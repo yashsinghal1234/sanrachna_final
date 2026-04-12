@@ -4,11 +4,12 @@ import { CalendarDays, Flag, HeartPulse, Timer, TrendingUp } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { useTimelineStore } from '@/store/useTimelineStore'
 
-function formatDate(d: Date) {
+function formatDate(d: unknown) {
   try {
-    return new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short', year: 'numeric' }).format(d)
+    const dt = d instanceof Date ? d : new Date(d as string)
+    return new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short', year: 'numeric' }).format(dt)
   } catch {
-    return d.toISOString().slice(0, 10)
+    return String(d).slice(0, 10)
   }
 }
 

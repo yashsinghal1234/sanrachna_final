@@ -306,7 +306,12 @@ export function DailyLogsPage() {
                       onClick={() => setLightboxUrl(p.url)}
                       title="Tap to enlarge"
                     >
-                      <img src={p.url} alt="" className="h-24 w-full object-cover" />
+                      <img
+                        src={p.url}
+                        alt=""
+                        className="h-24 w-full object-cover"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                      />
                     </button>
                     <p className="text-[10px] text-[color:var(--color-text_muted)]">
                       {p.captureSource === 'live_camera' ? 'Live camera' : 'Gallery'} ·{' '}
@@ -410,7 +415,20 @@ export function DailyLogsPage() {
                       onClick={() => setLightboxUrl(src)}
                       title="View full size"
                     >
-                      <img src={src} alt="" className="h-28 w-40 object-cover" />
+                      <img
+                        src={src}
+                        alt=""
+                        className="h-28 w-40 object-cover"
+                        onError={(e) => {
+                          const img = e.currentTarget as HTMLImageElement
+                          img.style.display = 'none'
+                          const parent = img.closest('button')
+                          if (parent) {
+                            parent.insertAdjacentHTML('afterend', '<div class="flex h-28 w-40 items-center justify-center rounded-lg bg-slate-100 text-xs text-slate-400">No image</div>')
+                            parent.remove()
+                          }
+                        }}
+                      />
                     </button>
                   ) : (
                     <div className="flex h-28 w-40 items-center justify-center rounded-[var(--radius-lg)] bg-[color:var(--color-bg)] text-xs text-[color:var(--color-text_muted)]">

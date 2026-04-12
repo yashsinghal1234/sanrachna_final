@@ -14,11 +14,20 @@ function badgeTone(status: string) {
   return 'bg-[color:var(--color-info)]/10 text-[color:var(--color-info)]'
 }
 
-function formatDateTime(d: Date) {
+function safeDate(v: unknown): Date {
+  if (v instanceof Date && !Number.isNaN(v.getTime())) return v
+  if (typeof v === 'string' || typeof v === 'number') {
+    const d = new Date(v as string | number)
+    if (!Number.isNaN(d.getTime())) return d
+  }
+  return new Date()
+}
+
+function formatDateTime(d: unknown) {
   try {
-    return new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short', year: 'numeric' }).format(d)
+    return new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short', year: 'numeric' }).format(safeDate(d))
   } catch {
-    return d.toISOString().slice(0, 10)
+    return String(d).slice(0, 10)
   }
 }
 
@@ -73,15 +82,15 @@ export function TimelineHeader({
     const json = JSON.stringify(
       {
         ...timeline,
-        lastSynced: timeline.lastSynced.toISOString(),
-        plannedCompletionDate: timeline.plannedCompletionDate.toISOString(),
-        forecastedCompletionDate: timeline.forecastedCompletionDate.toISOString(),
+        lastSynced: safeDate(timeline.lastSynced).toISOString(),
+        plannedCompletionDate: safeDate(timeline.plannedCompletionDate).toISOString(),
+        forecastedCompletionDate: safeDate(timeline.forecastedCompletionDate).toISOString(),
         tasks: timeline.tasks.map((t) => ({
           ...t,
-          startDate: t.startDate.toISOString(),
-          endDate: t.endDate.toISOString(),
-          baselineStart: t.baselineStart.toISOString(),
-          baselineEnd: t.baselineEnd.toISOString(),
+          startDate: safeDate(t.startDate).toISOString(),
+          endDate: safeDate(t.endDate).toISOString(),
+          baselineStart: safeDate(t.baselineStart).toISOString(),
+          baselineEnd: safeDate(t.baselineEnd).toISOString(),
         })),
       },
       null,

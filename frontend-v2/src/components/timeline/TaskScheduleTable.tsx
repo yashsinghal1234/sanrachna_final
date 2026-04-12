@@ -7,12 +7,23 @@ import type { GanttTask, Phase, TaskStatus } from '@/types/timeline.types'
 import { useTimelineStore } from '@/store/useTimelineStore'
 import { cn } from '@/utils/cn'
 
-function formatDate(d: Date) {
+function formatDate(d: unknown) {
+  const dt = safeDate(d)
   try {
-    return new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short', year: 'numeric' }).format(d)
+    return new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short', year: 'numeric' }).format(dt)
   } catch {
-    return d.toISOString().slice(0, 10)
+    return dt.toISOString().slice(0, 10)
   }
+}
+
+/** Coerce a value that may be a Date object or ISO string into a valid Date. */
+function safeDate(v: unknown): Date {
+  if (v instanceof Date && !Number.isNaN(v.getTime())) return v
+  if (typeof v === 'string' || typeof v === 'number') {
+    const d = new Date(v as string | number)
+    if (!Number.isNaN(d.getTime())) return d
+  }
+  return new Date()
 }
 
 function parseDateInput(v: string): Date | null {
@@ -65,7 +76,7 @@ export function TaskScheduleTable({ onToast }: { onToast: (msg: string) => void 
       .filter((t) => (phase === 'All' ? true : t.phase === phase))
       .filter((t) => (status === 'All' ? true : t.status === status))
       .filter((t) => (needle ? `${t.name} ${t.assignedCrew}`.toLowerCase().includes(needle) : true))
-      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
+      .sort((a, b) => safeDate(a.startDate).getTime() - safeDate(b.startDate).getTime())
   }, [timeline, q, phase, status])
 
   const pages = Math.max(1, Math.ceil(filtered.length / pageSize))
@@ -254,7 +265,7 @@ export function TaskScheduleTable({ onToast }: { onToast: (msg: string) => void 
                           <input
                             className="h-9 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 text-sm"
                             type="date"
-                            value={t.startDate.toISOString().slice(0, 10)}
+                            value={safeDate(t.startDate).toISOString().slice(0, 10)}
                             onChange={(e) => {
                               const nd = parseDateInput(e.target.value)
                               if (nd) editCell(t, 'startDate', nd)
@@ -269,7 +280,7 @@ export function TaskScheduleTable({ onToast }: { onToast: (msg: string) => void 
                           <input
                             className="h-9 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 text-sm"
                             type="date"
-                            value={t.endDate.toISOString().slice(0, 10)}
+                            value={safeDate(t.endDate).toISOString().slice(0, 10)}
                             onChange={(e) => {
                               const nd = parseDateInput(e.target.value)
                               if (nd) editCell(t, 'endDate', nd)
@@ -279,7 +290,7 @@ export function TaskScheduleTable({ onToast }: { onToast: (msg: string) => void 
                           formatDate(t.endDate)
                         )}
                       </td>
-                      <td className="px-3 py-3">{t.durationDays}d</td>
+                      <td className="px-3 py-3">{t.durationDays ?? 0}d</td>
                       <td className="px-3 py-3 text-xs text-[color:var(--color-text_secondary)]">
                         {t.dependsOn.length ? t.dependsOn.join(', ') : '—'}
                       </td>

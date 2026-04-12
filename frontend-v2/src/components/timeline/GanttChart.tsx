@@ -100,12 +100,17 @@ export function GanttChart() {
   const tasks = useMemo(() => {
     if (!timeline) return []
     const base = selectedPhaseFilter === 'All' ? timeline.tasks : timeline.tasks.filter((t) => t.phase === selectedPhaseFilter)
-    return [...base].sort((a, b) => a.startDate.getTime() - b.startDate.getTime())
+    return [...base].sort((a, b) => toDate(a.startDate).getTime() - toDate(b.startDate).getTime())
   }, [timeline, selectedPhaseFilter])
 
   const bounds = useMemo(() => {
     const today = dayStart(new Date())
-    const dates = tasks.flatMap((t) => [t.baselineStart, t.baselineEnd, t.startDate, t.endDate])
+    const dates = tasks.flatMap((t) => [
+      toDate(t.baselineStart),
+      toDate(t.baselineEnd),
+      toDate(t.startDate),
+      toDate(t.endDate),
+    ])
     const min = dates.reduce((m, d) => (d.getTime() < m.getTime() ? d : m), today)
     const max = dates.reduce((m, d) => (d.getTime() > m.getTime() ? d : m), today)
     const pad = 10
@@ -207,7 +212,7 @@ export function GanttChart() {
   const depIndex = useMemo(() => {
     const map = new Map<string, { xEnd: number; y: number }>()
     tasks.forEach((t, i) => {
-      map.set(t.id, { xEnd: xFor(t.endDate), y: taskY(i) + 8 })
+      map.set(t.id, { xEnd: xFor(toDate(t.endDate)), y: taskY(i) + 8 })
     })
     return map
   }, [tasks, bounds.start, zoomLevel])
@@ -377,13 +382,15 @@ export function GanttChart() {
 
                 {/* rows */}
                 {tasks.map((t, i) => {
-                  const x0 = xFor(t.startDate)
-                  const x1 = xFor(t.endDate)
+                  const tStart = toDate(t.startDate)
+                  const tEnd = toDate(t.endDate)
+                  const x0 = xFor(tStart)
+                  const x1 = xFor(tEnd)
                   const w = Math.max(6, x1 - x0)
                   const y = taskY(i)
-                  const tone = PHASE_COLORS[t.phase]
-                  const baselineX0 = xFor(t.baselineStart)
-                  const baselineX1 = xFor(t.baselineEnd)
+                  const tone = PHASE_COLORS[t.phase] ?? PHASE_COLORS['Finishing']
+                  const baselineX0 = xFor(toDate(t.baselineStart))
+                  const baselineX1 = xFor(toDate(t.baselineEnd))
                   const baselineW = Math.max(4, baselineX1 - baselineX0)
                   const isCritical = showCriticalPath && t.isCriticalPath
                   const barFill = isCritical ? 'rgba(239,68,68,0.13)' : tone.bg
@@ -393,7 +400,7 @@ export function GanttChart() {
                     e.preventDefault()
                     e.stopPropagation()
                     ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
-                    setDrag({ taskId: t.id, mode, startX: e.clientX, originStart: t.startDate, originEnd: t.endDate })
+                    setDrag({ taskId: t.id, mode, startX: e.clientX, originStart: tStart, originEnd: tEnd })
                   }
 
                   const onHover = (e: React.MouseEvent) => {
@@ -500,11 +507,11 @@ export function GanttChart() {
               <div className="mt-2 grid grid-cols-2 gap-2 text-[color:var(--color-text_secondary)]">
                 <div>
                   <div className="text-[11px] font-semibold">Start</div>
-                  <div>{formatShort(hover.task.startDate)}</div>
+                  <div>{formatShort(toDate(hover.task.startDate))}</div>
                 </div>
                 <div>
                   <div className="text-[11px] font-semibold">End</div>
-                  <div>{formatShort(hover.task.endDate)}</div>
+                  <div>{formatShort(toDate(hover.task.endDate))}</div>
                 </div>
                 <div>
                   <div className="text-[11px] font-semibold">Progress</div>
