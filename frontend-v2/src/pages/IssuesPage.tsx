@@ -1,7 +1,6 @@
 import {
   CheckCircle2,
   ClipboardList,
-  Download,
   Filter,
   Flag,
   ImagePlus,
@@ -238,37 +237,11 @@ export function IssuesPage() {
     e.currentTarget.reset()
   }
 
-  const exportCsv = () => {
-    const rows = filtered.map((i) => ({
-      id: i.id,
-      title: i.title,
-      category: i.category,
-      severity: i.severity,
-      status: i.status,
-      reportedBy: i.reportedBy,
-      assignedTo: i.assignedTo ?? '',
-      raisedAt: i.raisedAt,
-      dueAt: i.dueAt,
-      location: i.location,
-      verification: i.verification ? 'Verified' : i.status === 'Resolved' ? 'Pending' : '',
-    }))
-    const header = Object.keys(rows[0] ?? { id: '' })
-    const csv = [
-      header.join(','),
-      ...rows.map((r) => header.map((k) => `"${String((r as any)[k] ?? '').replaceAll('"', '""')}"`).join(',')),
-    ].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `issues_${currentProjectId}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+
 
   const convertToRfi = () => {
-    if (!selected) return
-    createRfi({
+    if (!selected || !currentProjectId) return
+    createRfi(currentProjectId, {
       title: `Clarification needed: ${selected.title}`,
       description: selected.description,
       category: 'General',

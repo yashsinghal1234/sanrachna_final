@@ -180,7 +180,7 @@ function persistTimelineToServer(projectId: string, timeline: ProjectTimeline) {
 }
 
 /** Build the body to POST when creating a backend Task from a GanttTask. */
-function ganttTaskToBackendPayload(t: GanttTask, projectId: string): Record<string, unknown> {
+function ganttTaskToBackendPayload(t: GanttTask, _projectId: string): Record<string, unknown> {
   return {
     title: t.name,
     description: '',

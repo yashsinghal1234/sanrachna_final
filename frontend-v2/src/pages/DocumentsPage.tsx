@@ -13,7 +13,6 @@ import {
   GitCompare,
   Link2,
   Lock,
-  Plus,
   Search,
   Send,
   Shield,

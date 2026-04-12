@@ -60,9 +60,7 @@ function clampPct(n: number) {
   return Math.max(0, Math.min(100, Math.round(n)))
 }
 
-function todayKey() {
-  return new Date().toISOString().slice(0, 10)
-}
+
 
 function nowIso() {
   return new Date().toISOString()

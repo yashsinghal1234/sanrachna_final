@@ -121,28 +121,21 @@ export function reportToTimeline(
     isIdle: t.count === 0,
   }))
 
-  // Risk forecast
   const risks = report.riskForecast.map((r, i) => ({
     id: `risk_${i}`,
-    category: r.risk.slice(0, 30),
+    taskName: r.risk.slice(0, 60),
+    riskLevel: (r.level === 'High' || r.level === 'Medium' || r.level === 'Low' ? r.level : 'Medium') as import('@/types/timeline.types').RiskLevel,
     description: r.risk,
-    probability: r.level === 'High' ? 0.75 : r.level === 'Medium' ? 0.45 : 0.2,
-    impact: r.level === 'High' ? 0.8 : 0.4,
-    score: r.level === 'High' ? 60 : r.level === 'Medium' ? 36 : 16,
-    mitigation: r.mitigation,
-    owner: 'Engineer',
-    dueDate: addDays(now, 30),
-    status: 'open' as const,
+    delayProbability: r.level === 'High' ? 0.75 : r.level === 'Medium' ? 0.45 : 0.2,
+    impactDays: r.level === 'High' ? 14 : r.level === 'Medium' ? 7 : 3,
   }))
 
-  // Recovery actions from optimizations
   const recoveryActions = report.optimizations.slice(0, 4).map((opt, i) => ({
     id: `rec_${i}`,
-    title: opt.suggestion.slice(0, 60),
-    description: opt.impact ?? 'Value engineering opportunity',
+    suggestion: opt.suggestion.slice(0, 80),
+    impact: opt.impact ?? 'Value engineering opportunity',
     savingDays: 7,
-    costImpact: 0,
-    status: 'pending' as const,
+    type: 'other' as const,
   }))
 
   return {

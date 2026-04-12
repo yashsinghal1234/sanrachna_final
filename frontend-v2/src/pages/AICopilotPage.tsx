@@ -23,7 +23,6 @@ import {
   apiRenameThread,
   apiSendMessage,
   type BackendThread,
-  type BackendMessage,
 } from '@/api/copilotApi'
 import { isBackendConfigured } from '@/api/http'
 import { Button } from '@/components/ui/Button'
