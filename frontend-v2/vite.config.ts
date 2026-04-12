@@ -4,13 +4,25 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  // Makes built assets work when hosted from a subpath (e.g. GitHub Pages / static hosting folders).
-  // BrowserRouter will also use BASE_URL as basename (see src/main.tsx).
-  base: './',
+  // Vercel serves from the domain root — use '/' in production.
+  base: '/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-charts': ['recharts', 'react-google-charts'],
+          'vendor-ui': ['lucide-react', 'clsx', 'tailwind-merge', 'class-variance-authority'],
+          'vendor-forms': ['react-hook-form', '@hookform/resolvers', 'zod'],
+          'vendor-state': ['zustand'],
+        },
+      },
     },
   },
 })

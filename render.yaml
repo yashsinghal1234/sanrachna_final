@@ -1,0 +1,36 @@
+services:
+  # ── Node.js / Express Backend ────────────────────────────────────────────
+  - type: web
+    name: sanrachna-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CORS_ORIGIN
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+
+  # ── Python / FastAPI Report Engine ───────────────────────────────────────
+  - type: web
+    name: sanrachna-report-engine
+    runtime: python
+    rootDir: report-engine
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: CORS_ORIGINS
+        sync: false

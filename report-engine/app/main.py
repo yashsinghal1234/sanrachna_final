@@ -9,6 +9,8 @@ Routes:
     GET  /health            → liveness probe
 """
 
+import os
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, JSONResponse
@@ -35,7 +37,13 @@ app = FastAPI(
     license_info={"name": "Proprietary"},
 )
 
-# ── CORS — allow the React frontend dev server ─────────────────────────────────
+# ── CORS ─────────────────────────────────────────────────────────────────────
+# In production set CORS_ORIGINS env var to a comma-separated list of allowed
+# origins, e.g. "https://sanrachna-final.vercel.app". Falls back to "*" so
+# local development keeps working without any extra config.
+_raw_origins = os.environ.get("CORS_ORIGINS", "")
+_extra = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -43,8 +51,8 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:3000",
-        "*",                         # tighten in production
-    ],
+        *_extra,
+    ] or ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
