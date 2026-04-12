@@ -174,8 +174,9 @@ export function RfiPage() {
   }
 
   const create = () => {
+    if (!projectId) { onToast('Select a project first.'); return }
     const dueAt = new Date(Date.now() + Math.max(1, newRfi.dueDays) * 24 * 60 * 60 * 1000).toISOString()
-    createRfi({
+    createRfi(projectId, {
       title: newRfi.title.trim() || 'Untitled RFI',
       description: newRfi.description.trim() || '—',
       category: newRfi.category,
@@ -455,9 +456,9 @@ export function RfiPage() {
                           variant="secondary"
                           onClick={() => {
                             if (!can.canRespond) return
-                            addComment(r.id, { kind: 'response', author: user?.name ?? 'Engineer', text: 'Acknowledged. Will revert shortly.' })
-                            moveStatus(r.id, 'In Review')
-                            onToast('Responded (demo).')
+                            addComment(projectId ?? '', r.id, { kind: 'response', author: user?.name ?? 'Engineer', text: 'Acknowledged. Will revert shortly.' })
+                            moveStatus(projectId ?? '', r.id, 'In Review')
+                            onToast('Responded.')
                           }}
                           disabled={!can.canRespond}
                         >
@@ -468,7 +469,7 @@ export function RfiPage() {
                           variant="outline"
                           onClick={() => {
                             if (!can.canEscalate) return
-                            escalate(r.id, 'Manual escalation by user', can.isOwner ? 'Owner' : 'Owner — K. Iyer')
+                            escalate(projectId ?? '', r.id, 'Manual escalation by user', can.isOwner ? 'Owner' : 'Owner — K. Iyer')
                             onToast('Escalated (demo).')
                           }}
                           disabled={!can.canEscalate}
@@ -520,8 +521,8 @@ export function RfiPage() {
                         variant="outline"
                         onClick={() => {
                           if (!can.canEscalate) return
-                          escalate(x.item.id, 'Nearing SLA breach (24h window)', 'Owner — K. Iyer')
-                          onToast('Auto-escalated (demo).')
+                          escalate(projectId ?? '', x.item.id, 'Nearing SLA breach (24h window)', 'Owner — K. Iyer')
+                          onToast('Auto-escalated.')
                         }}
                         disabled={!can.canEscalate}
                       >
@@ -611,8 +612,8 @@ export function RfiPage() {
                 variant="outline"
                 onClick={() => {
                   if (!can.canEscalate) return
-                  escalate(selected.id, 'Escalated from detail drawer', 'Owner — K. Iyer')
-                  onToast('Escalated (demo).')
+                  escalate(projectId ?? '', selected.id, 'Escalated from detail drawer', 'Owner — K. Iyer')
+                  onToast('Escalated.')
                 }}
                 disabled={!can.canEscalate}
               >
@@ -622,9 +623,9 @@ export function RfiPage() {
                 variant="secondary"
                 onClick={() => {
                   if (!can.canRespond) return
-                  addComment(selected.id, { kind: 'response', author: user?.name ?? 'Engineer', text: 'Proposed resolution: proceed with revised routing; awaiting approval.' })
-                  moveStatus(selected.id, 'Answered')
-                  onToast('Marked answered (demo).')
+                  addComment(projectId ?? '', selected.id, { kind: 'response', author: user?.name ?? 'Engineer', text: 'Proposed resolution: proceed with revised routing; awaiting approval.' })
+                  moveStatus(projectId ?? '', selected.id, 'Answered')
+                  onToast('Marked answered.')
                 }}
                 disabled={!can.canRespond}
               >
@@ -689,7 +690,7 @@ export function RfiPage() {
                     <Button
                       variant="secondary"
                       onClick={() => {
-                        addComment(selected.id, { kind: 'comment', author: user?.name ?? 'Engineer', text: 'Adding note: awaiting drawing markups from consultant.' })
+                        addComment(projectId ?? '', selected.id, { kind: 'comment', author: user?.name ?? 'Engineer', text: 'Adding note: awaiting drawing markups from consultant.' })
                         onToast('Added comment.')
                       }}
                     >
@@ -698,7 +699,7 @@ export function RfiPage() {
                     <Button
                       variant="outline"
                       onClick={() => {
-                        moveStatus(selected.id, selected.status === 'Open' ? 'In Review' : 'Awaiting Response')
+                        moveStatus(projectId ?? '', selected.id, selected.status === 'Open' ? 'In Review' : 'Awaiting Response')
                         onToast('Updated status.')
                       }}
                     >

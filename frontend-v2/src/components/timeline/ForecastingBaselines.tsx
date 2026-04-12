@@ -16,11 +16,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import type { Phase } from '@/types/timeline.types'
 import { useTimelineStore } from '@/store/useTimelineStore'
 
-function diffDays(a: Date, b: Date) {
-  const one = new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime()
-  const two = new Date(b.getFullYear(), b.getMonth(), b.getDate()).getTime()
+/** Safely coerce a value that may be a Date or ISO string to a Date. */
+function toDate(v: unknown): Date {
+  if (v instanceof Date && !Number.isNaN(v.getTime())) return v
+  if (typeof v === 'string' || typeof v === 'number') {
+    const d = new Date(v)
+    if (!Number.isNaN(d.getTime())) return d
+  }
+  return new Date()
+}
+
+function diffDays(a: unknown, b: unknown) {
+  const da = toDate(a)
+  const db = toDate(b)
+  const one = new Date(da.getFullYear(), da.getMonth(), da.getDate()).getTime()
+  const two = new Date(db.getFullYear(), db.getMonth(), db.getDate()).getTime()
   return Math.round((two - one) / (24 * 60 * 60 * 1000))
 }
+
 
 const PHASES: Phase[] = ['Foundation', 'Substructure', 'Superstructure', 'MEP', 'Finishing', 'Handover']
 

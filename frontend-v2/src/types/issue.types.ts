@@ -29,6 +29,8 @@ export type IssueVerification = {
 
 export type IssueItem = {
   id: string
+  /** Friendly display ID, e.g. ISS-123. Falls back to id if not set. */
+  issue_id?: string
   projectId: string
 
   title: string

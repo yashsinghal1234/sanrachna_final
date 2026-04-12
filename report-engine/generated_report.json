@@ -1,0 +1,375 @@
+{
+  "executiveSummary": {
+    "feasibility": "Feasible",
+    "estimatedMonths": 0.9,
+    "estimatedCost": 55440000.0,
+    "confidencePercent": 80,
+    "majorRisks": [
+      "Labour: Available workforce (100) is significantly below the estimated requirement (160)"
+    ],
+    "keyAssumptions": [
+      "All costs are in Indian Rupees (INR) at Q1 2025 market rates.",
+      "Built-up area of 24,000 sqft is taken as the primary quantification basis.",
+      "Construction type is 'new'; BOM quantities use full multipliers.",
+      "Effective productivity = 100 workers × 10 sqft/day × 1.0 (single shift) = 1,000 sqft/day.",
+      "Site access penalty: good → no reduction."
+    ]
+  },
+  "costBreakdown": {
+    "totalCost": 52800000.0,
+    "costPerSqFt": 2200.0,
+    "contingencyAmount": 2640000.0,
+    "phases": [
+      {
+        "name": "Design & Consultancy",
+        "cost": 4224000.0,
+        "percent": 8.0
+      },
+      {
+        "name": "Foundation Works",
+        "cost": 9504000.0,
+        "percent": 18.0
+      },
+      {
+        "name": "Structural Works",
+        "cost": 19008000.0,
+        "percent": 36.0
+      },
+      {
+        "name": "MEP Services",
+        "cost": 10560000.0,
+        "percent": 20.0
+      },
+      {
+        "name": "Finishing & Interiors",
+        "cost": 9504000.0,
+        "percent": 18.0
+      }
+    ]
+  },
+  "billOfMaterials": [
+    {
+      "material": "Cement (bags 50 kg)",
+      "quantity": 204.0,
+      "unit": "bags",
+      "unitRate": 400.0,
+      "totalCost": 81600.0
+    },
+    {
+      "material": "TMT Steel (MT)",
+      "quantity": 100.8,
+      "unit": "MT",
+      "unitRate": 65000.0,
+      "totalCost": 6552000.0
+    },
+    {
+      "material": "Brick / Block Masonry (units)",
+      "quantity": 1320000.0,
+      "unit": "units",
+      "unitRate": 8.0,
+      "totalCost": 10560000.0
+    },
+    {
+      "material": "River Sand / M-Sand (cu.ft)",
+      "quantity": 13200.0,
+      "unit": "cu.ft",
+      "unitRate": 35.0,
+      "totalCost": 462000.0
+    },
+    {
+      "material": "Coarse Aggregate (cu.ft)",
+      "quantity": 16800.0,
+      "unit": "cu.ft",
+      "unitRate": 28.0,
+      "totalCost": 470400.0
+    },
+    {
+      "material": "Plaster Sand (cu.ft)",
+      "quantity": 4800.0,
+      "unit": "cu.ft",
+      "unitRate": 30.0,
+      "totalCost": 144000.0
+    },
+    {
+      "material": "Shuttering Plywood (sqft)",
+      "quantity": 4320.0,
+      "unit": "sqft",
+      "unitRate": 55.0,
+      "totalCost": 237600.0
+    },
+    {
+      "material": "Binding Wire (kg)",
+      "quantity": 8400.0,
+      "unit": "kg",
+      "unitRate": 80.0,
+      "totalCost": 672000.0
+    },
+    {
+      "material": "PCC / Concrete (cu.ft)",
+      "quantity": 7200.0,
+      "unit": "cu.ft",
+      "unitRate": 250.0,
+      "totalCost": 1800000.0
+    },
+    {
+      "material": "Tiles / Flooring (sqft)",
+      "quantity": 25200.0,
+      "unit": "sqft",
+      "unitRate": 90.0,
+      "totalCost": 2268000.0
+    },
+    {
+      "material": "Paint (litre)",
+      "quantity": 2880.0,
+      "unit": "litre",
+      "unitRate": 180.0,
+      "totalCost": 518400.0
+    },
+    {
+      "material": "Electrical Conduit (m)",
+      "quantity": 1920.0,
+      "unit": "m",
+      "unitRate": 45.0,
+      "totalCost": 86400.0
+    },
+    {
+      "material": "GI Pipes (m)",
+      "quantity": 1080.0,
+      "unit": "m",
+      "unitRate": 320.0,
+      "totalCost": 345600.0
+    },
+    {
+      "material": "CPVC / PVC Pipes (m)",
+      "quantity": 1560.0,
+      "unit": "m",
+      "unitRate": 150.0,
+      "totalCost": 234000.0
+    }
+  ],
+  "workforcePlan": {
+    "totalWorkers": 160,
+    "peakWorkers": 192,
+    "byTrade": [
+      {
+        "trade": "Masons",
+        "count": 48,
+        "phase": "Structural Works"
+      },
+      {
+        "trade": "Bar Benders",
+        "count": 24,
+        "phase": "Structural Works"
+      },
+      {
+        "trade": "Carpenters",
+        "count": 16,
+        "phase": "Structural Works"
+      },
+      {
+        "trade": "MEP Workers",
+        "count": 32,
+        "phase": "MEP & Finishing"
+      },
+      {
+        "trade": "Finishing Workers",
+        "count": 40,
+        "phase": "MEP & Finishing"
+      }
+    ]
+  },
+  "equipmentPlan": [
+    {
+      "name": "Tower Crane",
+      "recommendation": "Rent",
+      "reason": "4 crane(s) for 12-storey structure"
+    },
+    {
+      "name": "Concrete Pump",
+      "recommendation": "Rent",
+      "reason": "For continuous casting; reduces manual labour 40 %"
+    },
+    {
+      "name": "Transit Mixer",
+      "recommendation": "Rent",
+      "reason": "Hire as needed for RMC delivery"
+    },
+    {
+      "name": "Bar Bending Machine",
+      "recommendation": "Buy",
+      "reason": "Essential for onsite bending; resale value retained"
+    },
+    {
+      "name": "Plate Compactor",
+      "recommendation": "Buy",
+      "reason": "Foundation compaction"
+    },
+    {
+      "name": "Vibrator (Poker)",
+      "recommendation": "Buy",
+      "reason": "Concrete compaction; 1 per 2 000 sqft"
+    },
+    {
+      "name": "Scaffolding (Tubular)",
+      "recommendation": "Rent",
+      "reason": "7200 sqft of scaffolding area estimated"
+    },
+    {
+      "name": "Welding Set",
+      "recommendation": "Buy",
+      "reason": "Structural steel or formwork connections"
+    },
+    {
+      "name": "Safety Equipment (Helmets, Harness, PPE)",
+      "recommendation": "Buy",
+      "reason": "Mandatory per IS 3764; 1 set per worker"
+    },
+    {
+      "name": "Cube Testing Moulds",
+      "recommendation": "Buy",
+      "reason": "QA/QC concrete testing"
+    },
+    {
+      "name": "Surveying Total Station",
+      "recommendation": "Rent",
+      "reason": "Setting out, levels, and alignment checks"
+    },
+    {
+      "name": "Generator (DG Set)",
+      "recommendation": "Rent",
+      "reason": "Approx. 50 kVA required"
+    }
+  ],
+  "timeline": {
+    "totalMonths": 1.0,
+    "phases": [
+      {
+        "name": "Design & Approvals",
+        "months": 0.2,
+        "milestones": [
+          "Structural drawings complete",
+          "Building plan approved",
+          "BOQ and tender finalized"
+        ]
+      },
+      {
+        "name": "Structural Works",
+        "months": 0.5,
+        "milestones": [
+          "Foundation & plinth complete",
+          "All slab levels cast",
+          "Brick/block masonry done",
+          "Structural steel / topping slab complete"
+        ]
+      },
+      {
+        "name": "Finishing Works",
+        "months": 0.3,
+        "milestones": [
+          "Plaster & waterproofing complete",
+          "MEP rough-in done",
+          "Tiles & flooring laid",
+          "Final paint, fixtures & handover"
+        ]
+      }
+    ]
+  },
+  "riskForecast": [
+    {
+      "risk": "[Labour] Available workforce (100) is significantly below the estimated requirement (160). Critical labour shortage risk.",
+      "level": "High",
+      "mitigation": "Engage labour contractor with mobilisation guarantee. Consider double-shift or mechanised alternatives."
+    },
+    {
+      "risk": "[Weather] Seasonal risk identified: 'monsoon (June-September)'. Adverse weather can halt outdoor works.",
+      "level": "Medium",
+      "mitigation": "Build weather contingency in schedule (10 % float). Procure weather-protection sheeting. Plan indoor / covered works during risk period."
+    },
+    {
+      "risk": "[Schedule] Schedule slip due to unplanned design revisions, RFI delays, or scope creep.",
+      "level": "Medium",
+      "mitigation": "Freeze design before construction kickoff. Limit post-approval changes. Track RFIs."
+    },
+    {
+      "risk": "[Financial] Cost drift from material price escalation over the project duration.",
+      "level": "Medium",
+      "mitigation": "Lock material rates via price-escalation clauses with suppliers. Monthly market-rate benchmarking."
+    },
+    {
+      "risk": "[Seismic] Seismic Zone III — moderate seismic demand.",
+      "level": "Medium",
+      "mitigation": "Follow IS 1893 (Part 1) provisions. Shear walls or braced frames recommended."
+    },
+    {
+      "risk": "[Regulatory] Regulatory delays — plan approvals, NOCs, completion certificates.",
+      "level": "Low",
+      "mitigation": "Engage experienced liaison consultant. Submit documents 3 months before needed. Maintain digital document register."
+    },
+    {
+      "risk": "[Quality] Concrete cube failure risk if mix design, curing, or testing protocols are not followed.",
+      "level": "Low",
+      "mitigation": "Appoint third-party QC agency. Daily cube casting. Minimum 7-day / 28-day tests."
+    },
+    {
+      "risk": "[Geotechnical] Medium soil — moderate risk of settlement under heavy loads.",
+      "level": "Low",
+      "mitigation": "Standard soil investigation sufficient. Isolated / strip footings acceptable."
+    }
+  ],
+  "optimizations": [
+    {
+      "suggestion": "Move to double-shift operation for structural works. Increases daily output by ~80 %.",
+      "impact": "25–40 % schedule reduction",
+      "savingAmount": 25.0
+    },
+    {
+      "suggestion": "Evaluate pre-cast column / beam / slab elements. Reduces formwork cost and improves quality.",
+      "impact": "10–18 % structural cost reduction",
+      "savingAmount": 10.0
+    },
+    {
+      "suggestion": "Use Ready-Mix Concrete (RMC) from a certified plant for all structural pours. Eliminates batch variations and reduces wastage by ~12 %.",
+      "impact": "₹15–₹30 / cu.ft",
+      "savingAmount": 15.0
+    },
+    {
+      "suggestion": "Purchase cement, steel, and aggregates in bulk at project start using BOM quantities. Lock prices with suppliers for 6-month tenure.",
+      "impact": "8–15 % material cost reduction",
+      "savingAmount": 8.0
+    },
+    {
+      "suggestion": "Install rooftop solar (3–5 kW) to offset construction-phase DG costs and enable GRIHA / LEED rating that improves property value.",
+      "impact": "₹60 000–₹1.5 L / year power savings",
+      "savingAmount": 60.0
+    },
+    {
+      "suggestion": "Implement on-site C&D waste segregation and recycling. Crushed concrete may be reused as sub-base; saves disposal costs.",
+      "impact": "₹10–₹25 / sqft disposal cost reduction",
+      "savingAmount": 10.0
+    },
+    {
+      "suggestion": "Deploy cloud-based project management + daily progress photo logs. Reduces schedule slippage detection time from weeks to days.",
+      "impact": "5–10 % schedule improvement",
+      "savingAmount": 5.0
+    }
+  ],
+  "assumptions": [
+    "All costs are in Indian Rupees (INR) at Q1 2025 market rates.",
+    "Built-up area of 24,000 sqft is taken as the primary quantification basis.",
+    "Construction type is 'new'; BOM quantities use full multipliers.",
+    "Effective productivity = 100 workers × 10 sqft/day × 1.0 (single shift) = 1,000 sqft/day.",
+    "Site access penalty: good → no reduction.",
+    "All concrete is designed to grade M25 per IS 456:2000.",
+    "Reinforcement steel is Fe500 TMT bars per IS 1786.",
+    "Seismic design per IS 1893 (Part 1) for Zone III.",
+    "Foundation type subject to final soil investigation; isolated / combined footing assumed.",
+    "A 5 % contingency reserve is included in the cost overview.",
+    "Labour rates are indicative urban-India 2024 benchmarks; actual rates vary by region and season.",
+    "Material prices exclude GST. Apply 18 % GST on civil materials and 28 % on certain equipment.",
+    "Monsoon disruption is NOT included in the base schedule; add 10–15 % float for monsoon-prone regions.",
+    "Shift type: single. Night / double shifts incur premium of 20–30 % on labour wages.",
+    "Environmental clearance, heritage NOC, and aviation NOC (if applicable) are not in scope.",
+    "This report is generated by a deterministic rule-based engine. Final design, quantities, and costs must be verified by a licensed structural engineer."
+  ],
+  "revisionSummary": null
+}

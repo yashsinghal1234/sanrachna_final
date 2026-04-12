@@ -4,15 +4,17 @@ import {
   Download,
   Filter,
   Flag,
+  ImagePlus,
   Layers,
   Plus,
   Search,
   ShieldAlert,
   Timer,
   UserPlus,
+  X,
 } from 'lucide-react'
 import type { FormEvent } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { useAuth } from '@/auth/AuthContext'
@@ -25,6 +27,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useProjectsStore } from '@/store/useProjectsStore'
 import { useRfiStore } from '@/store/useRfiStore'
 import { useIssueStore, computeIssueMetrics } from '@/store/useIssueStore'
+import { apiGetTeam } from '@/api/projectTeamApi'
 import type { IssueCategory, IssueItem, IssueSeverity, IssueStatus } from '@/types/issue.types'
 import { ISSUE_CATEGORIES, ISSUE_SEVERITIES, ISSUE_STATUSES } from '@/constants/issues'
 import { formatDate } from '@/utils/format'
@@ -87,6 +90,8 @@ export function IssuesPage() {
   const currentProjectId = useProjectsStore((s) => s.currentProjectId)
   const projects = useProjectsStore((s) => s.projects)
   const setCurrentProjectId = useProjectsStore((s) => s.setCurrentProjectId)
+  // Non-null alias – guards all store calls below
+  const pid: string = currentProjectId ?? ''
 
   const issuesByProject = useIssueStore((s) => s.issuesByProject)
   const selectedId = useIssueStore((s) => s.selectedId)
@@ -111,14 +116,39 @@ export function IssuesPage() {
 
   const createRfi = useRfiStore((s) => s.createRfi)
 
-  useEffect(() => {
-    void fetchIssues(currentProjectId)
-  }, [currentProjectId, fetchIssues])
-
+  // State declarations
   const [createOpen, setCreateOpen] = useState(false)
   const [verifyOpen, setVerifyOpen] = useState(false)
   const [detailOpen, setDetailOpen] = useState(false)
   const [assignTo, setAssignTo] = useState('')
+  const [assignSearch, setAssignSearch] = useState('')
+  const [teamMembers, setTeamMembers] = useState<{ id: string; name: string; role: string }[]>([])
+  const [assignDropOpen, setAssignDropOpen] = useState(false)
+  const afterPhotoRef = useRef<HTMLInputElement | null>(null)
+  const [afterPhotoFile, setAfterPhotoFile] = useState<File | null>(null)
+  const [afterPhotoPreview, setAfterPhotoPreview] = useState<string | null>(null)
+
+  // Fetch issues when project changes
+  useEffect(() => {
+    void fetchIssues(currentProjectId)
+  }, [currentProjectId, fetchIssues])
+
+  // Fetch team members when project changes
+  useEffect(() => {
+    if (!currentProjectId) return
+    apiGetTeam(currentProjectId)
+      .then((res) => {
+        const members = (res.members ?? []) as { id: string; name: string; role?: string }[]
+        setTeamMembers(members.map((m) => ({ id: m.id, name: m.name, role: m.role ?? 'member' })))
+      })
+      .catch(() => setTeamMembers([]))
+  }, [currentProjectId])
+
+  const filteredTeam = useMemo(() => {
+    if (!assignSearch.trim()) return teamMembers
+    const q = assignSearch.toLowerCase()
+    return teamMembers.filter((m) => m.name.toLowerCase().includes(q) || m.role.toLowerCase().includes(q))
+  }, [teamMembers, assignSearch])
 
   const items = issuesByProject[currentProjectId ?? ''] ?? []
   const filtered = useMemo(() => {
@@ -196,10 +226,15 @@ export function IssuesPage() {
     if (!selected) return
     const fd = new FormData(e.currentTarget)
     const notes = String(fd.get('notes') ?? '')
-    const afterPhotoName = String(fd.get('afterPhotoName') ?? '').trim()
+    const afterPhotoName = afterPhotoFile?.name ?? String(fd.get('afterPhotoName') ?? '').trim()
+    if (!afterPhotoName) {
+      return // require photo name or file
+    }
     const verifier = myKey ?? 'Engineer'
-    verifyIssue(currentProjectId, selected.id, verifier, notes, afterPhotoName || undefined)
+    verifyIssue(pid, selected.id, verifier, notes, afterPhotoName || undefined)
     setVerifyOpen(false)
+    setAfterPhotoFile(null)
+    setAfterPhotoPreview(null)
     e.currentTarget.reset()
   }
 
@@ -278,10 +313,6 @@ export function IssuesPage() {
             Create new issue
           </Button>
         ) : null}
-        <Button variant="secondary" onClick={exportCsv}>
-          <Download className="size-4" />
-          Export register
-        </Button>
         {canManage ? (
           <Button variant={isDirty ? 'primary' : 'secondary'} onClick={() => saveChanges()}>
             <ClipboardList className="size-4" />
@@ -403,57 +434,59 @@ export function IssuesPage() {
   )
 
   const Kanban = (
-    <div className="grid gap-4 lg:grid-cols-6">
+    <div className="-mx-1 overflow-x-auto pb-3">
+      <div className="flex gap-3 px-1" style={{ minWidth: `${ISSUE_STATUSES.length * 220}px` }}>
       {ISSUE_STATUSES.map((col) => {
         const colItems = filtered.filter((i) => i.status === col)
         return (
-          <Card key={col} className="min-h-[180px]">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">
-                {col} <span className="text-muted">({colItems.length})</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <div key={col} className="flex w-52 shrink-0 flex-col">
+            <div className="mb-2 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <span className="flex-1 truncate text-xs font-bold text-slate-700">{col}</span>
+              <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-slate-600">{colItems.length}</span>
+            </div>
+            <div className="flex flex-col gap-2">
               {colItems.length ? (
                 colItems.map((i) => (
                   <button
                     key={i.id}
                     type="button"
                     onClick={() => onOpenDetail(i.id)}
-                    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:shadow-md"
+                    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:shadow-md hover:border-slate-300"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-1.5">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {severityBadge(i.severity)}
-                          <span className="font-mono text-xs text-slate-400">{i.id}</span>
-                          {isBlocked(i) ? (
-                            <span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700">
-                              Blocked tasks
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="text-sm font-semibold text-slate-900">{i.title}</div>
-                        <div className="text-xs text-muted">
-                          {i.location} · {i.assignedTo ?? 'Unassigned'}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-muted">
-                        <Timer className="size-4" />
-                        {formatDate(i.dueAt)}
-                      </div>
+                    <div className="flex items-center justify-between gap-1">
+                      {severityBadge(i.severity)}
+                      <span className="max-w-[70px] overflow-hidden truncate font-mono text-[10px] text-slate-400">
+                        {i.issue_id || i.id.slice(-6)}
+                      </span>
                     </div>
+                    <div className="mt-2 line-clamp-2 text-xs font-semibold leading-snug text-slate-900">{i.title}</div>
+                    <div className="mt-1 truncate text-[11px] text-slate-500">
+                      {i.location || 'No location'}
+                    </div>
+                    <div className="mt-1 truncate text-[11px] text-slate-500">
+                      {i.assignedTo ?? 'Unassigned'}
+                    </div>
+                    <div className="mt-2 flex items-center gap-1 text-[11px] text-slate-400">
+                      <Timer className="size-3 shrink-0" />
+                      <span className="truncate">{formatDate(i.dueAt)}</span>
+                    </div>
+                    {isBlocked(i) ? (
+                      <div className="mt-1 rounded-full bg-rose-50 px-2 py-0.5 text-center text-[10px] font-semibold text-rose-700">
+                        Blocked tasks
+                      </div>
+                    ) : null}
                   </button>
                 ))
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-200 p-3 text-xs text-muted">
-                  No items.
+                <div className="rounded-xl border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">
+                  Empty
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )
       })}
+      </div>
     </div>
   )
 
@@ -596,26 +629,67 @@ export function IssuesPage() {
               {canManage ? (
                 <div className="rounded-xl border border-slate-200 p-3">
                   <div className="text-xs font-semibold text-slate-900">Assignment</div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <Input
-                      value={assignTo}
-                      onChange={(e) => setAssignTo(e.target.value)}
-                      placeholder="Assigned person / team"
-                      className="min-w-[220px]"
-                    />
+                  <div className="mt-2 flex flex-col gap-2">
+                    <div className="relative">
+                      <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                        <Search className="size-4 shrink-0 text-slate-400" />
+                        <input
+                          className="flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
+                          placeholder="Search team member…"
+                          value={assignSearch}
+                          onChange={(e) => { setAssignSearch(e.target.value); setAssignDropOpen(true) }}
+                          onFocus={() => setAssignDropOpen(true)}
+                        />
+                        {assignSearch && (
+                          <button type="button" onClick={() => { setAssignSearch(''); setAssignTo(''); setAssignDropOpen(false) }}>
+                            <X className="size-4 text-slate-400" />
+                          </button>
+                        )}
+                      </div>
+                      {assignDropOpen && filteredTeam.length > 0 && (
+                        <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-44 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+                          {filteredTeam.map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                              onClick={() => {
+                                setAssignTo(m.name)
+                                setAssignSearch(m.name)
+                                setAssignDropOpen(false)
+                              }}
+                            >
+                              <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-blue-700">
+                                {m.name.charAt(0).toUpperCase()}
+                              </span>
+                              <span className="flex-1 font-medium">{m.name}</span>
+                              <span className="text-xs capitalize text-slate-400">{m.role}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {assignDropOpen && filteredTeam.length === 0 && assignSearch.length > 0 && (
+                        <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-lg">
+                          <p className="text-xs text-slate-400">No team members found. You can still type a name manually.</p>
+                        </div>
+                      )}
+                    </div>
                     <Button
                       variant="secondary"
+                      className="w-full"
                       onClick={() => {
                         if (!selected) return
-                        const next = assignTo.trim()
+                        const next = (assignTo || assignSearch).trim()
                         if (!next) return
-                        updateIssue(currentProjectId, selected.id, { assignedTo: next })
-                        moveStatus(currentProjectId, selected.id, 'Assigned', myKey ?? 'Engineer', `Assigned to ${next}`)
+                        updateIssue(pid, selected.id, { assignedTo: next })
+                        moveStatus(pid, selected.id, 'Assigned', myKey ?? 'Engineer', `Assigned to ${next}`)
                         setAssignTo('')
+                        setAssignSearch('')
+                        setAssignDropOpen(false)
                       }}
                     >
                       <UserPlus className="size-4" />
-                      Assign
+                      Assign to {assignTo || assignSearch || '…'}
                     </Button>
                   </div>
                 </div>
@@ -683,7 +757,7 @@ export function IssuesPage() {
                   <>
                     <Button
                       variant="secondary"
-                      onClick={() => moveStatus(currentProjectId, selected.id, 'In Progress', myKey ?? 'Engineer', 'Work started.')}
+                      onClick={() => moveStatus(pid, selected.id, 'In Progress', myKey ?? 'Engineer', 'Work started.')}
                       disabled={selected.status === 'In Progress' || selected.status === 'Closed'}
                     >
                       <Timer className="size-4" />
@@ -691,7 +765,7 @@ export function IssuesPage() {
                     </Button>
                     <Button
                       variant="secondary"
-                      onClick={() => moveStatus(currentProjectId, selected.id, 'Resolved', myKey ?? 'Engineer', 'Resolution completed; pending verification.')}
+                      onClick={() => moveStatus(pid, selected.id, 'Resolved', myKey ?? 'Engineer', 'Resolution completed; pending verification.')}
                       disabled={selected.status === 'Resolved' || selected.status === 'Verified' || selected.status === 'Closed'}
                     >
                       <CheckCircle2 className="size-4" />
@@ -706,7 +780,7 @@ export function IssuesPage() {
                     </Button>
                     <Button
                       variant="secondary"
-                      onClick={() => closeIssue(currentProjectId, selected.id, myKey ?? 'Engineer')}
+                      onClick={() => closeIssue(pid, selected.id, myKey ?? 'Engineer')}
                       disabled={selected.status !== 'Verified'}
                     >
                       Close
@@ -1015,28 +1089,74 @@ export function IssuesPage() {
 
       <Modal
         open={verifyOpen}
-        onOpenChange={setVerifyOpen}
+        onOpenChange={(o) => { setVerifyOpen(o); if (!o) { setAfterPhotoFile(null); setAfterPhotoPreview(null) } }}
         title="Verify resolution"
-        description="Verification requires an after photo before the issue can be closed."
+        description={`Only engineers can verify. Upload an after-photo to confirm the fix is complete.`}
         footer={
-          <Button type="submit" form="issue-verify-form">
+          <Button type="submit" form="issue-verify-form" disabled={!afterPhotoFile && !afterPhotoPreview}>
             <CheckCircle2 className="size-4" />
-            Verify
+            Verify & Close
           </Button>
         }
       >
         <form id="issue-verify-form" className="space-y-4" onSubmit={onVerify}>
-          <div>
-            <label className="text-sm font-medium text-slate-800" htmlFor="afterPhotoName">
-              After photo (name)
-            </label>
-            <Input id="afterPhotoName" name="afterPhotoName" placeholder="e.g., issue_after.jpg" required />
+          {/* Who verifies callout */}
+          <div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm">
+            <ShieldAlert className="mt-0.5 size-4 shrink-0 text-blue-600" />
+            <div>
+              <p className="font-semibold text-blue-800">Engineer verification required</p>
+              <p className="mt-0.5 text-xs text-blue-600">The assigned engineer must physically inspect the fix and upload an after-photo before this issue can be closed.</p>
+            </div>
           </div>
+
+          {/* After photo upload */}
+          <div>
+            <label className="text-sm font-medium text-slate-800">After photo <span className="text-red-500">*</span></label>
+            <input
+              ref={afterPhotoRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null
+                setAfterPhotoFile(file)
+                if (file) {
+                  const reader = new FileReader()
+                  reader.onload = () => setAfterPhotoPreview(reader.result as string)
+                  reader.readAsDataURL(file)
+                } else {
+                  setAfterPhotoPreview(null)
+                }
+              }}
+            />
+            {afterPhotoPreview ? (
+              <div className="relative mt-2">
+                <img src={afterPhotoPreview} alt="After photo preview" className="h-48 w-full rounded-xl object-cover ring-1 ring-slate-200" />
+                <button
+                  type="button"
+                  className="absolute right-2 top-2 rounded-full bg-white p-1 shadow ring-1 ring-slate-200"
+                  onClick={() => { setAfterPhotoFile(null); setAfterPhotoPreview(null) }}
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-8 text-sm text-slate-500 hover:border-blue-300 hover:text-blue-600 transition-colors"
+                onClick={() => afterPhotoRef.current?.click()}
+              >
+                <ImagePlus className="size-5" />
+                Click to upload after-photo
+              </button>
+            )}
+          </div>
+
           <div>
             <label className="text-sm font-medium text-slate-800" htmlFor="notes">
-              Notes
+              Verification notes
             </label>
-            <textarea id="notes" name="notes" className={`${field} min-h-[90px]`} placeholder="What was verified and how?" />
+            <textarea id="notes" name="notes" className={`${field} min-h-[90px]`} placeholder="Describe what was inspected and confirmed fixed…" />
           </div>
         </form>
       </Modal>

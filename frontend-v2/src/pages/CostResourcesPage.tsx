@@ -13,12 +13,15 @@ import {
   YAxis,
 } from 'recharts'
 import {
+  BrainCircuit,
   Calculator,
+  CheckCircle2,
   ChevronDown,
   Download,
   HardHat,
   Info,
   Lightbulb,
+  Loader2,
   Package2,
   Percent,
   Save,
@@ -29,7 +32,8 @@ import {
 import { ProjectContextBanner } from '@/components/ProjectContextBanner'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { fetchWorkspaceCostResources } from '@/api/resources'
+import { fetchWorkspaceCostResources, apiEstimateBudget, type EstimateResult } from '@/api/resources'
+import { apiPatchPlanningStudio } from '@/api/projectTeamApi'
 import { useActiveProject } from '@/hooks/useActiveProject'
 import type { BillOfMaterialRow } from '@/types/planning.types'
 import type { CostBreakdown, ProjectSummary, ResourceLine } from '@/types/dashboard.types'
@@ -84,6 +88,67 @@ export function CostResourcesPage() {
   const [apiSummary, setApiSummary] = useState<ProjectSummary | null>(null)
   const [apiCostBreakdown, setApiCostBreakdown] = useState<CostBreakdown | null>(null)
   const [apiResources, setApiResources] = useState<ResourceLine[]>([])
+
+  // ── ML Budget Estimator ───────────────────────────────────────────────────
+  const [estMaterial, setEstMaterial] = useState(40000)
+  const [estLabor, setEstLabor] = useState(15000)
+  const [estProfitRate, setEstProfitRate] = useState(20)
+  const [estMarkup, setEstMarkup] = useState(5000)
+  const [estDiscount, setEstDiscount] = useState(-2000)
+  // Track if values are loaded from backend
+  const [estLoaded, setEstLoaded] = useState(false)
+    // Load planning fields from backend on mount or project change
+    useEffect(() => {
+      if (!project?.id) return
+      const studio = project?.planning?.sanrachnaStudio || {}
+      if (typeof studio === 'object') {
+        if (typeof studio.material === 'number') setEstMaterial(studio.material)
+        if (typeof studio.labor === 'number') setEstLabor(studio.labor)
+        if (typeof studio.profit_rate === 'number') setEstProfitRate(studio.profit_rate)
+        if (typeof studio.markup === 'number') setEstMarkup(studio.markup)
+        if (typeof studio.discount === 'number') setEstDiscount(studio.discount)
+      }
+      setEstLoaded(true)
+    }, [project?.id])
+
+    // Auto-save planning fields to backend when changed
+    useEffect(() => {
+      if (!project?.id || !estLoaded) return
+      const timer = setTimeout(() => {
+        apiPatchPlanningStudio(project.id, {
+          material: estMaterial,
+          labor: estLabor,
+          profit_rate: estProfitRate,
+          markup: estMarkup,
+          discount: estDiscount,
+        }).catch(() => {})
+      }, 500)
+      return () => clearTimeout(timer)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [estMaterial, estLabor, estProfitRate, estMarkup, estDiscount, project?.id, estLoaded])
+  const [estLoading, setEstLoading] = useState(false)
+  const [estError, setEstError] = useState<string | null>(null)
+  const [estResult, setEstResult] = useState<EstimateResult | null>(null)
+
+  const runEstimate = async () => {
+    if (!project?.id) return
+    setEstLoading(true)
+    setEstError(null)
+    try {
+      const res = await apiEstimateBudget(project.id, {
+        material: estMaterial,
+        labor: estLabor,
+        profit_rate: estProfitRate,
+        markup: estMarkup,
+        discount: estDiscount,
+      })
+      setEstResult(res)
+    } catch (e) {
+      setEstError(e instanceof Error ? e.message : 'Prediction failed.')
+    } finally {
+      setEstLoading(false)
+    }
+  }
 
   const wastePct = 0.05
 
@@ -187,6 +252,19 @@ export function CostResourcesPage() {
   }, [projects])
 
   const summary = useMemo(() => {
+    // If there is a predicted budget, show it as totalCost
+    if (estResult) {
+      return {
+        totalCost: estResult.prediction,
+        costPerSqFt: 0,
+        materialPct: 0,
+        laborPct: 0,
+        equipmentCost: 0,
+        contingency: 0,
+        materialCost: estResult.features.Material_Cost,
+        laborCost: estResult.features.Labor_Cost,
+      }
+    }
     if (computed && cost) {
       const totalCost = cost.totalCost
       const costPerSqFt = cost.costPerSqFt
@@ -221,7 +299,7 @@ export function CostResourcesPage() {
       materialCost: 0,
       laborCost: 0,
     }
-  }, [computed, cost, apiCostBreakdown, apiSummary, apiResources])
+  }, [computed, cost, apiCostBreakdown, apiSummary, apiResources, estResult])
 
   const costByPhase = useMemo(() => {
     if (computed) return computed.phases
@@ -774,6 +852,185 @@ export function CostResourcesPage() {
           </Card>
         </div>
       </div>
+
+      {/* ── ML BUDGET ESTIMATOR ─────────────────────────────────────── */}
+      <Card className="overflow-hidden border-purple-100 bg-gradient-to-br from-purple-50/60 to-blue-50/40">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BrainCircuit className="size-5 text-purple-600" />
+            AI Budget Estimator
+            <span className="ml-2 rounded-full bg-purple-100 px-2.5 py-0.5 text-[11px] font-semibold text-purple-700">
+              XGBoost ML Model
+            </span>
+          </CardTitle>
+          <CardDescription>
+            Enter cost inputs and run the trained XGBoost model to predict the final project budget.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-6 lg:grid-cols-[1fr_auto_1fr]">
+            {/* Input form */}
+            <div className="space-y-4">
+              <div className="text-xs font-semibold uppercase tracking-widest text-purple-600">
+                Input Features
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { label: 'Material Cost (₹)', state: estMaterial, set: setEstMaterial, icon: '🧱' },
+                  { label: 'Labor Cost (₹)', state: estLabor, set: setEstLabor, icon: '👷' },
+                  { label: 'Markup Cost (₹)', state: estMarkup, set: setEstMarkup, icon: '📈' },
+                  { label: 'Discount (₹, use negative)', state: estDiscount, set: setEstDiscount, icon: '🏷️' },
+                ].map(({ label, state, set, icon }) => (
+                  <div key={label} className="space-y-1">
+                    <label className="text-xs font-medium text-slate-600">
+                      {icon} {label}
+                    </label>
+                    <input
+                      type="number"
+                      className="h-10 w-full rounded-xl border border-purple-200 bg-white px-3 text-sm font-medium shadow-sm focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-200"
+                      value={state}
+                      onChange={(e) => set(Number(e.target.value))}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-600">📊 Profit Rate (%)</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={0}
+                    max={50}
+                    step={0.5}
+                    className="flex-1 accent-purple-600"
+                    value={estProfitRate}
+                    onChange={(e) => setEstProfitRate(Number(e.target.value))}
+                  />
+                  <span className="w-14 rounded-lg border border-purple-200 bg-white px-2 py-1 text-center text-sm font-bold text-purple-700">
+                    {estProfitRate}%
+                  </span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => void runEstimate()}
+                  disabled={estLoading || !project?.id}
+                  className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700"
+                >
+                  {estLoading ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Running XGBoost…
+                    </>
+                  ) : (
+                    <>
+                      <BrainCircuit className="size-4" />
+                      Predict Budget
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={estLoading || !project?.id}
+                  onClick={async () => {
+                    setEstLoading(true)
+                    setEstError(null)
+                    try {
+                      const studio = project?.planning?.sanrachnaStudio || {}
+                      const res = await apiEstimateBudget(project.id, {
+                        material: typeof studio.material === 'number' ? studio.material : 0,
+                        labor: typeof studio.labor === 'number' ? studio.labor : 0,
+                        profit_rate: typeof studio.profit_rate === 'number' ? studio.profit_rate : 0,
+                        markup: typeof studio.markup === 'number' ? studio.markup : 0,
+                        discount: typeof studio.discount === 'number' ? studio.discount : 0,
+                      })
+                      setEstResult(res)
+                    } catch (e) {
+                      setEstError(e instanceof Error ? e.message : 'Prediction failed.')
+                    } finally {
+                      setEstLoading(false)
+                    }
+                  }}
+                  className="flex-1 border-purple-300 text-purple-700 hover:bg-purple-50"
+                  title="Predict using saved planning data"
+                >
+                  Use Saved Data
+                </Button>
+              </div>
+              {estError ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  ⚠️ {estError}
+                </div>
+              ) : null}
+            </div>
+
+            {/* Divider */}
+            <div className="hidden lg:flex lg:items-center">
+              <div className="h-full w-px bg-purple-100" />
+            </div>
+
+            {/* Result */}
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-purple-100 bg-white p-6 shadow-sm">
+              {estResult ? (
+                <div className="w-full space-y-5 text-center">
+                  <div className="flex items-center justify-center gap-2 text-sm font-semibold text-green-700">
+                    <CheckCircle2 className="size-5" />
+                    Prediction ready
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                      Predicted Budget
+                    </div>
+                    <div className="mt-1 text-4xl font-black text-purple-700">
+                      ₹{inr(Math.round(estResult.prediction))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-left">
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <div className="text-[11px] font-semibold text-slate-400">Input Total</div>
+                      <div className="mt-0.5 text-base font-bold">₹{inr(Math.round(estResult.inputTotal))}</div>
+                    </div>
+                    <div className={`rounded-xl p-3 ${estResult.variance >= 0 ? 'bg-amber-50' : 'bg-green-50'}`}>
+                      <div className="text-[11px] font-semibold text-slate-400">Variance</div>
+                      <div className={`mt-0.5 text-base font-bold ${estResult.variance >= 0 ? 'text-amber-700' : 'text-green-700'}`}>
+                        {estResult.variance >= 0 ? '+' : ''}₹{inr(Math.round(Math.abs(estResult.variance)))}
+                        <span className="ml-1 text-xs font-medium">({estResult.variancePct}%)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-purple-100 bg-purple-50 px-3 py-2 text-xs text-purple-700">
+                    <div className="font-semibold">Model: {estResult.model}</div>
+                    <div className="mt-1">
+                      Mat: ₹{inr(Math.round(estResult.features.Material_Cost))} · 
+                      Lab: ₹{inr(Math.round(estResult.features.Labor_Cost))} · 
+                      Profit: {estResult.features.Profit_Rate}%
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 text-center">
+                  <div className="flex items-center justify-center">
+                    <div className="rounded-full bg-purple-100 p-6">
+                      <BrainCircuit className="size-10 text-purple-400" />
+                    </div>
+                  </div>
+                  <div className="text-sm font-semibold text-slate-500">
+                    Fill in the inputs and click<br />
+                    <span className="text-purple-600">Predict Budget</span> to run the model
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    Trained on: Material_Cost · Labor_Cost<br />
+                    Profit_Rate · Markup_cost · Discount_cost
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* BOTTOM FULL WIDTH: Equipment / Buy vs Rent Analysis */}
       <Card>

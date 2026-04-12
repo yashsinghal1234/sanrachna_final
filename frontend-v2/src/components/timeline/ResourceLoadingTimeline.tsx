@@ -10,6 +10,8 @@ export function ResourceLoadingTimeline() {
   const summary = useMemo(() => {
     if (!timeline) return null
     const weeks = timeline.resourceTimeline
+    // Guard: empty array causes weeks[0]! to be undefined → crash
+    if (!weeks || weeks.length === 0) return null
     const peak = weeks.reduce((m, w) => (w.workers > m.workers ? w : m), weeks[0]!)
     const avg = Math.round(weeks.reduce((a, w) => a + w.workers, 0) / Math.max(1, weeks.length))
     const over = weeks.filter((w) => w.isOverallocated).length
@@ -18,13 +20,15 @@ export function ResourceLoadingTimeline() {
 
   if (!timeline || !summary) {
     return (
-      <Card className="animate-pulse">
+      <Card>
         <CardHeader>
           <CardTitle>Resource loading</CardTitle>
-          <CardDescription>Loading…</CardDescription>
+          <CardDescription>No resource data available yet — approve a plan first.</CardDescription>
         </CardHeader>
         <CardContent className="h-[280px]">
-          <div className="h-full rounded-[var(--radius-2xl)] bg-slate-100" />
+          <div className="flex h-full items-center justify-center rounded-[var(--radius-2xl)] bg-slate-50 text-sm text-[color:var(--color-text_muted)]">
+            Resource data will appear after the schedule is populated.
+          </div>
         </CardContent>
       </Card>
     )
@@ -91,7 +95,6 @@ export function ResourceLoadingTimeline() {
           </ResponsiveContainer>
         </div>
 
-        {/* Simple color legend via blocks to avoid <Cell/> TS hassles */}
         <div className="flex flex-wrap items-center gap-3 text-xs text-[color:var(--color-text_secondary)]">
           <span className="inline-flex items-center gap-2">
             <span className="h-2 w-4 rounded bg-[#2FBFAD]" /> Normal
@@ -106,9 +109,7 @@ export function ResourceLoadingTimeline() {
             <span className="h-0.5 w-6 bg-[#EF4444]" /> Capacity
           </span>
         </div>
-
       </CardContent>
     </Card>
   )
 }
-

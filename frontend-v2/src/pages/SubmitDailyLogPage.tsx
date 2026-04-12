@@ -1,5 +1,5 @@
 import { AlertTriangle, Camera, CheckCircle2, ChevronLeft, ChevronRight, CloudRain, ClipboardCheck, FileText, Flag, ImagePlus, ShieldAlert } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { isBackendConfigured } from '@/api/http'
@@ -132,7 +132,17 @@ export function SubmitDailyLogPage() {
     return `Worker — ${nm}`
   }, [user?.name])
 
-  const date = todayKey()
+  const [now, setNow] = useState(() => new Date())
+
+  // Tick every second for live clock
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const date = now.toISOString().slice(0, 10)
+  const liveTime = now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const liveDate = now.toLocaleDateString(undefined, { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
   const projectName = projectsById[currentProjectId]?.name ?? 'Project'
   const draftStorageKey = `${DRAFT_KEY}:${currentProjectId}:${myKey}:${date}`
   const tasksStorageKey = `${TASKS_KEY}:${currentProjectId}:${myKey}`
@@ -357,8 +367,9 @@ export function SubmitDailyLogPage() {
       <Card>
         <CardContent className="grid gap-3 pt-4 sm:grid-cols-4">
           <div className="rounded-xl border border-[color:var(--color-border)] bg-white p-3">
-            <div className="text-xs text-[color:var(--color-text_secondary)]">Date</div>
-            <div className="mt-1 text-sm font-semibold">{formatDate(date)}</div>
+            <div className="text-xs text-[color:var(--color-text_secondary)]">Date &amp; Time</div>
+            <div className="mt-1 text-sm font-semibold text-blue-700">{liveDate}</div>
+            <div className="font-mono text-lg font-bold tabular-nums tracking-tight text-slate-900">{liveTime}</div>
           </div>
           <div className="rounded-xl border border-[color:var(--color-border)] bg-white p-3">
             <div className="text-xs text-[color:var(--color-text_secondary)]">Project</div>

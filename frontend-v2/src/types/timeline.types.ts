@@ -12,6 +12,8 @@ export type RiskLevel = 'High' | 'Medium' | 'Low'
 
 export interface GanttTask {
   id: string
+  /** MongoDB _id of the synced Task document — set after backend create succeeds. */
+  backendTaskId?: string
   name: string
   phase: Phase
   startDate: Date

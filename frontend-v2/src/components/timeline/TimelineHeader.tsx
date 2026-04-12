@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { Check, Cloud, GitCompare, Save, Upload, Download } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Check, Cloud, GitCompare, Save, Upload, Download, RefreshCw } from 'lucide-react'
 
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
@@ -28,7 +28,8 @@ export function TimelineHeader({
   onToast: (msg: string) => void
 }) {
   const { projects, currentProjectId, setCurrentProjectId } = useProjectsStore()
-  const { timeline, isDirty, saveChanges, markPublished, toggleBaseline } = useTimelineStore()
+  const { timeline, isDirty, saveChanges, markPublished, toggleBaseline, refreshFromBackend } = useTimelineStore()
+  const [refreshing, setRefreshing] = useState(false)
 
   const projectOptions = useMemo(() => {
     return Object.values(projects)
@@ -47,12 +48,24 @@ export function TimelineHeader({
 
   const onPublish = () => {
     markPublished()
-    onToast('Published updates (demo).')
+    onToast('Published updates.')
   }
 
   const onCompare = () => {
     toggleBaseline()
     onToast('Toggled baseline comparison.')
+  }
+
+  const onRefresh = async () => {
+    setRefreshing(true)
+    try {
+      await refreshFromBackend()
+      onToast('Pulled latest updates from workers.')
+    } catch {
+      onToast('Refresh failed — retrying next time.')
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   const onExport = () => {
@@ -132,6 +145,16 @@ export function TimelineHeader({
         </div>
 
         <div className="flex flex-wrap items-center justify-start gap-2 lg:justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRefresh}
+            disabled={refreshing}
+            title="Pull latest status and progress updates from workers"
+          >
+            <RefreshCw className={cn('size-4', refreshing && 'animate-spin')} />
+            {refreshing ? 'Refreshing…' : 'Pull Worker Updates'}
+          </Button>
           <Button variant="secondary" onClick={onSave}>
             <Save className="size-4" />
             Save Changes
@@ -153,4 +176,3 @@ export function TimelineHeader({
     </Card>
   )
 }
-

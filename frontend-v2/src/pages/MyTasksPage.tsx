@@ -1,9 +1,9 @@
-import { AlertTriangle, CalendarDays, CheckCircle2, ChevronDown, Clock, Search, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, CalendarDays, CheckCircle2, ChevronDown, Clock, Plus, Search, ShieldAlert, Users } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { fetchWorkerTasks } from '@/api/resources'
+import { createWorkerTask, fetchWorkerTasks, updateWorkerTask } from '@/api/resources'
 import { useAuth } from '@/auth/AuthContext'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -197,8 +197,9 @@ export function MyTasksPage() {
   const [tasksLoading, setTasksLoading] = useState(false)
   const [tasksError, setTasksError] = useState<string | null>(null)
 
+  // For engineers/owners load all project tasks; for workers filter to their name
   useEffect(() => {
-    if (!currentProjectId || role !== 'worker') {
+    if (!currentProjectId) {
       setTasks([])
       setTasksError(null)
       setTasksLoading(false)
@@ -207,7 +208,8 @@ export function MyTasksPage() {
     let cancelled = false
     setTasksLoading(true)
     setTasksError(null)
-    fetchWorkerTasks(currentProjectId, myKey)
+    const workerFilter = role === 'worker' ? myKey : undefined
+    fetchWorkerTasks(currentProjectId, workerFilter)
       .then((raw) => {
         if (cancelled) return
         const list = Array.isArray(raw) ? raw : []
@@ -224,9 +226,7 @@ export function MyTasksPage() {
       .finally(() => {
         if (!cancelled) setTasksLoading(false)
       })
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [currentProjectId, myKey, role])
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -281,9 +281,26 @@ export function MyTasksPage() {
     return events.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 10)
   }, [tasks])
 
-  const persist = (next: WorkerTask[]) => {
+  // After each local update, sync to the backend
+  const syncTask = (task: WorkerTask) => {
+    if (!currentProjectId) return
+    updateWorkerTask(currentProjectId, task.id, {
+      status: task.status,
+      progressPct: task.progressPct,
+      blockedReason: task.blockedReason ?? null,
+      note: task.activity[0]?.text ?? '',
+    }).catch(() => {
+      // Silently keep local state on API failure
+    })
+  }
+
+  const persist = (next: WorkerTask[], changedId?: string) => {
     setTasks(next)
     safeWrite(storageKey, next)
+    if (changedId) {
+      const changed = next.find((t) => t.id === changedId)
+      if (changed) syncTask(changed)
+    }
   }
 
   const openDetail = (id: string) => {
@@ -292,33 +309,31 @@ export function MyTasksPage() {
   }
 
   const startTask = (id: string) => {
-    persist(
-      tasks.map((t) =>
-        t.id === id
-          ? {
-              ...t,
-              status: t.status === 'Completed' ? 'Completed' : 'In progress',
-              progressPct: Math.max(1, t.progressPct),
-              activity: [{ id: `${t.id}_start_${Date.now().toString(36)}`, at: nowIso(), text: 'Started task.' }, ...t.activity],
-            }
-          : t,
-      ),
+    const next = tasks.map((t) =>
+      t.id === id
+        ? {
+            ...t,
+            status: t.status === 'Completed' ? 'Completed' as TaskStatus : 'In progress' as TaskStatus,
+            progressPct: Math.max(1, t.progressPct),
+            activity: [{ id: `${t.id}_start_${Date.now().toString(36)}`, at: nowIso(), text: 'Started task.' }, ...t.activity],
+          }
+        : t,
     )
+    persist(next, id)
   }
 
   const markComplete = (id: string) => {
-    persist(
-      tasks.map((t) =>
-        t.id === id
-          ? {
-              ...t,
-              status: 'Completed',
-              progressPct: 100,
-              activity: [{ id: `${t.id}_done_${Date.now().toString(36)}`, at: nowIso(), text: 'Marked complete.' }, ...t.activity],
-            }
-          : t,
-      ),
+    const next = tasks.map((t) =>
+      t.id === id
+        ? {
+            ...t,
+            status: 'Completed' as TaskStatus,
+            progressPct: 100,
+            activity: [{ id: `${t.id}_done_${Date.now().toString(36)}`, at: nowIso(), text: 'Marked complete.' }, ...t.activity],
+          }
+        : t,
     )
+    persist(next, id)
     setSelectedId(id)
     setCompletePromptOpen(true)
   }
@@ -330,25 +345,30 @@ export function MyTasksPage() {
     const pct = clampPct(Number(fd.get('pct') ?? selected.progressPct))
     const note = String(fd.get('note') ?? '').trim()
     const photo = String(fd.get('photo') ?? '').trim()
-    persist(
-      tasks.map((t) =>
-        t.id === selected.id
-          ? {
-              ...t,
-              status: t.status === 'Blocked' ? 'Blocked' : pct >= 100 ? 'Completed' : pct > 0 ? 'In progress' : 'Not started',
-              progressPct: pct,
-              activity: [
-                {
-                  id: `${t.id}_upd_${Date.now().toString(36)}`,
-                  at: nowIso(),
-                  text: `Progress updated to ${pct}%${note ? ` — ${note}` : ''}${photo ? ` (photo: ${photo})` : ''}`,
-                },
-                ...t.activity,
-              ],
-            }
-          : t,
-      ),
+    const actEntry = {
+      id: `${selected.id}_upd_${Date.now().toString(36)}`,
+      at: nowIso(),
+      text: `Progress updated to ${pct}%${note ? ` — ${note}` : ''}${photo ? ` (photo: ${photo})` : ''}`,
+    }
+    const next = tasks.map((t) =>
+      t.id === selected.id
+        ? {
+            ...t,
+            status: t.status === 'Blocked' ? 'Blocked' as TaskStatus : pct >= 100 ? 'Completed' as TaskStatus : pct > 0 ? 'In progress' as TaskStatus : 'Not started' as TaskStatus,
+            progressPct: pct,
+            activity: [actEntry, ...t.activity],
+          }
+        : t,
     )
+    // Also send note to backend
+    if (currentProjectId) {
+      updateWorkerTask(currentProjectId, selected.id, {
+        progressPct: pct,
+        status: next.find(t => t.id === selected.id)?.status,
+        note,
+      }).catch(() => {})
+    }
+    persist(next)
     setProgressOpen(false)
     e.currentTarget.reset()
   }
@@ -358,18 +378,17 @@ export function MyTasksPage() {
     if (!selected) return
     const fd = new FormData(e.currentTarget)
     const reason = String(fd.get('reason') ?? '').trim()
-    persist(
-      tasks.map((t) =>
-        t.id === selected.id
-          ? {
-              ...t,
-              status: 'Blocked',
-              blockedReason: reason || 'Blocked',
-              activity: [{ id: `${t.id}_blk_${Date.now().toString(36)}`, at: nowIso(), text: `Marked blocked — ${reason || 'No reason'}` }, ...t.activity],
-            }
-          : t,
-      ),
+    const next = tasks.map((t) =>
+      t.id === selected.id
+        ? {
+            ...t,
+            status: 'Blocked' as TaskStatus,
+            blockedReason: reason || 'Blocked',
+            activity: [{ id: `${t.id}_blk_${Date.now().toString(36)}`, at: nowIso(), text: `Marked blocked — ${reason || 'No reason'}` }, ...t.activity],
+          }
+        : t,
     )
+    persist(next, selected.id)
     setBlockedOpen(false)
     e.currentTarget.reset()
   }
@@ -387,13 +406,45 @@ export function MyTasksPage() {
     safeWrite(WORKER_LOGS_KEY, [entry, ...logs].slice(0, 30))
   }
 
-  if (role !== 'worker') {
-    return (
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">My Tasks</h1>
-        <p className="text-sm text-[color:var(--color-text_secondary)]">This page is designed for the worker role.</p>
-      </div>
-    )
+  // ─── Assign Task (engineer/owner) ─────────────────────────────────────────
+  const isManager = role === 'engineer' || role === 'owner'
+  const [createOpen, setCreateOpen] = useState(false)
+  const [newTask, setNewTask] = useState({
+    title: '', description: '', assignedTo: '', phase: 'Execution' as TaskPhase,
+    location: '', priority: 'Medium' as TaskPriority, dueAt: '', engineerNotes: '',
+  })
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [creating, setCreating] = useState(false)
+
+  const submitCreateTask = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!currentProjectId) return
+    if (!newTask.title.trim()) { setCreateError('Title is required.'); return }
+    if (!newTask.dueAt) { setCreateError('Due date is required.'); return }
+    setCreating(true)
+    setCreateError(null)
+    try {
+      const raw = await createWorkerTask(currentProjectId, {
+        title: newTask.title.trim(),
+        description: newTask.description.trim(),
+        assignedTo: newTask.assignedTo.trim(),
+        assignedBy: user?.name ?? 'Engineer',
+        phase: newTask.phase,
+        location: newTask.location.trim(),
+        priority: newTask.priority,
+        dueAt: new Date(newTask.dueAt).toISOString(),
+        startAt: new Date().toISOString(),
+        engineerNotes: newTask.engineerNotes.trim(),
+      })
+      const mapped = mapApiToWorkerTask(raw, currentProjectId, tasks.length)
+      if (mapped) setTasks((prev) => [mapped, ...prev])
+      setCreateOpen(false)
+      setNewTask({ title: '', description: '', assignedTo: '', phase: 'Execution', location: '', priority: 'Medium', dueAt: '', engineerNotes: '' })
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : 'Failed to create task')
+    } finally {
+      setCreating(false)
+    }
   }
 
   return (
@@ -461,6 +512,12 @@ export function MyTasksPage() {
             <AlertTriangle className="size-4" />
             Emergency
           </Button>
+          {isManager ? (
+            <Button variant="primary" onClick={() => setCreateOpen(true)} disabled={!currentProjectId}>
+              <Plus className="size-4" />
+              Assign Task
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -949,6 +1006,84 @@ export function MyTasksPage() {
           Tip: this helps your supervisor compile the daily log faster.
         </div>
       </Modal>
+      {/* Create Task modal (engineer/owner) */}
+      {isManager ? (
+        <Modal
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          title="Assign new task"
+          description="Creates a task assigned to a worker. They will see it in My Tasks."
+          className="max-w-2xl"
+          footer={
+            <>
+              <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="submit" form="create-task-form" disabled={creating}>
+                {creating ? 'Creating…' : 'Create Task'}
+              </Button>
+            </>
+          }
+        >
+          <form id="create-task-form" className="grid gap-3 md:grid-cols-2" onSubmit={submitCreateTask}>
+            {createError ? (
+              <div className="md:col-span-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{createError}</div>
+            ) : null}
+            <label className="text-sm">
+              <div className="mb-1 font-semibold">Title *</div>
+              <Input value={newTask.title} onChange={(e) => setNewTask((s) => ({ ...s, title: e.target.value }))} placeholder="Task title" required />
+            </label>
+            <label className="text-sm">
+              <div className="mb-1 font-semibold">Assigned to (worker name)</div>
+              <Input value={newTask.assignedTo} onChange={(e) => setNewTask((s) => ({ ...s, assignedTo: e.target.value }))} placeholder="e.g. Worker — yogesh" />
+            </label>
+            <label className="text-sm md:col-span-2">
+              <div className="mb-1 font-semibold">Description</div>
+              <textarea
+                className="min-h-20 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
+                value={newTask.description}
+                onChange={(e) => setNewTask((s) => ({ ...s, description: e.target.value }))}
+                placeholder="What needs to be done?"
+              />
+            </label>
+            <label className="text-sm">
+              <div className="mb-1 font-semibold">Phase</div>
+              <select
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm shadow-sm"
+                value={newTask.phase}
+                onChange={(e) => setNewTask((s) => ({ ...s, phase: e.target.value as TaskPhase }))}
+              >
+                {PHASES.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </label>
+            <label className="text-sm">
+              <div className="mb-1 font-semibold">Priority</div>
+              <select
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm shadow-sm"
+                value={newTask.priority}
+                onChange={(e) => setNewTask((s) => ({ ...s, priority: e.target.value as TaskPriority }))}
+              >
+                {PRIOS.map((p) => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </label>
+            <label className="text-sm">
+              <div className="mb-1 font-semibold">Location</div>
+              <Input value={newTask.location} onChange={(e) => setNewTask((s) => ({ ...s, location: e.target.value }))} placeholder="Floor 3, Zone B…" />
+            </label>
+            <label className="text-sm">
+              <div className="mb-1 font-semibold">Due date *</div>
+              <Input type="date" value={newTask.dueAt} onChange={(e) => setNewTask((s) => ({ ...s, dueAt: e.target.value }))} required />
+            </label>
+            <label className="text-sm md:col-span-2">
+              <div className="mb-1 font-semibold">Engineer notes (visible to worker)</div>
+              <textarea
+                className="min-h-16 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm"
+                value={newTask.engineerNotes}
+                onChange={(e) => setNewTask((s) => ({ ...s, engineerNotes: e.target.value }))}
+                placeholder="Safety instructions, materials needed, special notes…"
+              />
+            </label>
+          </form>
+        </Modal>
+      ) : null}
     </div>
   )
 }

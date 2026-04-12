@@ -38,13 +38,89 @@ export async function fetchWorkspaceTimeline(projectId: string, projectName: str
 }
 
 export async function fetchWorkspaceIssues(projectId: string): Promise<IssueItem[]> {
-  const payload = await apiJson<unknown>(`${WS(projectId)}/issues`)
-  return unwrapList(payload) as IssueItem[]
+  const res = await apiJson<unknown>(`/api/projects/${encodeURIComponent(projectId)}/issues`)
+  const list = Array.isArray(res) ? res : (res as any)?.issues ?? []
+  return list as IssueItem[]
+}
+
+export async function createWorkspaceIssue(
+  projectId: string,
+  body: Record<string, unknown>,
+): Promise<IssueItem> {
+  const res = await apiJson<{ issue: IssueItem }>(
+    `/api/projects/${encodeURIComponent(projectId)}/issues`,
+    { method: 'POST', body: JSON.stringify(body) },
+  )
+  return res.issue
+}
+
+export async function updateWorkspaceIssue(
+  projectId: string,
+  issueId: string,
+  body: Record<string, unknown>,
+): Promise<IssueItem> {
+  const res = await apiJson<{ issue: IssueItem }>(
+    `/api/projects/${encodeURIComponent(projectId)}/issues/${encodeURIComponent(issueId)}`,
+    { method: 'PATCH', body: JSON.stringify(body) },
+  )
+  return res.issue
+}
+
+export async function fetchWorkspaceEmergency(projectId: string): Promise<unknown[]> {
+  const res = await apiJson<unknown>(`/api/projects/${encodeURIComponent(projectId)}/emergency`)
+  return Array.isArray(res) ? res : (res as any)?.incidents ?? []
+}
+
+export async function createWorkspaceEmergency(
+  projectId: string,
+  body: Record<string, unknown>,
+): Promise<unknown> {
+  const res = await apiJson<{ incident: unknown }>(
+    `/api/projects/${encodeURIComponent(projectId)}/emergency`,
+    { method: 'POST', body: JSON.stringify(body) },
+  )
+  return res.incident
+}
+
+export async function updateWorkspaceEmergency(
+  projectId: string,
+  incidentId: string,
+  body: Record<string, unknown>,
+): Promise<unknown> {
+  const res = await apiJson<{ incident: unknown }>(
+    `/api/projects/${encodeURIComponent(projectId)}/emergency/${encodeURIComponent(incidentId)}`,
+    { method: 'PATCH', body: JSON.stringify(body) },
+  )
+  return res.incident
 }
 
 export async function fetchWorkspaceRfis(projectId: string): Promise<RfiItem[]> {
-  const payload = await apiJson<unknown>(`${WS(projectId)}/rfis`)
-  return unwrapList(payload) as RfiItem[]
+  const res = await apiJson<unknown>(`/api/projects/${encodeURIComponent(projectId)}/rfis`)
+  const list = Array.isArray(res) ? res : (res as any)?.rfis ?? []
+  return list as RfiItem[]
+}
+
+export async function createWorkspaceRfi(
+  projectId: string,
+  body: Record<string, unknown>,
+): Promise<RfiItem> {
+  const res = await apiJson<{ rfi: RfiItem }>(
+    `/api/projects/${encodeURIComponent(projectId)}/rfis`,
+    { method: 'POST', body: JSON.stringify(body) },
+  )
+  return res.rfi
+}
+
+export async function updateWorkspaceRfi(
+  projectId: string,
+  rfiId: string,
+  body: Record<string, unknown>,
+): Promise<RfiItem> {
+  const res = await apiJson<{ rfi: RfiItem }>(
+    `/api/projects/${encodeURIComponent(projectId)}/rfis/${encodeURIComponent(rfiId)}`,
+    { method: 'PATCH', body: JSON.stringify(body) },
+  )
+  return res.rfi
 }
 
 export async function fetchNotifications(): Promise<NotificationAlert[]> {
@@ -146,18 +222,85 @@ export async function fetchDashboardBundle(projectId: string): Promise<{
   if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
     const o = payload as Record<string, unknown>
     return {
-      summary: (o.summary as ProjectSummary) ?? (o.projectSummary as ProjectSummary) ?? null,
+      summary: (o.summary as ProjectSummary) ?? (o.projectSummary as ProjectSummary) ?? (o.project as ProjectSummary) ?? null,
       cost_breakdown: (o.cost_breakdown as CostBreakdown) ?? null,
       resources: unwrapList(o.resources) as ResourceLine[],
       timeline_tasks: unwrapList(o.timeline_tasks) as TimelineTask[],
-      activity: unwrapList(o.activity) as ActivityItem[],
+      activity: unwrapList(o.activity ?? o.recent_activity) as ActivityItem[],
     }
   }
   return { summary: null, cost_breakdown: null, resources: [], timeline_tasks: [], activity: [] }
 }
 
-export async function fetchWorkerTasks(projectId: string, workerKey: string): Promise<unknown[]> {
-  const q = new URLSearchParams({ worker: workerKey })
-  const payload = await apiJson<unknown>(`${WS(projectId)}/worker-tasks?${q.toString()}`)
-  return unwrapList(payload)
+export async function fetchWorkerTasks(projectId: string, workerKey?: string): Promise<unknown[]> {
+  const q = new URLSearchParams()
+  if (workerKey) q.set('worker', workerKey)
+  const url = `/api/projects/${encodeURIComponent(projectId)}/tasks${q.toString() ? `?${q.toString()}` : ''}`
+  const res = await apiJson<unknown>(url)
+  const list = Array.isArray(res) ? res : (res as any)?.tasks ?? []
+  return list
+}
+
+export async function createWorkerTask(
+  projectId: string,
+  body: Record<string, unknown>,
+): Promise<unknown> {
+  const res = await apiJson<{ task: unknown }>(
+    `/api/projects/${encodeURIComponent(projectId)}/tasks`,
+    { method: 'POST', body: JSON.stringify(body) },
+  )
+  return (res as any)?.task ?? res
+}
+
+export async function updateWorkerTask(
+  projectId: string,
+  taskId: string,
+  body: Record<string, unknown>,
+): Promise<unknown> {
+  const res = await apiJson<{ task: unknown }>(
+    `/api/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}`,
+    { method: 'PATCH', body: JSON.stringify(body) },
+  )
+  return (res as any)?.task ?? res
+}
+
+export async function deleteWorkerTask(
+  projectId: string,
+  taskId: string,
+): Promise<void> {
+  await apiJson<{ success: boolean }>(
+    `/api/projects/${encodeURIComponent(projectId)}/tasks/${encodeURIComponent(taskId)}`,
+    { method: 'DELETE' },
+  )
+}
+
+export type EstimateResult = {
+  prediction: number
+  model: string
+  features: {
+    Material_Cost: number
+    Labor_Cost: number
+    Profit_Rate: number
+    Markup_cost: number
+    Discount_cost: number
+  }
+  inputTotal: number
+  variance: number
+  variancePct: number
+}
+
+export async function apiEstimateBudget(
+  projectId: string,
+  features: {
+    material: number
+    labor: number
+    profit_rate: number
+    markup: number
+    discount: number
+  },
+): Promise<EstimateResult> {
+  return apiJson<EstimateResult>(
+    `/api/projects/${encodeURIComponent(projectId)}/estimate`,
+    { method: 'POST', body: JSON.stringify(features) },
+  )
 }

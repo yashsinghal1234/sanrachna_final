@@ -21,8 +21,17 @@ const { uploadLogPhotoMiddleware } = require('../middleware/uploadLogPhoto')
 const { listRfis, createRfi, updateRfiStatus } = require('../controllers/rfis.controller')
 const { listIssues, createIssue, updateIssue } = require('../controllers/issues.controller')
 const { listContacts, createContact } = require('../controllers/contacts.controller')
-const { listDocuments, createDocument } = require('../controllers/documents.controller')
+const {
+  listDocuments,
+  createDocument,
+  updateDocument,
+  bulkCreateDocuments,
+  getDocumentFile,
+} = require('../controllers/documents.controller')
+const { optionalSingleDocumentUpload, bulkDocumentUpload } = require('../middleware/uploadDocument')
 const { listEmergency, createEmergency, updateEmergency } = require('../controllers/emergency.controller')
+const { listTasks, createTask, updateTask, deleteTask } = require('../controllers/tasks.controller')
+const { estimateBudget } = require('../controllers/estimate.controller')
 const {
   listNotifications,
   createNotification,
@@ -33,6 +42,8 @@ const {
   createThread,
   getThread,
   addMessage,
+  patchThread,
+  deleteThread,
 } = require('../controllers/copilot.controller')
 const {
   getProjectSettings,
@@ -93,11 +104,25 @@ router.get('/:projectId/contacts', asyncHandler(listContacts))
 router.post('/:projectId/contacts', asyncHandler(createContact))
 
 router.get('/:projectId/documents', asyncHandler(listDocuments))
-router.post('/:projectId/documents', asyncHandler(createDocument))
+router.patch('/:projectId/documents/:documentId', asyncHandler(updateDocument))
+router.post('/:projectId/documents/bulk', bulkDocumentUpload, asyncHandler(bulkCreateDocuments))
+router.post('/:projectId/documents', optionalSingleDocumentUpload, asyncHandler(createDocument))
+router.get('/:projectId/documents/:documentId/file', asyncHandler(getDocumentFile))
 
 router.get('/:projectId/emergency', asyncHandler(listEmergency))
 router.post('/:projectId/emergency', asyncHandler(createEmergency))
 router.patch('/:projectId/emergency/:incidentId', asyncHandler(updateEmergency))
+
+router.get('/:projectId/tasks', asyncHandler(listTasks))
+router.post('/:projectId/tasks', asyncHandler(createTask))
+router.patch('/:projectId/tasks/:taskId', asyncHandler(updateTask))
+router.delete('/:projectId/tasks/:taskId', asyncHandler(deleteTask))
+
+// ML Budget Estimator
+router.post('/:projectId/estimate', asyncHandler(estimateBudget))
+
+// Legacy alias for worker-tasks (same handler)
+router.get('/:projectId/worker-tasks', asyncHandler(listTasks))
 
 router.get('/:projectId/notifications', asyncHandler(listNotifications))
 router.post('/:projectId/notifications', asyncHandler(createNotification))
@@ -106,6 +131,8 @@ router.patch('/:projectId/notifications/:notificationId', asyncHandler(updateNot
 router.get('/:projectId/copilot/threads', asyncHandler(listThreads))
 router.post('/:projectId/copilot/threads', asyncHandler(createThread))
 router.get('/:projectId/copilot/threads/:threadId', asyncHandler(getThread))
+router.patch('/:projectId/copilot/threads/:threadId', asyncHandler(patchThread))
+router.delete('/:projectId/copilot/threads/:threadId', asyncHandler(deleteThread))
 router.post('/:projectId/copilot/threads/:threadId/messages', asyncHandler(addMessage))
 
 router.get('/:projectId/settings/project', asyncHandler(getProjectSettings))

@@ -9,23 +9,35 @@ import {
   FileSpreadsheet,
   FileText,
   Filter,
+  FolderOpen,
   GitCompare,
   Link2,
   Lock,
+  Plus,
   Search,
   Send,
   Shield,
   Upload,
+  X,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
 
-import { fetchWorkspaceDocuments } from '@/api/resources'
+import {
+  bulkUploadProjectDocuments,
+  downloadProjectDocumentFile,
+  fetchProjectDocuments,
+  getProjectDocumentObjectUrl,
+  updateProjectDocument,
+  uploadProjectDocument,
+} from '@/api/documentsApi'
+import { messageFromApiError } from '@/api/projectTeamApi'
 import { useAuth } from '@/auth/AuthContext'
+import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { useActiveProject } from '@/hooks/useActiveProject'
-import type { AccessLevel, DocKind, DocPhase, ProjectDocument } from '@/types/documents.types'
+import type { AccessLevel, DocKind, DocPhase, DocReviewStatus, ProjectDocument } from '@/types/documents.types'
 import { cn } from '@/utils/cn'
 
 type ComplianceAlert = { id: string; severity: 'critical' | 'warning' | 'info'; text: string }
@@ -153,6 +165,7 @@ function buildRows(docs: ProjectDocument[], versionFilter: VersionFilter): Table
 export function DocumentsPage() {
   const { role } = useAuth()
   const isOwner = role === 'owner'
+  const canManage = role === 'owner' || role === 'engineer'
   const { projectId } = useActiveProject()
 
   const [projectDocuments, setProjectDocuments] = useState<ProjectDocument[]>([])
@@ -173,8 +186,37 @@ export function DocumentsPage() {
   const [versionsOpen, setVersionsOpen] = useState(true)
   const [aiQuery, setAiQuery] = useState('')
   const [aiHint, setAiHint] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewTitle, setPreviewTitle] = useState('')
+  const [previewLoading, setPreviewLoading] = useState(false)
+
+  const [uploadMode, setUploadMode] = useState<'single' | 'bulk'>('single')
+  const [uploadTitle, setUploadTitle] = useState('')
+  const [uploadPhase, setUploadPhase] = useState<DocPhase>('Design')
+  const [uploadType, setUploadType] = useState<DocKind>('Other')
+  const [uploadDescription, setUploadDescription] = useState('')
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [bulkFiles, setBulkFiles] = useState<File[]>([])
+  const [uploadBusy, setUploadBusy] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const anchor = useMemo(() => new Date(), [])
+
+  const reloadDocuments = useCallback(() => setRefreshKey((k) => k + 1), [])
+
+  const handleReviewAction = async (status: DocReviewStatus) => {
+    if (!selected || !projectId) return
+    try {
+      const updated = await updateProjectDocument(projectId, selected.id, { reviewStatus: status })
+      setProjectDocuments((prev) => prev.map((d) => (d.id === updated.id ? updated : d)))
+      setSelected(updated)
+      setAiHint(null)
+    } catch (err) {
+      setAiHint(messageFromApiError(err))
+    }
+  }
 
   useEffect(() => {
     if (!projectId) {
@@ -189,7 +231,7 @@ export function DocumentsPage() {
     let cancelled = false
     setDocumentsLoading(true)
     setDocumentsError(null)
-    fetchWorkspaceDocuments(projectId)
+    fetchProjectDocuments(projectId)
       .then((d) => {
         if (cancelled) return
         setProjectDocuments(d.documents)
@@ -199,7 +241,7 @@ export function DocumentsPage() {
       })
       .catch((e) => {
         if (cancelled) return
-        setDocumentsError(e instanceof Error ? e.message : 'Could not load documents')
+        setDocumentsError(messageFromApiError(e))
         setProjectDocuments([])
         setStatsFromApi(undefined)
         setDocEventsFromApi(undefined)
@@ -211,7 +253,7 @@ export function DocumentsPage() {
     return () => {
       cancelled = true
     }
-  }, [projectId])
+  }, [projectId, refreshKey])
 
   const documentStats = useMemo(() => {
     if (statsFromApi && typeof statsFromApi.totalDocuments === 'number') {
@@ -243,24 +285,122 @@ export function DocumentsPage() {
       }
       return true
     })
-  }, [search, phase, kind, accessFilter, dateRange, anchor])
+  }, [projectDocuments, search, phase, kind, accessFilter, dateRange, anchor])
 
   const tableRows = useMemo(() => buildRows(filteredDocs, versionFilter), [filteredDocs, versionFilter])
 
   const runAiSearch = () => {
     const q = aiQuery.trim()
     if (!q) return
-    setAiHint('Semantic document search is not connected yet. Use filters and the register, or wire an Ask-Docs endpoint to your backend.')
+    setAiHint('Semantic document search is not connected yet. Use filters and the table, or wire an Ask-Docs endpoint to your backend.')
+  }
+
+  function suggestDownloadFilename(doc: ProjectDocument) {
+    if (doc.originalFilename?.trim()) return doc.originalFilename.trim()
+    return `${doc.name.replace(/[/\\?%*:|"<>]/g, '-').slice(0, 120)}.bin`
+  }
+
+  const openUpload = (mode: 'single' | 'bulk') => {
+    setUploadMode(mode)
+    setUploadError(null)
+    setUploadTitle('')
+    setUploadPhase('Design')
+    setUploadType('Other')
+    setUploadDescription('')
+    setUploadFile(null)
+    setBulkFiles([])
+    setUploadOpen(true)
+  }
+
+  const submitUpload = async () => {
+    if (!projectId) return
+    setUploadBusy(true)
+    setUploadError(null)
+    try {
+      if (uploadMode === 'single') {
+        const title = uploadTitle.trim() || uploadFile?.name.replace(/\.[^.]+$/, '') || ''
+        if (!title) {
+          setUploadError('Enter a title or choose a file.')
+          return
+        }
+        if (!uploadFile) {
+          setUploadError('Choose a file to upload.')
+          return
+        }
+        await uploadProjectDocument(projectId, {
+          title,
+          phase: uploadPhase,
+          type: uploadType,
+          description: uploadDescription,
+          file: uploadFile,
+        })
+      } else if (!bulkFiles.length) {
+        setUploadError('Add at least one file.')
+        return
+      } else {
+        await bulkUploadProjectDocuments(projectId, bulkFiles, {
+          phase: uploadPhase,
+          type: uploadType,
+        })
+      }
+      setUploadOpen(false)
+      reloadDocuments()
+    } catch (e) {
+      setUploadError(messageFromApiError(e))
+    } finally {
+      setUploadBusy(false)
+    }
+  }
+
+  const handleViewDoc = async (e: MouseEvent<HTMLButtonElement>, doc: ProjectDocument) => {
+    e.stopPropagation()
+    if (!projectId || !doc.fileUrl) return
+    setPreviewLoading(true)
+    setPreviewTitle(doc.name)
+    setPreviewUrl(null)
+    setFilePreviewOpen(true)
+    try {
+      const url = await getProjectDocumentObjectUrl(projectId, doc.id)
+      setPreviewUrl(url)
+    } catch (err) {
+      setAiHint(messageFromApiError(err))
+      setFilePreviewOpen(false)
+    } finally {
+      setPreviewLoading(false)
+    }
+  }
+
+  const [filePreviewOpen, setFilePreviewOpen] = useState(false)
+  const closePreview = () => {
+    setFilePreviewOpen(false)
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+      setPreviewUrl(null)
+    }
+  }
+
+  const handleDownloadDoc = async (e: MouseEvent<HTMLButtonElement>, doc: ProjectDocument) => {
+    e.stopPropagation()
+    if (!projectId || !doc.fileUrl) return
+    try {
+      await downloadProjectDocumentFile(projectId, doc.id, suggestDownloadFilename(doc))
+    } catch (err) {
+      setAiHint(messageFromApiError(err))
+    }
   }
 
   return (
     <div className="space-y-6">
       {!projectId ? (
-        <Card>
-          <CardContent className="py-6 text-sm text-[color:var(--color-text_secondary)]">
-            Select a workspace project to load documents from <span className="font-mono text-xs">GET /api/v1/workspaces/&#123;id&#125;/documents</span>.
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[color:var(--color-border)] bg-white py-20 text-center">
+          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-full bg-slate-100">
+            <FolderOpen className="size-7 text-[color:var(--color-text_muted)]" />
+          </div>
+          <h2 className="text-lg font-bold">No project selected</h2>
+          <p className="mt-2 max-w-xs text-sm text-[color:var(--color-text_secondary)]">
+            Select or create a project from the top of the sidebar, then come back here to manage your documents.
+          </p>
+        </div>
       ) : null}
       {documentsError ? (
         <Card className="border-[color:var(--color-error)]/35 bg-[color:var(--color-error)]/5">
@@ -271,8 +411,27 @@ export function DocumentsPage() {
         <div className="text-sm text-[color:var(--color-text_secondary)]">Loading documents…</div>
       ) : null}
 
-      {/* Top action bar */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      {/* Page heading */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Documents</h1>
+          <p className="mt-1 text-sm text-[color:var(--color-text_secondary)]">
+            Phase-tagged files, version lineage, and links to RFIs/issues.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" onClick={() => openUpload('single')}>
+            <Upload className="size-4" />
+            Upload Document
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => openUpload('bulk')}>
+            Bulk Upload
+          </Button>
+        </div>
+      </div>
+
+      {/* Search + filter count */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative max-w-xl flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--color-text_muted)]" />
           <Input
@@ -282,31 +441,6 @@ export function DocumentsPage() {
             placeholder="Search documents, tags, keywords…"
             aria-label="Search documents"
           />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" onClick={() => setUploadOpen(true)}>
-            <Upload className="size-4" />
-            Upload Document
-          </Button>
-          <Button type="button" variant="secondary" onClick={() => setUploadOpen(true)}>
-            Bulk Upload
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setAiHint('Export register requires a documents export endpoint — UI placeholder only.')}
-          >
-            Export Register
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Document intelligence hub</h1>
-          <p className="mt-1 text-sm text-[color:var(--color-text_secondary)]">
-            Phase-tagged files, version lineage, and links to RFIs/issues — not a generic drive.
-          </p>
         </div>
         <div className="inline-flex items-center gap-2 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[color:var(--color-text_secondary)] shadow-sm">
           <Filter className="size-3.5" />
@@ -373,6 +507,55 @@ export function DocumentsPage() {
               <option value="90d">Last 90 days</option>
             </select>
           </div>
+          {(search || phase !== 'all' || kind !== 'all' || accessFilter !== 'all' || dateRange !== 'all') && (
+            <div className="flex flex-1 items-center gap-2 overflow-x-auto text-sm">
+              {search ? (
+                <div className="inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-xl)] bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700">
+                  <span className="max-w-[120px] truncate">"{search}"</span>
+                  <button
+                    type="button"
+                    className="rounded-full p-0.5 hover:bg-indigo-100"
+                    onClick={() => setSearch('')}
+                    title="Clear search"
+                  >
+                    <X className="size-3 cursor-pointer" />
+                  </button>
+                </div>
+              ) : null}
+              {phase !== 'all' ? (
+                <div className="inline-flex items-center gap-1 rounded-[var(--radius-xl)] border border-[color:var(--color-border_strong)] bg-[color:var(--color-bg)] px-2.5 py-1 text-xs font-semibold">
+                  <span className="text-[color:var(--color-text_secondary)]">Phase:</span> {phase}
+                  <button type="button" onClick={() => setPhase('all')}>
+                    <X className="ml-1 size-3 cursor-pointer" />
+                  </button>
+                </div>
+              ) : null}
+              {kind !== 'all' ? (
+                <div className="inline-flex items-center gap-1 rounded-[var(--radius-xl)] border border-[color:var(--color-border_strong)] bg-[color:var(--color-bg)] px-2.5 py-1 text-xs font-semibold">
+                  <span className="text-[color:var(--color-text_secondary)]">Type:</span> {kind}
+                  <button type="button" onClick={() => setKind('all')}>
+                    <X className="ml-1 size-3 cursor-pointer" />
+                  </button>
+                </div>
+              ) : null}
+              {accessFilter !== 'all' ? (
+                <div className="inline-flex items-center gap-1 rounded-[var(--radius-xl)] border border-[color:var(--color-border_strong)] bg-[color:var(--color-bg)] px-2.5 py-1 text-xs font-semibold">
+                  <span className="text-[color:var(--color-text_secondary)]">Access:</span> {accessFilter}
+                  <button type="button" onClick={() => setAccessFilter('all')}>
+                    <X className="ml-1 size-3 cursor-pointer" />
+                  </button>
+                </div>
+              ) : null}
+              {dateRange !== 'all' ? (
+                <div className="inline-flex items-center gap-1 rounded-[var(--radius-xl)] border border-[color:var(--color-border_strong)] bg-[color:var(--color-bg)] px-2.5 py-1 text-xs font-semibold">
+                  <span className="text-[color:var(--color-text_secondary)]">Date:</span> {dateRange}
+                  <button type="button" onClick={() => setDateRange('all')}>
+                    <X className="ml-1 size-3 cursor-pointer" />
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -400,7 +583,6 @@ export function DocumentsPage() {
           <Card className="overflow-hidden">
             <CardHeader className="border-b border-[color:var(--color-border)]">
               <CardTitle className="text-base">Project register</CardTitle>
-              <CardDescription>Name · type · phase · version · ownership · access · workflow status</CardDescription>
             </CardHeader>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[960px] text-left text-sm">
@@ -415,13 +597,35 @@ export function DocumentsPage() {
                     <th className="px-4 py-3">Access</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Links</th>
+                    <th className="px-4 py-3 text-right">File</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[color:var(--color-border)]">
                   {tableRows.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-4 py-12 text-center text-[color:var(--color-text_secondary)]">
-                        No documents match filters.
+                      <td colSpan={10} className="px-4 py-12 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <p className="text-[color:var(--color-text_secondary)]">
+                            {projectDocuments.length === 0
+                              ? 'No documents uploaded yet. Click "Upload Document" to get started.'
+                              : 'No documents match your current filters.'}
+                          </p>
+                          {projectDocuments.length > 0 && (
+                            <button
+                              type="button"
+                              className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-4 py-1.5 text-sm font-medium hover:bg-slate-50"
+                              onClick={() => {
+                                setSearch('')
+                                setPhase('all')
+                                setKind('all')
+                                setAccessFilter('all')
+                                setDateRange('all')
+                              }}
+                            >
+                              Clear all filters
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -467,6 +671,32 @@ export function DocumentsPage() {
                         <td className="px-4 py-3">{reviewPill(row.doc.reviewStatus)}</td>
                         <td className="px-4 py-3 text-xs text-[color:var(--color-text_muted)]">
                           RFI {row.doc.linkedRfis} / Iss {row.doc.linkedIssues}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              title={row.doc.fileUrl ? 'View file' : 'No file attached'}
+                              disabled={!row.doc.fileUrl}
+                              aria-label="View document file"
+                              onClick={(e) => void handleViewDoc(e, row.doc)}
+                            >
+                              <Eye className="size-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              title={row.doc.fileUrl ? 'Download' : 'No file attached'}
+                              disabled={!row.doc.fileUrl}
+                              aria-label="Download document file"
+                              onClick={(e) => void handleDownloadDoc(e, row.doc)}
+                            >
+                              <Download className="size-4" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -629,7 +859,20 @@ export function DocumentsPage() {
                 </div>
                 <div>
                   <div className="text-xs font-semibold text-[color:var(--color-text_muted)]">Review</div>
-                  <div className="mt-1">{reviewPill(selected.reviewStatus)}</div>
+                  <div className="mt-1 flex items-center gap-2">
+                    {reviewPill(selected.reviewStatus)}
+                    {canManage && (
+                      <select
+                        className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-2 py-0.5 text-xs font-medium text-[color:var(--color-text)] outline-none focus:ring-1 focus:ring-[color:var(--color-primary)]"
+                        value={selected.reviewStatus}
+                        onChange={(e) => void handleReviewAction(e.target.value as DocReviewStatus)}
+                      >
+                        <option value="Under Review">Mark Under Review</option>
+                        <option value="Approved">Approve</option>
+                        <option value="Requires Attention">Flag Attention</option>
+                      </select>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -681,23 +924,95 @@ export function DocumentsPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant="secondary" className="w-full">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  disabled={!selected.fileUrl}
+                  title={selected.fileUrl ? 'Open in a new tab' : 'No file attached'}
+                  onClick={() => {
+                    if (!projectId || !selected.fileUrl) return
+                    setPreviewLoading(true)
+                    setPreviewTitle(selected.name)
+                    setPreviewUrl(null)
+                    setFilePreviewOpen(true)
+                    getProjectDocumentObjectUrl(projectId, selected.id)
+                      .then((url) => setPreviewUrl(url))
+                      .catch((err) => {
+                        setAiHint(messageFromApiError(err))
+                        setFilePreviewOpen(false)
+                      })
+                      .finally(() => setPreviewLoading(false))
+                  }}
+                >
                   <Eye className="size-4" />
                   View
                 </Button>
-                <Button type="button" variant="secondary" className="w-full">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  disabled={!selected.fileUrl}
+                  title={selected.fileUrl ? 'Download file' : 'No file attached'}
+                  onClick={() => {
+                    if (!projectId || !selected.fileUrl) return
+                    void downloadProjectDocumentFile(projectId, selected.id, suggestDownloadFilename(selected)).catch(
+                      (err) => setAiHint(messageFromApiError(err)),
+                    )
+                  }}
+                >
                   <Download className="size-4" />
                   Download
                 </Button>
-                <Button type="button" variant="outline" className="w-full">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  disabled={!selected.versions || selected.versions.length < 2}
+                  title={selected.versions.length < 2 ? 'Upload more versions to compare' : 'Compare versions'}
+                  onClick={() => {
+                    const sorted = [...selected.versions].sort((a, b) => b.version - a.version)
+                    const latest = sorted[0]
+                    const prev = sorted[1]
+                    if (!latest || !prev) return
+                    setAiHint(
+                      `Comparing v${latest.version} (${latest.uploadedAt}, by ${latest.uploadedBy}) ← ${prev.version === selected.currentVersion ? 'latest' : 'archived'} vs v${prev.version} (${prev.uploadedAt}, by ${prev.uploadedBy}). Full diff view requires a dedicated viewer — download both versions to compare locally.`
+                    )
+                  }}
+                >
                   <GitCompare className="size-4" />
                   Compare
                 </Button>
-                <Button type="button" variant="outline" className="w-full">
+                <Button type="button" variant="outline" className="w-full"
+                  onClick={() => {
+                    if (!projectId || !selected.fileUrl) {
+                      setAiHint('No file attached to this document.')
+                      return
+                    }
+                    const fileApiUrl = `${window.location.origin}/api/projects/${projectId}/documents/${selected.id}/file`
+                    navigator.clipboard.writeText(fileApiUrl).then(() => {
+                      setAiHint('Share link copied to clipboard!')
+                    }).catch(() => {
+                      setAiHint(`Copy this URL: ${fileApiUrl}`)
+                    })
+                  }}
+                >
                   <Archive className="size-4" />
                   Archive
                 </Button>
-                <Button type="button" variant="outline" className="col-span-2 w-full">
+                <Button type="button" variant="outline" className="col-span-2 w-full"
+                  title={selected.fileUrl ? 'Copy shareable file link' : 'No file to share'}
+                  disabled={!selected.fileUrl}
+                  onClick={() => {
+                    const base = window.location.origin
+                    const url = `${base}/app/documents?project=${projectId ?? ''}&doc=${selected.id}`
+                    navigator.clipboard.writeText(url).then(() => {
+                      setAiHint('Share link copied to clipboard! Anyone with project access can use it.')
+                    }).catch(() => {
+                      setAiHint(`Share this URL: ${url}`)
+                    })
+                  }}
+                >
                   <Link2 className="size-4" />
                   Share link
                 </Button>
@@ -714,39 +1029,147 @@ export function DocumentsPage() {
           role="dialog"
           aria-modal="true"
           aria-label="Upload document"
-          onClick={() => setUploadOpen(false)}
+          onClick={() => !uploadBusy && setUploadOpen(false)}
         >
           <Card className="relative w-full max-w-lg shadow-[var(--shadow-card)]" onClick={(e) => e.stopPropagation()}>
             <CardHeader>
-              <CardTitle>Add document</CardTitle>
-              <CardDescription>Register a new revision — ties to phase, RFIs, and audit trail.</CardDescription>
+              <CardTitle>{uploadMode === 'single' ? 'Upload document' : 'Bulk upload'}</CardTitle>
+              <CardDescription>
+                {uploadMode === 'single'
+                  ? 'Files are stored on the server and linked to this project.'
+                  : 'Upload many files at once. Each file becomes its own document (title from filename).'}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium" htmlFor="doc-title">
-                  Title
-                </label>
-                <Input id="doc-title" className="mt-1.5" placeholder="e.g. Structural package Rev C" />
-              </div>
-              <div>
-                <div className="text-sm font-medium">Attach file</div>
-                <div className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-[var(--radius-2xl)] border-2 border-dashed border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-4 py-10 text-center transition hover:border-[color:var(--color-primary_light)]">
-                  <Upload className="mx-auto size-8 text-[color:var(--color-text_muted)]" />
-                  <p className="mt-2 text-sm text-[color:var(--color-text_secondary)]">
-                    Drag & drop or <span className="font-semibold text-[color:var(--color-info)]">browse</span>
-                  </p>
-                  <p className="mt-2 flex items-center justify-center gap-1 text-xs text-[color:var(--color-text_muted)]">
-                    <Lock className="size-3" /> Demo only — files are not uploaded
-                  </p>
+              {uploadMode === 'single' ? (
+                <div>
+                  <label className="text-sm font-medium" htmlFor="doc-title">
+                    Title
+                  </label>
+                  <Input
+                    id="doc-title"
+                    className="mt-1.5"
+                    placeholder="e.g. Structural package Rev C"
+                    value={uploadTitle}
+                    onChange={(e) => setUploadTitle(e.target.value)}
+                  />
+                </div>
+              ) : null}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium" htmlFor="doc-phase">
+                    Phase
+                  </label>
+                  <select
+                    id="doc-phase"
+                    className="mt-1.5 w-full rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm"
+                    value={uploadPhase}
+                    onChange={(e) => setUploadPhase(e.target.value as DocPhase)}
+                  >
+                    <option value="Design">Design</option>
+                    <option value="Foundation">Foundation</option>
+                    <option value="Structure">Structure</option>
+                    <option value="MEP">MEP</option>
+                    <option value="Finishing">Finishing</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium" htmlFor="doc-type">
+                    Document type
+                  </label>
+                  <select
+                    id="doc-type"
+                    className="mt-1.5 w-full rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm"
+                    value={uploadType}
+                    onChange={(e) => setUploadType(e.target.value as DocKind)}
+                  >
+                    <option value="Blueprint">Blueprint</option>
+                    <option value="Contract">Contract</option>
+                    <option value="Permit">Permit</option>
+                    <option value="Inspection">Inspection</option>
+                    <option value="Soil Report">Soil Report</option>
+                    <option value="Invoice">Invoice</option>
+                    <option value="Other">Other</option>
+                  </select>
                 </div>
               </div>
-              <Button type="button" className="w-full" onClick={() => setUploadOpen(false)}>
-                Upload
-              </Button>
+
+              {uploadMode === 'single' ? (
+                <div>
+                  <label className="text-sm font-medium" htmlFor="doc-desc">
+                    Description (optional)
+                  </label>
+                  <Input
+                    id="doc-desc"
+                    className="mt-1.5"
+                    placeholder="Short summary"
+                    value={uploadDescription}
+                    onChange={(e) => setUploadDescription(e.target.value)}
+                  />
+                </div>
+              ) : null}
+
+              <div>
+                <div className="text-sm font-medium">{uploadMode === 'single' ? 'Attach file' : 'Choose files'}</div>
+                <label className="relative mt-2 flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[var(--radius-2xl)] border-2 border-dashed border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-4 py-8 text-center transition hover:border-[color:var(--color-primary_light)]">
+                  <Upload className="pointer-events-none mx-auto size-8 text-[color:var(--color-text_muted)]" />
+                  <p className="pointer-events-none mt-2 text-sm text-[color:var(--color-text_secondary)]">
+                    {uploadMode === 'single'
+                      ? uploadFile
+                        ? uploadFile.name
+                        : 'Click to browse (PDF, Office, images, zip — max 40 MB)'
+                      : bulkFiles.length
+                        ? `${bulkFiles.length} file(s) selected`
+                        : 'Click to select multiple files'}
+                  </p>
+                  <p className="pointer-events-none mt-2 flex items-center justify-center gap-1 text-xs text-[color:var(--color-text_muted)]">
+                    <Lock className="size-3" /> Stored on server; view/download uses your session
+                  </p>
+                  <input
+                    type="file"
+                    className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+                    multiple={uploadMode === 'bulk'}
+                    onChange={(e) => {
+                      const list = Array.from(e.target.files ?? [])
+                      if (uploadMode === 'single') {
+                        setUploadFile(list[0] ?? null)
+                      } else {
+                        setBulkFiles(list)
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+
+              {uploadError ? (
+                <p className="text-sm text-[color:var(--color-error)]">{uploadError}</p>
+              ) : null}
+
+              <div className="flex gap-2">
+                <Button type="button" variant="secondary" className="flex-1" disabled={uploadBusy} onClick={() => setUploadOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="button" className="flex-1" disabled={uploadBusy} onClick={() => void submitUpload()}>
+                  {uploadBusy ? 'Uploading…' : uploadMode === 'single' ? 'Upload' : 'Upload all'}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
       ) : null}
+
+      <Modal open={filePreviewOpen} onOpenChange={(val) => !val && closePreview()} title={previewTitle || 'Document Preview'} description="Viewing document inline" className="max-w-5xl">
+        <div className="h-[70vh] w-full mt-2 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] overflow-hidden bg-slate-50 flex items-center justify-center">
+          {previewLoading ? (
+            <div className="text-sm text-[color:var(--color-text_secondary)]">Loading preview...</div>
+          ) : previewUrl ? (
+            <iframe src={previewUrl} className="h-full w-full border-0" title={previewTitle} />
+          ) : (
+            <div className="text-sm text-[color:var(--color-text_secondary)]">Preview not available</div>
+          )}
+        </div>
+      </Modal>
     </div>
   )
 }

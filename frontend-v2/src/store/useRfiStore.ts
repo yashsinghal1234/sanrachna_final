@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-import { fetchWorkspaceRfis } from '@/api/resources'
+import { fetchWorkspaceRfis, createWorkspaceRfi, updateWorkspaceRfi } from '@/api/resources'
 import { RFI_STATUSES } from '@/constants/rfi'
 import type { RfiItem, RfiMetrics, RfiPriority, RfiStatus } from '@/types/rfi.types'
 
@@ -62,11 +62,16 @@ export type RfiState = {
   setFilterPriority: (p: RfiPriority | 'All') => void
   setSearch: (q: string) => void
 
-  createRfi: (draft: Omit<RfiItem, 'id' | 'status' | 'raisedAt' | 'thread' | 'attachments' | 'approval'> & { attachments?: RfiItem['attachments'] }) => void
-  updateRfi: (id: string, patch: Partial<RfiItem>) => void
-  addComment: (id: string, comment: { kind: RfiItem['thread'][number]['kind']; author: string; text: string }) => void
-  moveStatus: (id: string, status: RfiStatus) => void
-  escalate: (id: string, reason: string, nextTarget?: string) => void
+  createRfi: (
+    projectId: string,
+    draft: Omit<RfiItem, 'id' | 'status' | 'raisedAt' | 'thread' | 'attachments' | 'approval'> & {
+      attachments?: RfiItem['attachments']
+    },
+  ) => void
+  updateRfi: (projectId: string, id: string, patch: Partial<RfiItem>) => void
+  addComment: (projectId: string, id: string, comment: { kind: RfiItem['thread'][number]['kind']; author: string; text: string }) => void
+  moveStatus: (projectId: string, id: string, status: RfiStatus) => void
+  escalate: (projectId: string, id: string, reason: string, nextTarget?: string) => void
   saveChanges: () => void
 }
 
@@ -100,11 +105,10 @@ export function computeAutoEscalations(items: RfiItem[]) {
 }
 
 function newId() {
-  const n = String(Math.floor(100 + Math.random() * 900))
-  return `RFI-${n}`
+  return `RFI-${String(Math.floor(100 + Math.random() * 900))}`
 }
 
-export const useRfiStore = create<RfiState>()((set) => ({
+export const useRfiStore = create<RfiState>()((set, get) => ({
   rfis: [],
   selectedId: null,
   registerView: 'kanban',
@@ -127,6 +131,8 @@ export const useRfiStore = create<RfiState>()((set) => ({
       const hardened = rows.map((r) => ({
         ...r,
         status: (RFI_STATUSES.includes(r.status) ? r.status : 'Open') as RfiStatus,
+        thread: Array.isArray(r.thread) ? r.thread : [],
+        attachments: Array.isArray(r.attachments) ? r.attachments : [],
       }))
       set({ rfis: hardened, loadStatus: 'ready', loadError: null, loadedProjectId: projectId })
     } catch (e) {
@@ -141,90 +147,138 @@ export const useRfiStore = create<RfiState>()((set) => ({
   setFilterPriority: (filterPriority) => set({ filterPriority }),
   setSearch: (search) => set({ search }),
 
-  createRfi: (draft) =>
-    set((s) => {
-      const id = newId()
-      const item: RfiItem = {
-        id,
-        title: draft.title,
-        description: draft.description,
-        category: draft.category,
-        priority: draft.priority,
-        status: 'Open',
-        raisedBy: draft.raisedBy,
-        assignedTo: draft.assignedTo,
-        raisedAt: nowIso(),
-        dueAt: draft.dueAt,
-        linkedDoc: draft.linkedDoc,
-        linkedTask: draft.linkedTask,
-        linkedPhase: draft.linkedPhase,
-        location: draft.location,
-        attachments: draft.attachments ?? [],
-        thread: [
-          {
-            id: `${id}_q1`,
-            kind: 'question',
-            author: draft.raisedBy,
-            at: nowIso(),
-            text: 'Raised new RFI.',
-          },
-        ],
-        approval: null,
-      }
-      return { ...s, rfis: [item, ...s.rfis], selectedId: id, isDirty: true }
-    }),
+  createRfi: (projectId, draft) => {
+    const localId = newId()
+    const item: RfiItem = {
+      id: localId,
+      title: draft.title,
+      description: draft.description,
+      category: draft.category,
+      priority: draft.priority,
+      status: 'Open',
+      raisedBy: draft.raisedBy,
+      assignedTo: draft.assignedTo,
+      raisedAt: nowIso(),
+      dueAt: draft.dueAt,
+      linkedDoc: draft.linkedDoc,
+      linkedTask: draft.linkedTask,
+      linkedPhase: draft.linkedPhase,
+      location: draft.location,
+      attachments: draft.attachments ?? [],
+      thread: [
+        {
+          id: `${localId}_q1`,
+          kind: 'question',
+          author: draft.raisedBy,
+          at: nowIso(),
+          text: draft.description || 'Raised new RFI.',
+        },
+      ],
+      approval: null,
+    }
 
-  updateRfi: (id, patch) => set((s) => ({ ...s, rfis: s.rfis.map((r) => (r.id === id ? { ...r, ...patch } : r)), isDirty: true })),
+    // Optimistic local add
+    set((s) => ({ rfis: [item, ...s.rfis], selectedId: localId, isDirty: true }))
 
-  addComment: (id, comment) =>
+    // Persist to backend
+    if (projectId) {
+      createWorkspaceRfi(projectId, {
+        id: localId,
+        title: item.title,
+        description: item.description,
+        category: item.category,
+        priority: item.priority,
+        status: item.status,
+        raisedBy: item.raisedBy,
+        assignedTo: item.assignedTo,
+        raisedAt: item.raisedAt,
+        dueAt: item.dueAt,
+        linkedDoc: item.linkedDoc,
+        linkedTask: item.linkedTask,
+        linkedPhase: item.linkedPhase,
+        location: item.location,
+        attachments: item.attachments,
+        thread: item.thread,
+      }).then((saved) => {
+        // Replace local with server version
+        set((s) => ({
+          rfis: s.rfis.map((r) =>
+            r.id === localId ? { ...item, ...saved, id: saved.id || localId } : r,
+          ),
+        }))
+      }).catch(() => {
+        // Keep local version on failure
+      })
+    }
+  },
+
+  updateRfi: (projectId, id, patch) => {
+    set((s) => ({ rfis: s.rfis.map((r) => (r.id === id ? { ...r, ...patch } : r)), isDirty: true }))
+    if (projectId) {
+      updateWorkspaceRfi(projectId, id, patch as Record<string, unknown>).catch(() => {})
+    }
+  },
+
+  addComment: (projectId, id, comment) => {
+    const newComment = {
+      id: `${id}_${Date.now().toString(36)}`,
+      kind: comment.kind,
+      author: comment.author,
+      at: nowIso(),
+      text: comment.text,
+    }
     set((s) => ({
-      ...s,
       rfis: s.rfis.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              thread: [
-                ...r.thread,
-                {
-                  id: `${id}_${Date.now().toString(36)}`,
-                  kind: comment.kind,
-                  author: comment.author,
-                  at: nowIso(),
-                  text: comment.text,
-                },
-              ],
-            }
-          : r,
+        r.id === id ? { ...r, thread: [...r.thread, newComment] } : r,
       ),
       isDirty: true,
-    })),
+    }))
+    const updated = get().rfis.find((r) => r.id === id)
+    if (projectId && updated) {
+      updateWorkspaceRfi(projectId, id, { thread: updated.thread }).catch(() => {})
+    }
+  },
 
-  moveStatus: (id, status) => set((s) => ({ ...s, rfis: s.rfis.map((r) => (r.id === id ? { ...r, status } : r)), isDirty: true })),
-
-  escalate: (id, reason, nextTarget) =>
+  moveStatus: (projectId, id, status) => {
     set((s) => ({
-      ...s,
+      rfis: s.rfis.map((r) => (r.id === id ? { ...r, status } : r)),
+      isDirty: true,
+    }))
+    if (projectId) {
+      updateWorkspaceRfi(projectId, id, { status }).catch(() => {})
+    }
+  },
+
+  escalate: (projectId, id, reason, nextTarget) => {
+    const escComment = {
+      id: `${id}_esc_${Date.now().toString(36)}`,
+      kind: 'decision' as const,
+      author: 'System',
+      at: nowIso(),
+      text: `Auto-escalated: ${reason}`,
+    }
+    set((s) => ({
       rfis: s.rfis.map((r) =>
         r.id === id
           ? {
               ...r,
-              status: 'Escalated',
+              status: 'Escalated' as RfiStatus,
               assignedTo: nextTarget ?? r.assignedTo,
-              thread: [
-                ...r.thread,
-                {
-                  id: `${id}_esc_${Date.now().toString(36)}`,
-                  kind: 'decision',
-                  author: 'System',
-                  at: nowIso(),
-                  text: `Auto-escalated: ${reason}`,
-                },
-              ],
+              thread: [...r.thread, escComment],
             }
           : r,
       ),
       isDirty: true,
-    })),
+    }))
+    const updated = get().rfis.find((r) => r.id === id)
+    if (projectId && updated) {
+      updateWorkspaceRfi(projectId, id, {
+        status: 'Escalated',
+        assignedTo: nextTarget,
+        thread: updated.thread,
+      }).catch(() => {})
+    }
+  },
 
-  saveChanges: () => set((s) => ({ ...s, isDirty: false })),
+  saveChanges: () => set({ isDirty: false }),
 }))

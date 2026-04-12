@@ -2,6 +2,7 @@ import {
   Archive,
   ChevronRight,
   FileText,
+  Loader2,
   PanelRight,
   Pin,
   Plus,
@@ -11,63 +12,108 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '@/auth/AuthContext'
+import {
+  apiCreateThread,
+  apiDeleteThread,
+  apiListThreads,
+  apiRenameThread,
+  apiSendMessage,
+  type BackendThread,
+  type BackendMessage,
+} from '@/api/copilotApi'
+import { isBackendConfigured } from '@/api/http'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import type { CopilotModule, CopilotRole, CopilotSource } from '@/store/useCopilotStore'
-import { useCopilotStore } from '@/store/useCopilotStore'
-import { useIssueStore } from '@/store/useIssueStore'
+import type { CopilotModule, CopilotSource } from '@/store/useCopilotStore'
 import { useProjectsStore } from '@/store/useProjectsStore'
-import { useRfiStore } from '@/store/useRfiStore'
 import { cn } from '@/utils/cn'
 
-const WORKER_LOGS_KEY = 'sanrachna_worker_logs_v1'
-const WORKER_TASKS_KEY = 'sanrachna_worker_tasks_v1'
+// ─── types ────────────────────────────────────────────────────────────────────
+
+type CopilotRole = 'owner' | 'engineer' | 'worker'
+
+type LocalMessage = {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  createdAt: number
+  usedModules?: string[]
+  sources?: CopilotSource[]
+  followUps?: string[]
+}
+
+type LocalThread = {
+  backendId: string | null      // MongoDB _id if synced
+  title: string
+  messages: LocalMessage[]
+  pinned: boolean
+  archived: boolean
+  updatedAt: number
+}
 
 function uid(prefix = 'm') {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}_${Date.now()}`
 }
 
-function safeRead<T>(key: string, fallback: T): T {
-  try {
-    const raw = window.localStorage.getItem(key)
-    if (!raw) return fallback
-    return JSON.parse(raw) as T
-  } catch {
-    return fallback
+function moduleToSource(m: string): CopilotSource {
+  const routes: Record<string, string> = {
+    Timeline: '/app/timeline',
+    Issues: '/app/issues',
+    RFI: '/app/rfi',
+    'Daily Logs': '/app/logs',
+    'Cost & Resources': '/app/cost-resources',
+    Procurement: '/app/procurement',
+    Documents: '/app/documents',
+    Project: '/app',
+  }
+  return { id: uid('s'), label: m, module: m as CopilotModule, to: routes[m] }
+}
+
+function backendThreadToLocal(t: BackendThread): LocalThread {
+  return {
+    backendId: t.id,
+    title: t.title,
+    updatedAt: new Date(t.updatedAt).getTime(),
+    pinned: false,
+    archived: false,
+    messages: t.messages.map((m) => ({
+      id: m.id || uid('m'),
+      role: m.role,
+      content: m.content,
+      createdAt: m.createdAt ? new Date(m.createdAt).getTime() : Date.now(),
+      usedModules: m.usedModules,
+      sources: (m.usedModules ?? []).map(moduleToSource),
+      followUps: m.followUps,
+    })),
   }
 }
 
-function pageContext(pathname: string): { label: string; module: CopilotModule } | null {
-  if (pathname.includes('/timeline')) return { label: 'Timeline context active', module: 'Timeline' }
-  if (pathname.includes('/cost-resources')) return { label: 'Cost context active', module: 'Cost & Resources' }
-  if (pathname.includes('/procurement')) return { label: 'Procurement context active', module: 'Procurement' }
-  if (pathname.includes('/rfi')) return { label: 'RFI context active', module: 'RFI' }
-  if (pathname.includes('/issues')) return { label: 'Issues context active', module: 'Issues' }
-  if (pathname.includes('/logs')) return { label: 'Daily Logs context active', module: 'Daily Logs' }
-  if (pathname.includes('/documents')) return { label: 'Documents context active', module: 'Documents' }
-  if (pathname.includes('/contacts')) return { label: 'Contacts context active', module: 'Contacts' }
-  return null
+function defaultWelcome(projectName: string, role: CopilotRole): LocalMessage {
+  const roleLine =
+    role === 'worker'
+      ? 'As a worker, you can ask about your assigned tasks and your own submissions.'
+      : role === 'owner'
+        ? 'As an owner, you can ask about financials, risks, and project progress.'
+        : 'As an engineer, you can ask about operational details across modules.'
+
+  return {
+    id: uid('m'),
+    role: 'assistant',
+    content: `Project context: **${projectName}**.\n\n${roleLine}\n\nAsk natural-language questions like "Which tasks are delayed?" or "What issues are unresolved?". I will cite what I used and respect your role permissions.`,
+    createdAt: Date.now(),
+    usedModules: ['Project'],
+    sources: [{ id: uid('s'), label: 'Project workspace index', module: 'Project', to: '/app' }],
+    followUps: ['Which tasks are delayed?', 'Show open RFIs', 'Show unresolved issues'],
+  }
 }
 
-type Answer = {
-  text: string
-  usedModules: CopilotModule[]
-  sources: CopilotSource[]
-  followUps: string[]
-}
-
-/** Worker: narrow module set. Owner + engineer: full project data (per product spec). */
-function redactModulesForRole(role: CopilotRole, wants: CopilotModule[]): CopilotModule[] {
-  if (role !== 'worker') return wants
-  const allowed: CopilotModule[] = ['Timeline', 'Issues', 'Daily Logs', 'Documents', 'Contacts', 'Project']
-  return wants.filter((m) => allowed.includes(m))
-}
+// ─── component ────────────────────────────────────────────────────────────────
 
 export function AICopilotPage() {
   const navigate = useNavigate()
@@ -79,89 +125,85 @@ export function AICopilotPage() {
   const project = getCurrentProject()
   const projectName = project?.name ?? 'Project'
   const resolvedRole = (role ?? 'engineer') as CopilotRole
-  const userId = user?.id ?? 'anon'
 
-  const wsKey = `${currentProjectId ?? 'no-project'}|${userId}|${resolvedRole}`
-
-  const ensureWorkspace = useCopilotStore((s) => s.ensureWorkspace)
-  const workspaces = useCopilotStore((s) => s.workspaces)
-  const ws = workspaces[wsKey]
-  const setActiveSession = useCopilotStore((s) => s.setActiveSession)
-  const createSession = useCopilotStore((s) => s.createSession)
-  const renameSession = useCopilotStore((s) => s.renameSession)
-  const togglePin = useCopilotStore((s) => s.togglePin)
-  const archiveSession = useCopilotStore((s) => s.archiveSession)
-  const deleteSession = useCopilotStore((s) => s.deleteSession)
-  const addMessage = useCopilotStore((s) => s.addMessage)
-
-  const issuesByProject = useIssueStore((s) => s.issuesByProject)
-  const rfis = useRfiStore((s) => s.rfis)
-
-  const [searchSessions, setSearchSessions] = useState('')
+  // ── local thread state ────────────────────────────────────────────────────
+  const [threads, setThreads] = useState<LocalThread[]>([])
+  const [activeIdx, setActiveIdx] = useState(0)
+  const [searchQ, setSearchQ] = useState('')
   const [draft, setDraft] = useState('')
-  const [streaming, setStreaming] = useState(false)
+  const [sending, setSending] = useState(false)          // waiting for Gemini
   const [streamText, setStreamText] = useState('')
   const [rightOpen, setRightOpen] = useState(true)
   const [activeSources, setActiveSources] = useState<CopilotSource[]>([])
-  const [activeUsedModules, setActiveUsedModules] = useState<CopilotModule[]>([])
+  const [activeUsedModules, setActiveUsedModules] = useState<string[]>([])
   const [renameOpen, setRenameOpen] = useState(false)
   const [renameValue, setRenameValue] = useState('')
-  const lastUrlPromptRef = useRef<string>('')
+  const [loadingThreads, setLoadingThreads] = useState(false)
 
   const endRef = useRef<HTMLDivElement | null>(null)
+  const lastUrlPromptRef = useRef<string>('')
+
+  const activeThread = threads[activeIdx] ?? null
+
+  // ── load threads from backend ─────────────────────────────────────────────
+  const loadThreads = useCallback(async () => {
+    if (!currentProjectId || !isBackendConfigured()) return
+    setLoadingThreads(true)
+    try {
+      const backendThreads = await apiListThreads(currentProjectId)
+      if (backendThreads.length) {
+        const local = backendThreads.map(backendThreadToLocal)
+        setThreads(local)
+        setActiveIdx(0)
+      } else {
+        // No threads yet — start with a fresh one (will be created on first send)
+        setThreads([{
+          backendId: null,
+          title: 'New chat',
+          messages: [defaultWelcome(projectName, resolvedRole)],
+          pinned: false,
+          archived: false,
+          updatedAt: Date.now(),
+        }])
+        setActiveIdx(0)
+      }
+    } catch {
+      // Fallback: local-only welcome
+      setThreads([{
+        backendId: null,
+        title: 'New chat',
+        messages: [defaultWelcome(projectName, resolvedRole)],
+        pinned: false,
+        archived: false,
+        updatedAt: Date.now(),
+      }])
+    } finally {
+      setLoadingThreads(false)
+    }
+  }, [currentProjectId, projectName, resolvedRole])
 
   useEffect(() => {
-    ensureWorkspace(wsKey, resolvedRole, projectName)
-  }, [ensureWorkspace, wsKey, resolvedRole, projectName])
+    void loadThreads()
+  }, [loadThreads])
 
-  useEffect(() => {
-    const w = workspaces[wsKey]
-    if (!w) return
-    const open = w.sessions.filter((s) => !s.archived)
-    if (!open.length) {
-      const id = createSession(wsKey, resolvedRole, projectName)
-      setActiveSession(wsKey, id)
-      return
+  // ── new chat ──────────────────────────────────────────────────────────────
+  const startNewChat = () => {
+    const fresh: LocalThread = {
+      backendId: null,
+      title: 'New chat',
+      messages: [defaultWelcome(projectName, resolvedRole)],
+      pinned: false,
+      archived: false,
+      updatedAt: Date.now(),
     }
-    if (!w.activeSessionId || !open.some((s) => s.id === w.activeSessionId)) {
-      setActiveSession(wsKey, open[0].id)
-    }
-  }, [workspaces, wsKey, createSession, setActiveSession, resolvedRole, projectName])
+    setThreads((prev) => [fresh, ...prev])
+    setActiveIdx(0)
+    setActiveSources([])
+    setActiveUsedModules([])
+    setDraft('')
+  }
 
-  const sessions = ws?.sessions ?? []
-  const activeSession = useMemo(
-    () => sessions.find((s) => s.id === ws?.activeSessionId) ?? null,
-    [sessions, ws?.activeSessionId],
-  )
-
-  const ctx = useMemo(() => pageContext(location.pathname), [location.pathname])
-
-  const myKey = useMemo(() => {
-    const nm = user?.name?.trim()
-    if (!nm) return resolvedRole === 'worker' ? 'Worker' : resolvedRole === 'owner' ? 'Owner' : 'Engineer'
-    return resolvedRole === 'worker'
-      ? `Worker — ${nm}`
-      : resolvedRole === 'owner'
-        ? `Owner — ${nm}`
-        : `Engineer — ${nm}`
-  }, [resolvedRole, user?.name])
-
-  const workerTasksKey = useMemo(() => `${WORKER_TASKS_KEY}:${currentProjectId}:${myKey}`, [currentProjectId, myKey])
-  const workerLogs = useMemo(() => safeRead<any[]>(WORKER_LOGS_KEY, []), [])
-  const workerTasks = useMemo(() => safeRead<any[]>(workerTasksKey, []), [workerTasksKey])
-
-  const projectIssues = issuesByProject[currentProjectId ?? ''] ?? []
-
-  const visibleSessions = useMemo(() => {
-    const q = searchSessions.trim().toLowerCase()
-    const list = sessions.filter((s) => !s.archived)
-    const filtered = q ? list.filter((s) => s.title.toLowerCase().includes(q)) : list
-    return filtered.sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
-      return b.updatedAt - a.updatedAt
-    })
-  }, [sessions, searchSessions])
-
+  // ── suggested prompts ─────────────────────────────────────────────────────
   const suggestedPrompts = useMemo(() => {
     if (resolvedRole === 'worker') {
       return [
@@ -181,265 +223,156 @@ export function AICopilotPage() {
     ]
   }, [resolvedRole])
 
-  const answerFor = (prompt: string): Answer => {
-    const p = prompt.toLowerCase()
-    const sources: CopilotSource[] = []
-    const followUps: string[] = []
-    let wants: CopilotModule[] = []
-
-    if (resolvedRole === 'worker' && (p.includes('my tasks') || p.includes('tasks for today'))) {
-      wants = ['Timeline', 'Project']
-      const today = new Date().toISOString().slice(0, 10)
-      const dueToday = workerTasks.filter(
-        (t) => String(t.dueAt ?? '').slice(0, 10) === today || t.status === 'In progress' || t.status === 'Blocked',
-      )
-      const list = (dueToday.length ? dueToday : workerTasks).slice(0, 8)
-      const lines = list.map((t) => `- ${t.title ?? t.name ?? t.id} (${t.status ?? 'Not started'}) · ${t.location ?? '—'}`)
-      sources.push({ id: uid('s'), label: 'My Tasks', module: 'Timeline', to: '/app/my-tasks' })
-      followUps.push('Which of these are overdue?', 'Open Submit Log')
-      return {
-        text: lines.length ? `Here are your current tasks:\n${lines.join('\n')}` : 'I do not see any assigned tasks for you yet.',
-        usedModules: redactModulesForRole(resolvedRole, wants),
-        sources,
-        followUps,
-      }
-    }
-
-    if (resolvedRole === 'worker' && p.includes('my open issues')) {
-      wants = ['Issues', 'Project']
-      const open = projectIssues.filter((i) => i.reportedBy === myKey).filter((i) => i.status !== 'Closed')
-      sources.push({ id: uid('s'), label: 'Report Issue', module: 'Issues', to: '/app/issues/new' })
-      followUps.push('Show only critical issues')
-      return {
-        text: open.length
-          ? `You have ${open.length} open issue(s):\n${open
-              .slice(0, 8)
-              .map((i) => `- ${i.id}: ${i.title} (${i.status}) · ${i.location}`)
-              .join('\n')}`
-          : 'You have no open issues reported by you.',
-        usedModules: redactModulesForRole(resolvedRole, wants),
-        sources,
-        followUps,
-      }
-    }
-
-    if (p.includes('cement') || p.includes('how much cement')) {
-      wants = ['BOM', 'Cost & Resources', 'Project']
-      if (resolvedRole === 'worker') {
-        return {
-          text: 'I cannot share project-wide material quantities for your role. Ask about **your assigned tasks** or **your submitted issues/logs** instead.',
-          usedModules: ['Project'],
-          sources: [{ id: uid('s'), label: 'Role permissions', module: 'Project', to: '/app/settings/profile' }],
-          followUps: ['What are my tasks for today?', 'Show my open issues'],
-        }
-      }
-      sources.push({ id: uid('s'), label: 'BOM & cost snapshot', module: 'Cost & Resources', to: '/app/cost-resources' })
-      followUps.push('Open procurement for material quotes', 'Show BOM from approved plan')
-      return {
-        text: 'Material quantities are not estimated in the copilot without a live BOM integration. Open **Cost & Resources** for BOM rows from your approved plan or cost-resources API.',
-        usedModules: redactModulesForRole(resolvedRole, wants),
-        sources,
-        followUps,
-      }
-    }
-
-    if (p.includes('delayed') || p.includes('delay') || p.includes('behind')) {
-      wants = ['Timeline', 'Daily Logs', 'Issues']
-      const criticalOpen = projectIssues.filter((i) => i.severity === 'Critical' && i.status !== 'Closed').length
-      sources.push({ id: uid('s'), label: 'Timeline', module: 'Timeline', to: '/app/timeline' })
-      sources.push({ id: uid('s'), label: 'Issues', module: 'Issues', to: resolvedRole === 'worker' ? '/app/issues/new' : '/app/issues' })
-      followUps.push('Show unresolved critical issues', 'What RFIs are still open?')
-      return {
-        text:
-          criticalOpen > 0
-            ? `There are **${criticalOpen} critical issue(s)** still open — these often block work. Open **Timeline** to see which tasks are behind schedule and cross-check with Issues/Daily Logs.`
-            : 'Open **Timeline** to see tasks behind plan. I can dig into a specific phase (Foundation / Structure / MEP / Finishing) if you name it.',
-        usedModules: redactModulesForRole(resolvedRole, wants),
-        sources,
-        followUps,
-      }
-    }
-
-    if (p.includes('flooring') && p.includes('cost')) {
-      wants = ['Cost & Resources', 'Procurement']
-      if (resolvedRole === 'worker') {
-        return {
-          text: 'Project-wide cost estimates are not available for your role.',
-          usedModules: ['Project'],
-          sources: [{ id: uid('s'), label: 'Role permissions', module: 'Project', to: '/app/settings/profile' }],
-          followUps: suggestedPrompts.slice(0, 2),
-        }
-      }
-      sources.push({ id: uid('s'), label: 'Cost & Resources', module: 'Cost & Resources', to: '/app/cost-resources' })
-      sources.push({ id: uid('s'), label: 'Procurement', module: 'Procurement', to: '/app/procurement' })
-      followUps.push('Compare finish vendors', 'Show finishing phase cost')
-      return {
-        text: 'Line-item costs are not invented here. Use **Cost & Resources** and **Procurement** for values returned by your workspace APIs.',
-        usedModules: redactModulesForRole(resolvedRole, wants),
-        sources,
-        followUps,
-      }
-    }
-
-    if (p.includes('rfi') && (p.includes('open') || p.includes('still'))) {
-      wants = ['RFI']
-      const open = rfis.filter((r) => r.status !== 'Closed' && r.status !== 'Answered')
-      sources.push({ id: uid('s'), label: 'RFI Center', module: 'RFI', to: '/app/rfi' })
-      followUps.push('Which RFIs are overdue?')
-      return {
-        text: open.length
-          ? `Open RFIs: **${open.length}**\n${open.slice(0, 8).map((r) => `- ${r.id}: ${r.title} (${r.status})`).join('\n')}`
-          : 'No open RFIs in the current register.',
-        usedModules: redactModulesForRole(resolvedRole, wants),
-        sources,
-        followUps,
-      }
-    }
-
-    if (p.includes('unresolved') && p.includes('issue')) {
-      wants = ['Issues']
-      const unresolved = projectIssues.filter((i) => i.status !== 'Closed')
-      sources.push({ id: uid('s'), label: 'Issues', module: 'Issues', to: resolvedRole === 'worker' ? '/app/issues/new' : '/app/issues' })
-      followUps.push('Show only critical issues')
-      return {
-        text: unresolved.length
-          ? `Unresolved issues: **${unresolved.length}**\n${unresolved
-              .slice(0, 8)
-              .map((i) => `- ${i.id}: ${i.title} (${i.status}) · ${i.location}`)
-              .join('\n')}`
-          : 'No unresolved issues in the current register.',
-        usedModules: redactModulesForRole(resolvedRole, wants),
-        sources,
-        followUps,
-      }
-    }
-
-    if (p.includes('slab') && p.includes('cast')) {
-      wants = ['Timeline', 'Issues']
-      if (resolvedRole === 'worker') {
-        return {
-          text: 'I can only discuss **your** assigned tasks. Try: “What are my tasks for today?”',
-          usedModules: ['Project'],
-          sources: [{ id: uid('s'), label: 'My Tasks', module: 'Timeline', to: '/app/my-tasks' }],
-          followUps: ['What are my tasks for today?'],
-        }
-      }
-      sources.push({ id: uid('s'), label: 'Timeline / assignments', module: 'Timeline', to: '/app/timeline' })
-      const assignHint = projectIssues.find((i) => i.title.toLowerCase().includes('slab') || i.description.toLowerCase().includes('slab'))
-      followUps.push('Which tasks are delayed?', 'Open Issues for slab-related snags')
-      return {
-        text: assignHint
-          ? `For slab-related work, check **Timeline** for crew assignment. Related issue context: **${assignHint.title}** (see Issues).`
-          : 'Slab casting assignment is maintained on the **Timeline** (crew / task owner). Open Timeline for the authoritative assignment view.',
-        usedModules: redactModulesForRole(resolvedRole, wants),
-        sources,
-        followUps,
-      }
-    }
-
-    if (p.includes('latest daily log') || p.includes('summarize my latest')) {
-      wants = ['Daily Logs']
-      if (resolvedRole !== 'worker') {
-        sources.push({ id: uid('s'), label: 'Daily Logs', module: 'Daily Logs', to: '/app/logs' })
-        return {
-          text: 'Open **Daily Logs** for the full project feed, or ask a worker to submit today’s log.',
-          usedModules: redactModulesForRole(resolvedRole, wants),
-          sources,
-          followUps: ['What issues are unresolved?'],
-        }
-      }
-      const mine = workerLogs.filter((l: any) => l?.details?.worker === myKey || String(l?.details?.worker ?? '').includes(myKey))
-      const latest = mine[0] ?? workerLogs[0]
-      sources.push({ id: uid('s'), label: 'Submit Log', module: 'Daily Logs', to: '/app/logs/new' })
-      return {
-        text: latest
-          ? `Latest log snapshot:\n- **Tasks:** ${latest.tasksCompleted ?? '—'}\n- **Workers:** ${latest.workersPresent ?? '—'}\n- **Notes:** ${latest.issuesFaced ?? '—'}`
-          : 'No logs found locally yet. Submit one from **Submit Log**.',
-        usedModules: redactModulesForRole(resolvedRole, wants),
-        sources,
-        followUps: ['Submit a new daily log', 'What are my tasks for today?'],
-      }
-    }
-
-    wants = ctx ? ['Project', ctx.module] : ['Project']
-    return {
-      text:
-        resolvedRole === 'worker'
-          ? 'Ask about **your tasks**, **your issues**, or **your daily logs**. I stay within your role.'
-          : 'Ask about timeline, cost, procurement, RFIs, issues, or documents. I will cite the modules I used.',
-      usedModules: redactModulesForRole(resolvedRole, wants),
-      sources: [{ id: uid('s'), label: 'Project workspace', module: 'Project', to: '/app' }],
-      followUps: suggestedPrompts.slice(0, 4),
-    }
-  }
-
+  // ── send message ──────────────────────────────────────────────────────────
   const send = async (textArg?: string) => {
-    if (!activeSession || !ws) return
     const text = (textArg ?? draft).trim()
-    if (!text || streaming) return
-
-    addMessage(wsKey, activeSession.id, { id: uid('m'), role: 'user', content: text, createdAt: Date.now() })
+    if (!text || sending) return
     setDraft('')
 
-    const ans = answerFor(text)
-    const assistantId = uid('m')
-    setStreaming(true)
-    setStreamText('')
-
-    for (let i = 0; i <= ans.text.length; i++) {
-      // eslint-disable-next-line no-await-in-loop
-      await new Promise((r) => window.setTimeout(r, 4))
-      setStreamText(ans.text.slice(0, i))
-    }
-    await new Promise((r) => window.setTimeout(r, 40))
-
-    setStreaming(false)
-    setStreamText('')
-
-    addMessage(wsKey, activeSession.id, {
-      id: assistantId,
-      role: 'assistant',
-      content: ans.text,
-      createdAt: Date.now(),
-      usedModules: ans.usedModules,
-      sources: ans.sources,
-      followUps: ans.followUps,
+    // Add user message locally immediately
+    const userMsg: LocalMessage = { id: uid('m'), role: 'user', content: text, createdAt: Date.now() }
+    setThreads((prev) => {
+      const next = [...prev]
+      const t = { ...next[activeIdx]!, messages: [...next[activeIdx]!.messages, userMsg] }
+      next[activeIdx] = t
+      return next
     })
 
-    setActiveUsedModules(ans.usedModules)
-    setActiveSources(ans.sources)
+    setSending(true)
+    setStreamText('…')
+
+    try {
+      let thread = activeThread
+
+      // Ensure a backend thread exists (lazy creation)
+      if (!thread?.backendId && currentProjectId && isBackendConfigured()) {
+        const created = await apiCreateThread(currentProjectId, text.slice(0, 60))
+        setThreads((prev) => {
+          const next = [...prev]
+          next[activeIdx] = { ...next[activeIdx]!, backendId: created.id, title: created.title }
+          return next
+        })
+        thread = { ...thread!, backendId: created.id }
+      }
+
+      if (thread?.backendId && currentProjectId && isBackendConfigured()) {
+        // Call backend → Gemini
+        const { message: reply } = await apiSendMessage(currentProjectId, thread.backendId, text)
+        const assistantMsg: LocalMessage = {
+          id: reply.id || uid('m'),
+          role: 'assistant',
+          content: reply.content,
+          createdAt: Date.now(),
+          usedModules: reply.usedModules ?? [],
+          sources: (reply.usedModules ?? []).map(moduleToSource),
+          followUps: reply.followUps ?? [],
+        }
+        setActiveSources(assistantMsg.sources ?? [])
+        setActiveUsedModules(assistantMsg.usedModules ?? [])
+        setThreads((prev) => {
+          const next = [...prev]
+          const t = { ...next[activeIdx]!, messages: [...next[activeIdx]!.messages, assistantMsg], updatedAt: Date.now() }
+          if (t.title === 'New chat') t.title = text.slice(0, 48)
+          next[activeIdx] = t
+          return next
+        })
+      } else {
+        // Offline fallback
+        const fallback: LocalMessage = {
+          id: uid('m'),
+          role: 'assistant',
+          content: 'Backend is not connected. Please configure the server and refresh.',
+          createdAt: Date.now(),
+          usedModules: ['Project'],
+          sources: [],
+          followUps: [],
+        }
+        setThreads((prev) => {
+          const next = [...prev]
+          next[activeIdx] = { ...next[activeIdx]!, messages: [...next[activeIdx]!.messages, fallback] }
+          return next
+        })
+      }
+    } catch (err: unknown) {
+      const errMsg: LocalMessage = {
+        id: uid('m'),
+        role: 'assistant',
+        content: `⚠️ Error: ${err instanceof Error ? err.message : 'Request failed. Please try again.'}`,
+        createdAt: Date.now(),
+        usedModules: [],
+        sources: [],
+        followUps: suggestedPrompts.slice(0, 2),
+      }
+      setThreads((prev) => {
+        const next = [...prev]
+        next[activeIdx] = { ...next[activeIdx]!, messages: [...next[activeIdx]!.messages, errMsg] }
+        return next
+      })
+    } finally {
+      setSending(false)
+      setStreamText('')
+    }
   }
 
+  // ── auto-scroll ───────────────────────────────────────────────────────────
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [activeSession?.messages, streamText])
+  }, [activeThread?.messages, streamText])
 
+  // ── URL ?prompt= deep‑link ────────────────────────────────────────────────
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     const prompt = params.get('prompt')?.trim()
-    if (!prompt || !activeSession || streaming) return
+    if (!prompt || sending) return
     if (lastUrlPromptRef.current === prompt) return
     lastUrlPromptRef.current = prompt
     void send(prompt)
     navigate('/app/chatbot', { replace: true })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.search, activeSession?.id])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search])
 
-  const startNewChat = () => {
-    const id = createSession(wsKey, resolvedRole, projectName)
-    setActiveSession(wsKey, id)
-    setActiveSources([])
-    setActiveUsedModules([])
-  }
-
-  const onRename = () => {
-    if (!activeSession) return
-    renameSession(wsKey, activeSession.id, renameValue)
+  // ── rename ────────────────────────────────────────────────────────────────
+  const onRename = async () => {
+    if (!renameValue.trim()) return
+    setThreads((prev) => {
+      const next = [...prev]
+      next[activeIdx] = { ...next[activeIdx]!, title: renameValue.trim() }
+      return next
+    })
+    const t = threads[activeIdx]
+    if (t?.backendId && currentProjectId && isBackendConfigured()) {
+      await apiRenameThread(currentProjectId, t.backendId, renameValue.trim()).catch(() => {})
+    }
     setRenameOpen(false)
   }
 
+  // ── delete ────────────────────────────────────────────────────────────────
+  const deleteThread = async (idx: number) => {
+    const t = threads[idx]
+    if (t?.backendId && currentProjectId && isBackendConfigured()) {
+      await apiDeleteThread(currentProjectId, t.backendId).catch(() => {})
+    }
+    setThreads((prev) => prev.filter((_, i) => i !== idx))
+    setActiveIdx(0)
+  }
+
+  // ── visible threads ───────────────────────────────────────────────────────
+  const visibleThreads = useMemo(() => {
+    const q = searchQ.trim().toLowerCase()
+    return threads
+      .map((t, i) => ({ ...t, idx: i }))
+      .filter((t) => !t.archived)
+      .filter((t) => (q ? t.title.toLowerCase().includes(q) : true))
+      .sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+        return b.updatedAt - a.updatedAt
+      })
+  }, [threads, searchQ])
+
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
+      {/* Sidebar */}
       <Card className="h-[calc(100vh-130px)] overflow-hidden">
         <div className="flex h-full flex-col">
           <div className="border-b border-[color:var(--color-border)] p-4">
@@ -450,7 +383,7 @@ export function AICopilotPage() {
                   <div className="truncate text-sm font-semibold">AI Copilot</div>
                 </div>
                 <div className="mt-1 truncate text-xs text-[color:var(--color-text_secondary)]">
-                  {projectName} · {user?.emailOrPhone ?? userId}
+                  {projectName} · {user?.emailOrPhone ?? 'user'}
                 </div>
                 <div className="mt-1 text-[11px] text-[color:var(--color-text_muted)]">Role: {resolvedRole}</div>
               </div>
@@ -464,27 +397,31 @@ export function AICopilotPage() {
               <input
                 className="w-full min-w-0 bg-transparent text-sm outline-none"
                 placeholder="Search chats…"
-                value={searchSessions}
-                onChange={(e) => setSearchSessions(e.target.value)}
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
               />
             </div>
           </div>
 
           <div className="flex-1 overflow-auto">
-            {visibleSessions.length ? (
+            {loadingThreads ? (
+              <div className="flex items-center justify-center gap-2 p-6 text-sm text-[color:var(--color-text_secondary)]">
+                <Loader2 className="size-4 animate-spin" /> Loading chats…
+              </div>
+            ) : visibleThreads.length ? (
               <div className="divide-y divide-[color:var(--color-border)]">
-                {visibleSessions.map((s) => {
-                  const active = s.id === ws?.activeSessionId
+                {visibleThreads.map((t) => {
+                  const active = t.idx === activeIdx
                   return (
                     <button
-                      key={s.id}
+                      key={t.idx}
                       type="button"
                       onClick={() => {
-                        setActiveSession(wsKey, s.id)
-                        const lastAssistant = [...s.messages].reverse().find((m) => m.role === 'assistant')
-                        if (lastAssistant?.sources?.length) {
-                          setActiveSources(lastAssistant.sources)
-                          setActiveUsedModules(lastAssistant.usedModules ?? [])
+                        setActiveIdx(t.idx)
+                        const last = [...t.messages].reverse().find((m) => m.role === 'assistant')
+                        if (last?.sources?.length) {
+                          setActiveSources(last.sources)
+                          setActiveUsedModules(last.usedModules ?? [])
                         }
                       }}
                       className={cn(
@@ -495,11 +432,16 @@ export function AICopilotPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            {s.pinned ? <Pin className="size-3.5 shrink-0 text-[color:var(--color-warning)]" /> : null}
-                            <div className="truncate text-sm font-semibold">{s.title}</div>
+                            {t.pinned ? <Pin className="size-3.5 shrink-0 text-[color:var(--color-warning)]" /> : null}
+                            <div className="truncate text-sm font-semibold">{t.title}</div>
                           </div>
                           <div className="mt-1 text-xs text-[color:var(--color-text_secondary)]">
-                            {Math.max(0, s.messages.length - 1)} msgs
+                            {Math.max(0, t.messages.length - 1)} msgs
+                            {t.backendId ? (
+                              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-green-50 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">
+                                ✓ synced
+                              </span>
+                            ) : null}
                           </div>
                         </div>
                       </div>
@@ -508,25 +450,27 @@ export function AICopilotPage() {
                 })}
               </div>
             ) : (
-              <div className="p-4 text-sm text-[color:var(--color-text_secondary)]">No chats match your search.</div>
+              <div className="p-4 text-sm text-[color:var(--color-text_secondary)]">No chats found.</div>
             )}
           </div>
         </div>
       </Card>
 
+      {/* Main chat area + sources panel */}
       <div className={cn('grid gap-4', rightOpen ? 'xl:grid-cols-[1fr_340px]' : 'xl:grid-cols-1')}>
         <Card className="flex min-h-[60vh] flex-col overflow-hidden lg:min-h-[calc(100vh-130px)]">
+          {/* Chat header */}
           <div className="border-b border-[color:var(--color-border)] p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="truncate text-base font-semibold">{activeSession?.title ?? 'Chat'}</div>
+                <div className="truncate text-base font-semibold">{activeThread?.title ?? 'New chat'}</div>
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[color:var(--color-text_secondary)]">
                   <span className="rounded-full bg-[color:var(--color-bg)] px-2 py-1 font-medium">
                     Project: {projectName}
                   </span>
-                  {ctx ? (
-                    <span className="rounded-full bg-[color:var(--color-bg)] px-2 py-1 font-medium">{ctx.label}</span>
-                  ) : null}
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-purple-50 to-blue-50 px-2 py-1 text-[11px] font-semibold text-purple-700">
+                    <Sparkles className="size-3" /> Gemini 2.0 Flash
+                  </span>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -537,23 +481,51 @@ export function AICopilotPage() {
                   variant="secondary"
                   size="icon"
                   onClick={() => {
-                    if (!activeSession) return
-                    setRenameValue(activeSession.title)
+                    if (!activeThread) return
+                    setRenameValue(activeThread.title)
                     setRenameOpen(true)
                   }}
                   aria-label="Rename chat"
                 >
                   <Settings className="size-4" />
                 </Button>
-                {activeSession ? (
+                {activeThread ? (
                   <>
-                    <Button variant="secondary" size="icon" onClick={() => togglePin(wsKey, activeSession.id)} aria-label="Pin">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={() => {
+                        setThreads((prev) => {
+                          const next = [...prev]
+                          next[activeIdx] = { ...next[activeIdx]!, pinned: !next[activeIdx]!.pinned }
+                          return next
+                        })
+                      }}
+                      aria-label="Pin"
+                    >
                       <Pin className="size-4" />
                     </Button>
-                    <Button variant="secondary" size="icon" onClick={() => archiveSession(wsKey, activeSession.id)} aria-label="Archive">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={() => {
+                        setThreads((prev) => {
+                          const next = [...prev]
+                          next[activeIdx] = { ...next[activeIdx]!, archived: true }
+                          return next
+                        })
+                        setActiveIdx(0)
+                      }}
+                      aria-label="Archive"
+                    >
                       <Archive className="size-4" />
                     </Button>
-                    <Button variant="secondary" size="icon" onClick={() => deleteSession(wsKey, activeSession.id)} aria-label="Delete">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={() => void deleteThread(activeIdx)}
+                      aria-label="Delete"
+                    >
                       <Trash2 className="size-4" />
                     </Button>
                   </>
@@ -562,9 +534,10 @@ export function AICopilotPage() {
             </div>
           </div>
 
+          {/* Messages */}
           <CardContent className="flex-1 overflow-auto p-4">
             <div className="space-y-4">
-              {activeSession?.messages.map((m) => {
+              {activeThread?.messages.map((m) => {
                 const isUser = m.role === 'user'
                 return (
                   <div key={m.id} className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
@@ -576,7 +549,14 @@ export function AICopilotPage() {
                           : 'border-[color:var(--color-border)] bg-white text-[color:var(--color-text_secondary)]',
                       )}
                     >
-                      <div className="whitespace-pre-wrap leading-relaxed">{m.content}</div>
+                      {/* Render markdown-lite: bold, newlines */}
+                      <div className="whitespace-pre-wrap leading-relaxed">
+                        {m.content.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+                          part.startsWith('**') && part.endsWith('**')
+                            ? <strong key={i} className="font-semibold text-[color:var(--color-text)]">{part.slice(2, -2)}</strong>
+                            : part,
+                        )}
+                      </div>
 
                       {!isUser && (m.usedModules?.length || m.sources?.length) ? (
                         <div className="mt-3 space-y-2 border-t border-[color:var(--color-border)] pt-3">
@@ -584,10 +564,7 @@ export function AICopilotPage() {
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="text-[11px] font-semibold text-[color:var(--color-text_muted)]">Modules:</span>
                               {m.usedModules.map((x) => (
-                                <span
-                                  key={x}
-                                  className="rounded-full bg-[color:var(--color-bg)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--color-text_secondary)]"
-                                >
+                                <span key={x} className="rounded-full bg-[color:var(--color-bg)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--color-text_secondary)]">
                                   {x}
                                 </span>
                               ))}
@@ -620,7 +597,7 @@ export function AICopilotPage() {
                                   type="button"
                                   className="rounded-full bg-[color:var(--color-bg)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-text_secondary)] hover:bg-white"
                                   onClick={() => void send(q)}
-                                  disabled={streaming}
+                                  disabled={sending}
                                 >
                                   {q}
                                 </button>
@@ -634,11 +611,14 @@ export function AICopilotPage() {
                 )
               })}
 
-              {streaming ? (
+              {sending ? (
                 <div className="flex justify-start">
                   <div className="max-w-[min(92%,720px)] rounded-2xl border border-[color:var(--color-border)] bg-white px-4 py-3 text-sm text-[color:var(--color-text_secondary)] shadow-sm">
-                    <div className="whitespace-pre-wrap leading-relaxed">{streamText}</div>
-                    <div className="mt-2 h-1 w-16 animate-pulse rounded-full bg-[color:var(--color-primary)]" />
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="size-4 animate-spin text-[color:var(--color-primary)]" />
+                      <span>Gemini is thinking…</span>
+                    </div>
+                    <div className="mt-2 h-1 w-24 animate-pulse rounded-full bg-[color:var(--color-primary)]" />
                   </div>
                 </div>
               ) : null}
@@ -647,6 +627,7 @@ export function AICopilotPage() {
             </div>
           </CardContent>
 
+          {/* Input area */}
           <div className="border-t border-[color:var(--color-border)] p-4">
             <div className="flex flex-wrap gap-2">
               {suggestedPrompts.map((p) => (
@@ -655,7 +636,7 @@ export function AICopilotPage() {
                   type="button"
                   className="rounded-full border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[color:var(--color-text_secondary)] transition hover:bg-[color:var(--color-bg)]"
                   onClick={() => void send(p)}
-                  disabled={streaming}
+                  disabled={sending}
                 >
                   {p}
                 </button>
@@ -674,10 +655,10 @@ export function AICopilotPage() {
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="Ask anything about this project…"
-                disabled={streaming}
+                disabled={sending}
               />
-              <Button type="submit" disabled={streaming || !draft.trim()} className="sm:shrink-0">
-                <Send className="size-4" />
+              <Button type="submit" disabled={sending || !draft.trim()} className="sm:shrink-0">
+                {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
                 Send
               </Button>
             </form>
@@ -687,6 +668,7 @@ export function AICopilotPage() {
           </div>
         </Card>
 
+        {/* Sources panel */}
         {rightOpen ? (
           <Card className="h-auto max-h-[480px] overflow-hidden xl:max-h-[calc(100vh-130px)]">
             <div className="flex items-center justify-between border-b border-[color:var(--color-border)] p-4">
@@ -702,10 +684,7 @@ export function AICopilotPage() {
               {activeUsedModules.length ? (
                 <div className="flex flex-wrap gap-2">
                   {activeUsedModules.map((m) => (
-                    <span
-                      key={m}
-                      className="rounded-full bg-[color:var(--color-bg)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--color-text_secondary)]"
-                    >
+                    <span key={m} className="rounded-full bg-[color:var(--color-bg)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--color-text_secondary)]">
                       {m}
                     </span>
                   ))}
@@ -752,13 +731,14 @@ export function AICopilotPage() {
         ) : null}
       </div>
 
+      {/* Rename modal */}
       <Modal
         open={renameOpen}
         onOpenChange={setRenameOpen}
         title="Rename chat"
         description="Pick a short title so you can find this session later."
         footer={
-          <Button onClick={onRename} disabled={!renameValue.trim()}>
+          <Button onClick={() => void onRename()} disabled={!renameValue.trim()}>
             Save
           </Button>
         }

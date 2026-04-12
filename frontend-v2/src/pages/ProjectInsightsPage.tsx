@@ -22,6 +22,8 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { useActiveProject } from '@/hooks/useActiveProject'
+import { useProjectsStore } from '@/store/useProjectsStore'
+import { useTimelineStore } from '@/store/useTimelineStore'
 
 export type InsightTextRow = { id: string; text: string; locked: boolean }
 
@@ -219,7 +221,18 @@ const MONGO_ID_RE = /^[a-f0-9]{24}$/i
 export function ProjectInsightsPage() {
   const { role, token } = useAuth()
   const navigate = useNavigate()
-  const { projectId } = useActiveProject()
+  const { projectId, project } = useActiveProject()
+  const projectsById = useProjectsStore((s) => s.projects)
+  const fetchTimeline = useTimelineStore((s) => s.fetchTimeline)
+  const timelineProjectId = useTimelineStore((s) => s.timelineProjectId)
+
+  // Auto-fetch timeline in background so simulation panels get real data
+  useEffect(() => {
+    if (!projectId) return
+    if (timelineProjectId === projectId) return // already loaded
+    const name = project?.name ?? projectsById[projectId]?.name ?? 'Project'
+    void fetchTimeline(projectId, name)
+  }, [projectId, project, projectsById, fetchTimeline, timelineProjectId])
 
   const [model, setModel] = useState<ProjectInsightsModel>(defaultInsightsModel)
   const [loading, setLoading] = useState(false)

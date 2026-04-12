@@ -92,10 +92,10 @@ export function InputForm() {
             {reportLoading ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden />
-                Generating…
+                Generating report…
               </>
             ) : (
-              'Generate AI plan'
+              'Generate Report'
             )}
           </Button>
           <Button type="button" variant="secondary" onClick={saveDraft} disabled={reportLoading}>

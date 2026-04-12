@@ -1,6 +1,10 @@
 import { create } from 'zustand'
 
-import { fetchWorkspaceIssues } from '@/api/resources'
+import {
+  fetchWorkspaceIssues,
+  createWorkspaceIssue,
+  updateWorkspaceIssue,
+} from '@/api/resources'
 import { ISSUE_CATEGORIES, ISSUE_SEVERITIES, ISSUE_STATUSES } from '@/constants/issues'
 import type {
   IssueAttachment,
@@ -60,7 +64,7 @@ export function computeIssueMetrics(items: IssueItem[]): IssueMetrics {
   return { openIssues, criticalIssues, overdueIssues, resolvedThisWeek, verificationPending, avgResolutionDays: avgResolutionDaysValue }
 }
 
-function newId() {
+function newLocalId() {
   const n = String(Math.floor(100 + Math.random() * 900))
   return `ISS-${n}`
 }
@@ -138,6 +142,8 @@ export const useIssueStore = create<IssueState>()((set, get) => ({
         status: (ISSUE_STATUSES.includes(i.status) ? i.status : 'Reported') as IssueStatus,
         severity: (ISSUE_SEVERITIES.includes(i.severity) ? i.severity : 'Medium') as IssueSeverity,
         category: (ISSUE_CATEGORIES.includes(i.category) ? i.category : 'Other') as IssueCategory,
+        progressLog: Array.isArray(i.progressLog) ? i.progressLog : [],
+        attachments: Array.isArray(i.attachments) ? i.attachments : [],
       }))
       set((s) => ({
         issuesByProject: { ...s.issuesByProject, [projectId]: hardened },
@@ -148,7 +154,7 @@ export const useIssueStore = create<IssueState>()((set, get) => ({
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to load issues'
       set((s) => ({
-        issuesByProject: { ...s.issuesByProject, [projectId]: [] },
+        issuesByProject: { ...s.issuesByProject, [projectId]: s.issuesByProject[projectId] ?? [] },
         loadStatus: 'error',
         loadError: msg,
         loadedProjectId: projectId,
@@ -161,11 +167,11 @@ export const useIssueStore = create<IssueState>()((set, get) => ({
   setView: (view) => set({ view }),
 
   createIssue: (draft) => {
-    const id = newId()
+    const localId = newLocalId()
     const dueAt = new Date(Date.now() + Math.max(1, draft.dueDays) * 24 * 60 * 60 * 1000).toISOString()
     const attId = draft.attachmentName ? `att_${Date.now().toString(36)}` : null
     const issue: IssueItem = {
-      id,
+      id: localId,
       projectId: draft.projectId,
       title: draft.title.trim() || 'Untitled issue',
       description: draft.description.trim() || '—',
@@ -185,7 +191,7 @@ export const useIssueStore = create<IssueState>()((set, get) => ({
         : [],
       progressLog: [
         {
-          id: `${id}_Reported_${Date.now().toString(36)}`,
+          id: `${localId}_Reported_${Date.now().toString(36)}`,
           at: nowIso(),
           author: draft.reportedBy,
           status: 'Reported',
@@ -195,16 +201,52 @@ export const useIssueStore = create<IssueState>()((set, get) => ({
       resolutionNotes: null,
       verification: null,
     }
+
+    // Optimistic local update
     set((s) => ({
       ...s,
-      issuesByProject: { ...s.issuesByProject, [draft.projectId]: [issue, ...(s.issuesByProject[draft.projectId] ?? [])] },
-      selectedId: id,
-      isDirty: true,
+      issuesByProject: {
+        ...s.issuesByProject,
+        [draft.projectId]: [issue, ...(s.issuesByProject[draft.projectId] ?? [])],
+      },
+      selectedId: localId,
     }))
-    return id
+
+    // Persist to backend (fire-and-forget, update with real id when response comes)
+    createWorkspaceIssue(draft.projectId, {
+      id: localId,
+      title: issue.title,
+      description: issue.description,
+      category: issue.category,
+      severity: issue.severity,
+      status: issue.status,
+      reportedBy: issue.reportedBy,
+      raisedAt: issue.raisedAt,
+      dueAt: issue.dueAt,
+      location: issue.location,
+      zone: issue.zone || '',
+      floor: issue.floor || '',
+      area: issue.area || '',
+      attachments: issue.attachments,
+      progressLog: issue.progressLog,
+    }).then((saved) => {
+      // Replace local issue with server-saved one (keeping same ID for UI stability)
+      set((s) => ({
+        issuesByProject: {
+          ...s.issuesByProject,
+          [draft.projectId]: (s.issuesByProject[draft.projectId] ?? []).map((item) =>
+            item.id === localId ? { ...item, ...saved, id: saved.id || localId } : item
+          ),
+        },
+      }))
+    }).catch(() => {
+      // Silently keep local version if API fails
+    })
+
+    return localId
   },
 
-  updateIssue: (projectId, id, patch) =>
+  updateIssue: (projectId, id, patch) => {
     set((s) => ({
       ...s,
       issuesByProject: {
@@ -212,11 +254,14 @@ export const useIssueStore = create<IssueState>()((set, get) => ({
         [projectId]: (s.issuesByProject[projectId] ?? []).map((i) => (i.id === id ? { ...i, ...patch } : i)),
       },
       isDirty: true,
-    })),
+    }))
+    // Persist
+    updateWorkspaceIssue(projectId, id, patch as Record<string, unknown>).catch(() => {})
+  },
 
   assignIssue: (projectId, id, assignedTo) => get().moveStatus(projectId, id, 'Assigned', 'Engineer', `Assigned to ${assignedTo}`),
 
-  moveStatus: (projectId, id, status, author, note) =>
+  moveStatus: (projectId, id, status, author, note) => {
     set((s) => {
       const arr = s.issuesByProject[projectId] ?? []
       const next = arr.map((i) => {
@@ -231,7 +276,15 @@ export const useIssueStore = create<IssueState>()((set, get) => ({
         return { ...i, status, progressLog: [...i.progressLog, log] }
       })
       return { ...s, issuesByProject: { ...s.issuesByProject, [projectId]: next }, isDirty: true }
-    }),
+    })
+    const updated = get().issuesByProject[projectId]?.find((i) => i.id === id)
+    if (updated) {
+      updateWorkspaceIssue(projectId, id, {
+        status: updated.status,
+        progressLog: updated.progressLog,
+      }).catch(() => {})
+    }
+  },
 
   addProgress: (projectId, id, author, note, status) =>
     set((s) => {
@@ -251,7 +304,7 @@ export const useIssueStore = create<IssueState>()((set, get) => ({
       return { ...s, issuesByProject: { ...s.issuesByProject, [projectId]: next }, isDirty: true }
     }),
 
-  verifyIssue: (projectId, id, verifiedBy, notes, afterPhotoName) =>
+  verifyIssue: (projectId, id, verifiedBy, notes, afterPhotoName) => {
     set((s) => {
       const arr = s.issuesByProject[projectId] ?? []
       const next = arr.map((i) => {
@@ -271,9 +324,19 @@ export const useIssueStore = create<IssueState>()((set, get) => ({
         return { ...i, status: 'Verified' as IssueStatus, verification, attachments, progressLog: [...i.progressLog, log] }
       })
       return { ...s, issuesByProject: { ...s.issuesByProject, [projectId]: next }, isDirty: true }
-    }),
+    })
+    const updated = get().issuesByProject[projectId]?.find((i) => i.id === id)
+    if (updated) {
+      updateWorkspaceIssue(projectId, id, {
+        status: updated.status,
+        verification: updated.verification,
+        progressLog: updated.progressLog,
+        attachments: updated.attachments,
+      }).catch(() => {})
+    }
+  },
 
-  closeIssue: (projectId, id, author) =>
+  closeIssue: (projectId, id, author) => {
     set((s) => {
       const arr = s.issuesByProject[projectId] ?? []
       const next = arr.map((i) => {
@@ -288,7 +351,9 @@ export const useIssueStore = create<IssueState>()((set, get) => ({
         return { ...i, status: 'Closed' as IssueStatus, progressLog: [...i.progressLog, log] }
       })
       return { ...s, issuesByProject: { ...s.issuesByProject, [projectId]: next }, isDirty: true }
-    }),
+    })
+    updateWorkspaceIssue(projectId, id, { status: 'Closed' }).catch(() => {})
+  },
 
   saveChanges: () => set({ isDirty: false }),
 }))

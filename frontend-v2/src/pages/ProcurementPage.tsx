@@ -17,6 +17,7 @@ import { ProjectContextBanner } from '@/components/ProjectContextBanner'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { useActiveProject } from '@/hooks/useActiveProject'
+import { useApprovedReport } from '@/hooks/useApprovedReport'
 import type {
   ProcurementRecommendation,
   ProcurementScheduleRow,
@@ -86,7 +87,9 @@ function parseAlertLine(raw: unknown): string | null {
 
 export function ProcurementPage() {
   const { masterPlan, project } = useActiveProject()
-  const bom = masterPlan?.billOfMaterials ?? []
+  const { bom: reportBom, optimizations } = useApprovedReport()
+  // prefer masterPlan BOM, fall back to approved report BOM
+  const bom = masterPlan?.billOfMaterials ?? reportBom ?? []
   const [materialFilter, setMaterialFilter] = useState<string>('All')
   const [toast, setToast] = useState<string | null>(null)
   const [isDirty, setIsDirty] = useState(false)
@@ -176,16 +179,53 @@ export function ProcurementPage() {
     return procurementSchedule.filter((r) => r.material === materialFilter)
   }, [materialFilter, procurementSchedule])
 
+  // Derive procurement schedule from BOM when API returns nothing
+  const derivedSchedule = useMemo((): ProcurementScheduleRow[] => {
+    if (!bom.length) return []
+    const today = new Date()
+    return bom.map((row, i) => {
+      const procureBy = new Date(today)
+      procureBy.setDate(today.getDate() + 7 + i * 3)
+      const deliveryBy = new Date(procureBy)
+      deliveryBy.setDate(procureBy.getDate() + 14)
+      return {
+        id: `bom-${i}`,
+        material: row.material,
+        procureBy: procureBy.toISOString().slice(0, 10),
+        deliveryDeadline: deliveryBy.toISOString().slice(0, 10),
+        linkedPhase: 'Structural Works',
+        linkedTask: '—',
+        status: 'planned' as const,
+      }
+    })
+  }, [bom])
+
+  // Derive recommendations from optimizations when API returns nothing
+  const derivedRecommendations = useMemo((): ProcurementRecommendation[] => {
+    if (!optimizations.length) return []
+    return optimizations.slice(0, 5).map((opt, i) => ({
+      id: `opt-${i}`,
+      title: opt.suggestion.slice(0, 80),
+      rationale: opt.impact ?? 'Value engineering recommendation from planning report',
+    }))
+  }, [optimizations])
+
   const summary = useMemo(() => {
     const totalValue = bom.reduce((a, r) => a + (r.totalCost ?? Math.round(r.quantity * r.unitRate)), 0)
-    const pending = scheduleRows.filter((r) => r.status !== 'delivered').length
+    // Use API schedule if available, otherwise derived
+    const activeSchedule = scheduleRows.length ? scheduleRows : derivedSchedule
+    const pending = activeSchedule.filter((r) => r.status !== 'delivered').length
     const avgLead =
       supplierQuotes.length > 0 ? Math.round(supplierQuotes.reduce((a, q) => a + q.leadTimeDays, 0) / supplierQuotes.length) : 0
     const risk =
-      scheduleRows.length === 0 ? '—' : scheduleRows.some((r) => r.status === 'planned') ? 'At Risk' : 'On Track'
+      activeSchedule.length === 0 ? '—' : activeSchedule.some((r) => r.status === 'planned') ? 'At Risk' : 'On Track'
     const preferred = bestByMaterial.best.size
     return { totalValue, pending, avgLead, risk, preferred }
-  }, [bom, scheduleRows, bestByMaterial.best.size, supplierQuotes])
+  }, [bom, scheduleRows, derivedSchedule, bestByMaterial.best.size, supplierQuotes])
+
+  // Active schedule and recommendations: API first, fall back to derived
+  const activeScheduleRows = scheduleRows.length > 0 ? scheduleRows : derivedSchedule
+  const activeRecommendations = procurementRecommendations.length > 0 ? procurementRecommendations : derivedRecommendations
 
   const exportPlan = () => {
     const payload = {
@@ -457,8 +497,8 @@ export function ProcurementPage() {
               <CardDescription>Best actions to reduce cost & risk.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              {procurementRecommendations.length ? (
-                procurementRecommendations.map((r) => (
+              {activeRecommendations.length ? (
+                activeRecommendations.map((r) => (
                   <div key={r.id} className="rounded-[var(--radius-xl)] bg-white px-3 py-2 ring-1 ring-[#dcece9]">
                     <div className="font-semibold">{r.title}</div>
                     <div className="mt-1 text-xs text-[color:var(--color-text_secondary)]">{r.rationale}</div>
@@ -496,7 +536,7 @@ export function ProcurementPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[color:var(--color-border)]">
-              {scheduleRows.map((r) => (
+              {activeScheduleRows.map((r) => (
                 <tr key={r.id} className="hover:bg-[color:var(--color-surface_hover)]/40">
                   <td className="px-3 py-3 font-semibold">{r.material}</td>
                   <td className="px-3 py-3 text-[color:var(--color-text_secondary)]">{formatISO(r.procureBy)}</td>
@@ -525,7 +565,7 @@ export function ProcurementPage() {
                   </td>
                 </tr>
               ))}
-              {scheduleRows.length === 0 ? (
+              {activeScheduleRows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-3 py-8 text-sm text-[color:var(--color-text_secondary)]">
                     No schedule rows for this filter.

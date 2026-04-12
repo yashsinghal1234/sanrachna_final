@@ -8,6 +8,8 @@ const messageSchema = new mongoose.Schema(
     contexts: { type: [String], default: [] },
     actions: { type: [mongoose.Schema.Types.Mixed], default: [] },
     structured: { type: mongoose.Schema.Types.Mixed, default: null },
+    usedModules: { type: [String], default: [] },
+    followUps: { type: [String], default: [] },
   },
   { _id: true, timestamps: true },
 )

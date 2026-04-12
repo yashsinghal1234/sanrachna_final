@@ -32,4 +32,8 @@ export interface ProjectDocument {
   linkedRfis: number
   linkedIssues: number
   versions: VersionEntry[]
+  /** API path under backend base URL for authenticated file access (null = metadata-only). */
+  fileUrl?: string | null
+  /** Original upload filename when available. */
+  originalFilename?: string
 }

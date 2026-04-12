@@ -9,29 +9,40 @@ import { cn } from '@/utils/cn'
 
 type DragMode = 'move' | 'resize-start' | 'resize-end'
 
-function dayStart(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+function toDate(v: unknown): Date {
+  if (v instanceof Date && !Number.isNaN((v as Date).getTime())) return v as Date
+  if (typeof v === 'string' || typeof v === 'number') {
+    const d = new Date(v)
+    if (!Number.isNaN(d.getTime())) return d
+  }
+  return new Date()
 }
 
-function diffDays(a: Date, b: Date) {
+function dayStart(d: unknown) {
+  const dt = toDate(d)
+  return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate())
+}
+
+function diffDays(a: unknown, b: unknown) {
   const one = dayStart(a).getTime()
   const two = dayStart(b).getTime()
   return Math.round((two - one) / (24 * 60 * 60 * 1000))
 }
 
-function addDays(d: Date, days: number) {
+function addDays(d: unknown, days: number) {
   const dt = dayStart(d)
   dt.setDate(dt.getDate() + days)
   return dt
 }
 
-function formatShort(d: Date) {
+function formatShort(d: unknown) {
   try {
-    return new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short' }).format(d)
+    return new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short' }).format(toDate(d))
   } catch {
-    return d.toISOString().slice(5, 10)
+    return String(d).slice(5, 10)
   }
 }
+
 
 function zoomPpd(z: ZoomLevel) {
   // pixels per day

@@ -847,6 +847,7 @@ function OwnerEmergencyDashboard() {
 
 export function EmergencyPage() {
   const { role } = useAuth()
+  const { loading } = useEmergency()
   const resolvedRole: Role = role ?? 'engineer'
 
   return (
@@ -863,9 +864,15 @@ export function EmergencyPage() {
                 : 'Raise an emergency quickly and safely.'}
           </p>
         </div>
-        <div className="inline-flex items-center gap-2 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm font-semibold shadow-sm">
-          <HardHat className="size-4 text-[color:var(--color-primary_dark)]" />
-          {resolvedRole === 'owner' ? 'Owner view' : resolvedRole === 'engineer' ? 'Senior engineer view' : 'Worker / supervisor view'}
+        <div className="flex flex-col items-end gap-1">
+          <div className="inline-flex items-center gap-2 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm font-semibold shadow-sm">
+            <HardHat className="size-4 text-[color:var(--color-primary_dark)]" />
+            {resolvedRole === 'owner' ? 'Owner view' : resolvedRole === 'engineer' ? 'Senior engineer view' : 'Worker / supervisor view'}
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <span className={`inline-block size-2 rounded-full ${loading ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
+            {loading ? 'Syncing…' : 'Live — auto-refreshes every 15s'}
+          </div>
         </div>
       </div>
 
@@ -873,4 +880,5 @@ export function EmergencyPage() {
     </div>
   )
 }
+
 

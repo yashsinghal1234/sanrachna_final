@@ -40,6 +40,7 @@ import { Modal } from '@/components/ui/Modal'
 import { useIssueStore } from '@/store/useIssueStore'
 import { useProjectsStore } from '@/store/useProjectsStore'
 import { useRfiStore } from '@/store/useRfiStore'
+import { useApprovedReport } from '@/hooks/useApprovedReport'
 import type { CostBreakdown, TimelineTask } from '@/types/dashboard.types'
 import { formatDate, formatINR } from '@/utils/format'
 
@@ -212,24 +213,7 @@ export function AppDashboardPage() {
     }
   }, [role, currentProjectIdOwner])
 
-  const ownerPieData = useMemo(() => {
-    const c = ownerCostBreakdown
-    if (!c) {
-      return [
-        { name: 'Foundation', value: 0 },
-        { name: 'Structure', value: 0 },
-        { name: 'MEP', value: 0 },
-        { name: 'Finishing', value: 0 },
-      ]
-    }
-    return [
-      { name: 'Foundation', value: c.foundation_inr },
-      { name: 'Structure', value: c.structure_inr },
-      { name: 'MEP', value: c.mep_inr },
-      { name: 'Finishing', value: c.finishing_inr },
-      { name: 'Contingency', value: c.contingency_inr },
-    ].filter((x) => x.value > 0)
-  }, [ownerCostBreakdown])
+
 
   const ownerLineData = useMemo(() => {
     if (!ownerTimelineTasks.length) return []
@@ -241,6 +225,27 @@ export function AppDashboardPage() {
   }, [ownerTimelineTasks])
 
   const activeOwnerProject = currentProjectIdOwner ? projectsFromStore[currentProjectIdOwner] : undefined
+
+  // ── Report-derived data (replaces empty backend ownerCostBreakdown) ───────
+  const { cost: reportCost, risks: reportRisks, timeline: reportTimeline,
+          workforce: reportWorkforce, estimatedMonths, confidence,
+          feasibility, hasReport, isApproved } = useApprovedReport()
+
+  // Pie chart data: prefer report phases, fall back to backend breakdown
+  const ownerPieData = useMemo(() => {
+    if (reportCost) {
+      return reportCost.phases.map((p) => ({ name: p.name, value: p.cost })).filter((x) => x.value > 0)
+    }
+    const c = ownerCostBreakdown
+    if (!c) return [{ name: 'Foundation', value: 0 }]
+    return [
+      { name: 'Foundation', value: c.foundation_inr },
+      { name: 'Structure', value: c.structure_inr },
+      { name: 'MEP', value: c.mep_inr },
+      { name: 'Finishing', value: c.finishing_inr },
+      { name: 'Contingency', value: c.contingency_inr },
+    ].filter((x) => x.value > 0)
+  }, [reportCost, ownerCostBreakdown])
 
   const ownerAvgProgress = useMemo(() => {
     if (!ownerTimelineTasks.length) return null
@@ -783,22 +788,26 @@ export function AppDashboardPage() {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="text-sm">Cost risk</CardTitle>
-                  <CardDescription title="Forecast vs plan derived from logs + benchmarked estimate">
-                    Forecast vs plan
+                  <CardTitle className="text-sm">Est. project cost</CardTitle>
+                  <CardDescription title="From approved planning report">
+                    Plan total + contingency
                   </CardDescription>
                 </div>
-                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${kpiPillColor('good')}`}>Live</span>
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${hasReport ? kpiPillColor('good') : kpiPillColor('warning')}`}>
+                  {isApproved ? 'Approved' : hasReport ? 'Draft' : 'No plan'}
+                </span>
               </div>
             </CardHeader>
             <CardContent>
               <div className="flex items-end justify-between gap-3">
                 <div className="text-2xl font-bold">
-                  {ownerCostBreakdown?.total_inr ? formatINR(ownerCostBreakdown.total_inr) : '—'}
+                  {reportCost ? formatINR(reportCost.grandTotal) : ownerCostBreakdown?.total_inr ? formatINR(ownerCostBreakdown.total_inr) : '—'}
                 </div>
                 <TrendingUp className="size-5 text-[color:var(--color-text_muted)]" />
               </div>
-              <p className="mt-2 text-xs text-[color:var(--color-text_secondary)]">Total from dashboard cost_breakdown</p>
+              <p className="mt-2 text-xs text-[color:var(--color-text_secondary)]">
+                {reportCost ? `₹${reportCost.costPerSqFt.toLocaleString('en-IN')}/sqft · 5% contingency included` : 'Generate a plan to see estimates'}
+              </p>
             </CardContent>
           </Card>
 
@@ -806,20 +815,26 @@ export function AppDashboardPage() {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="text-sm">Delay risk</CardTitle>
-                  <CardDescription title="Predicted slippage at current pace and dependencies">
-                    Schedule variance
+                  <CardTitle className="text-sm">Timeline</CardTitle>
+                  <CardDescription title="Estimated duration from planning report">
+                    Planned duration
                   </CardDescription>
                 </div>
-                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${kpiPillColor('good')}`}>Live</span>
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${feasibility === 'Feasible' ? kpiPillColor('good') : feasibility ? kpiPillColor('critical') : kpiPillColor('warning')}`}>
+                  {feasibility ?? 'No plan'}
+                </span>
               </div>
             </CardHeader>
             <CardContent>
               <div className="flex items-end justify-between gap-3">
-                <div className="text-2xl font-bold">{ownerAvgProgress != null ? `${ownerAvgProgress}%` : '—'}</div>
+                <div className="text-2xl font-bold">
+                  {estimatedMonths != null ? `${estimatedMonths} mo` : ownerAvgProgress != null ? `${ownerAvgProgress}%` : '—'}
+                </div>
                 <Timer className="size-5 text-[color:var(--color-text_muted)]" />
               </div>
-              <p className="mt-2 text-xs text-[color:var(--color-text_secondary)]">Average task % complete (timeline_tasks)</p>
+              <p className="mt-2 text-xs text-[color:var(--color-text_secondary)]">
+                {reportTimeline ? `${reportTimeline.phases.length} phases · ${reportTimeline.totalMonths.toFixed(1)} months total` : 'Add tasks to chart progress'}
+              </p>
             </CardContent>
           </Card>
 
@@ -827,20 +842,22 @@ export function AppDashboardPage() {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="text-sm">Burn rate</CardTitle>
-                  <CardDescription title="Weekly spend velocity compared to planned curve">
-                    Spend per week
+                  <CardTitle className="text-sm">Workforce</CardTitle>
+                  <CardDescription title="Required crew from planning report">
+                    Planned headcount
                   </CardDescription>
                 </div>
-                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${kpiPillColor('good')}`}>API</span>
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${kpiPillColor('good')}`}>{hasReport ? 'Plan' : 'N/A'}</span>
               </div>
             </CardHeader>
             <CardContent>
               <div className="flex items-end justify-between gap-3">
-                <div className="text-2xl font-bold">—</div>
+                <div className="text-2xl font-bold">{reportWorkforce ? reportWorkforce.total : '—'}</div>
                 <IndianRupee className="size-5 text-[color:var(--color-text_muted)]" />
               </div>
-              <p className="mt-2 text-xs text-[color:var(--color-text_secondary)]">Add a burn-rate series to your dashboard API</p>
+              <p className="mt-2 text-xs text-[color:var(--color-text_secondary)]">
+                {reportWorkforce ? `Peak: ${reportWorkforce.peak} · ${reportWorkforce.byTrade.length} trades` : 'Generate a plan to see workforce'}
+              </p>
             </CardContent>
           </Card>
 
@@ -848,28 +865,26 @@ export function AppDashboardPage() {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="text-sm">Cash remaining</CardTitle>
-                  <CardDescription title="Buffer months based on burn rate and available contingency">
+                  <CardTitle className="text-sm">Contingency reserve</CardTitle>
+                  <CardDescription title="5% buffer from planning report">
                     Buffer health
                   </CardDescription>
                 </div>
-                <span
-                  className={`rounded-full px-2 py-1 text-xs font-semibold ${kpiPillColor('good')}`}
-                >
-                  Safe
+                <span className={`rounded-full px-2 py-1 text-xs font-semibold ${reportCost ? kpiPillColor('good') : kpiPillColor('warning')}`}>
+                  {reportCost ? 'Safe' : 'No plan'}
                 </span>
               </div>
             </CardHeader>
             <CardContent>
               <div className="flex items-end justify-between gap-3">
                 <div className="text-2xl font-bold">
-                  {ownerCostBreakdown?.contingency_inr != null
-                    ? formatINR(ownerCostBreakdown.contingency_inr)
-                    : '—'}
+                  {reportCost ? formatINR(reportCost.contingency) : ownerCostBreakdown?.contingency_inr != null ? formatINR(ownerCostBreakdown.contingency_inr) : '—'}
                 </div>
                 <TrendingDown className="size-5 text-[color:var(--color-text_muted)]" />
               </div>
-              <p className="mt-2 text-xs text-[color:var(--color-text_secondary)]">Contingency from dashboard cost_breakdown</p>
+              <p className="mt-2 text-xs text-[color:var(--color-text_secondary)]">
+                {reportCost ? `${((reportCost.contingency / reportCost.totalCost) * 100).toFixed(0)}% of total project cost` : 'Contingency from planning report'}
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -909,29 +924,33 @@ export function AppDashboardPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertTriangle className="size-4 text-[color:var(--color-warning)]" />
-                Priority alerts
+                Risk summary
               </CardTitle>
-              <CardDescription>What needs attention first</CardDescription>
+              <CardDescription>From approved planning report</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-3 gap-2">
                 <div className="rounded-[var(--radius-xl)] bg-[color:var(--color-error)]/10 p-3 text-center">
-                  <div className="text-xs font-semibold text-[color:var(--color-error)]">Critical</div>
-                  <div className="mt-1 text-lg font-bold">—</div>
+                  <div className="text-xs font-semibold text-[color:var(--color-error)]">High</div>
+                  <div className="mt-1 text-lg font-bold">{reportRisks?.highCount ?? '—'}</div>
                 </div>
                 <div className="rounded-[var(--radius-xl)] bg-[color:var(--color-warning)]/12 p-3 text-center">
-                  <div className="text-xs font-semibold text-[color:var(--color-warning)]">Warning</div>
-                  <div className="mt-1 text-lg font-bold">—</div>
+                  <div className="text-xs font-semibold text-[color:var(--color-warning)]">Medium</div>
+                  <div className="mt-1 text-lg font-bold">{reportRisks?.mediumCount ?? '—'}</div>
                 </div>
                 <div className="rounded-[var(--radius-xl)] bg-[color:var(--color-info)]/10 p-3 text-center">
-                  <div className="text-xs font-semibold text-[color:var(--color-info)]">Info</div>
-                  <div className="mt-1 text-lg font-bold">—</div>
+                  <div className="text-xs font-semibold text-[color:var(--color-info)]">Low</div>
+                  <div className="mt-1 text-lg font-bold">{reportRisks ? Math.max(0, reportRisks.risks.length - reportRisks.highCount - reportRisks.mediumCount) : '—'}</div>
                 </div>
               </div>
-
-              <p className="text-xs text-[color:var(--color-text_secondary)]">
-                Priority alerts will appear when your notifications or insights API supplies them.
-              </p>
+              {reportRisks?.risks.slice(0, 3).map((r, i) => (
+                <div key={i} className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 text-xs">
+                  <span className={`font-semibold ${r.level === 'High' ? 'text-[color:var(--color-error)]' : 'text-[color:var(--color-warning)]'}`}>[{r.level}] </span>
+                  {r.risk.slice(0, 72)}
+                </div>
+              )) ?? (
+                <p className="text-xs text-[color:var(--color-text_secondary)]">Risks will appear after generating a plan.</p>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -995,20 +1014,24 @@ export function AppDashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>Project health score</CardTitle>
-              <CardDescription>1-glance: cost, time, risk</CardDescription>
+              <CardDescription>Confidence from planning engine</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-end justify-between">
                 <div>
-                  <div className="text-xs text-[color:var(--color-text_secondary)]">Health</div>
-                  <div className="text-3xl font-bold">{ownerAvgProgress ?? '—'}</div>
+                  <div className="text-xs text-[color:var(--color-text_secondary)]">Confidence</div>
+                  <div className="text-3xl font-bold">{confidence != null ? `${confidence}%` : ownerAvgProgress != null ? `${ownerAvgProgress}` : '—'}</div>
                 </div>
-                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${kpiPillColor('good')}`}>Avg %</span>
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${confidence != null ? (confidence >= 75 ? kpiPillColor('good') : kpiPillColor('warning')) : kpiPillColor('warning')}`}>
+                  {confidence != null ? `${confidence >= 75 ? 'High' : 'Medium'}` : 'No plan'}
+                </span>
               </div>
-              {ownerAvgProgress != null ? (
-                <ScoreBar label="Average task completion (timeline_tasks)" value={ownerAvgProgress} />
+              {confidence != null ? (
+                <ScoreBar label="Plan confidence score" value={confidence} />
+              ) : ownerAvgProgress != null ? (
+                <ScoreBar label="Average task completion" value={ownerAvgProgress} />
               ) : (
-                <p className="text-xs text-[color:var(--color-text_muted)]">No timeline tasks from the dashboard API.</p>
+                <p className="text-xs text-[color:var(--color-text_muted)]">Generate a planning report to see score.</p>
               )}
             </CardContent>
           </Card>
@@ -1058,12 +1081,25 @@ export function AppDashboardPage() {
                     </ResponsiveContainer>
                   ) : (
                     <div className="flex h-full items-center justify-center rounded-[var(--radius-xl)] border border-dashed border-[color:var(--color-border)] text-sm text-[color:var(--color-text_secondary)]">
-                      No cost breakdown — load dashboard data for this project.
+                      Generate a planning report to see cost breakdown.
                     </div>
                   )}
                 </div>
                 <div className="space-y-3">
-                  {ownerCostBreakdown ? (
+                  {reportCost ? (
+                    reportCost.phases.map(({ name, cost }) => (
+                      <div
+                        key={name}
+                        className="flex items-center justify-between rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-4 py-3"
+                      >
+                        <div>
+                          <div className="text-sm font-semibold">{name}</div>
+                          <div className="text-xs text-[color:var(--color-text_secondary)]">{formatINR(cost)}</div>
+                        </div>
+                        <CheckCircle2 className="size-4 text-[color:var(--color-text_muted)]" />
+                      </div>
+                    ))
+                  ) : ownerCostBreakdown ? (
                     (
                       [
                         ['Foundation', ownerCostBreakdown.foundation_inr],
@@ -1084,7 +1120,7 @@ export function AppDashboardPage() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-xs text-[color:var(--color-text_secondary)]">Phase amounts appear when cost_breakdown is returned.</p>
+                    <p className="text-xs text-[color:var(--color-text_secondary)]">Phase amounts appear after generating a planning report.</p>
                   )}
                 </div>
               </div>

@@ -23,6 +23,7 @@ export function normalizeProjectTimeline(raw: unknown, fallbackId: string, fallb
     const endDate = toDate(tr.endDate, startDate)
     return {
       id: String(tr.id ?? ''),
+      backendTaskId: typeof tr.backendTaskId === 'string' && tr.backendTaskId ? tr.backendTaskId : undefined,
       name: String(tr.name ?? 'Task'),
       phase: tr.phase as GanttTask['phase'],
       startDate,

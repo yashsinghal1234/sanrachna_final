@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useProjectsStore } from '@/store/useProjectsStore'
 import { Keyboard, X } from 'lucide-react'
@@ -14,6 +14,8 @@ import { ResourceLoadingTimeline } from '@/components/timeline/ResourceLoadingTi
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { useTimelineStore } from '@/store/useTimelineStore'
+import { useApprovedReport } from '@/hooks/useApprovedReport'
+import { reportToTimeline } from '@/lib/reportToTimeline'
 
 type Toast = { id: string; msg: string }
 
@@ -22,17 +24,57 @@ function newId() {
 }
 
 export function TimelinePage() {
-  const { isDirty, saveChanges, markPublished, toggleBaseline, toggleDependencies, toggleCriticalPath, fetchTimeline, timelineLoadStatus, timelineLoadError } =
-    useTimelineStore()
+  const {
+    isDirty,
+    saveChanges,
+    markPublished,
+    toggleBaseline,
+    toggleDependencies,
+    toggleCriticalPath,
+    fetchTimeline,
+    refreshFromBackend,
+    timelineLoadStatus,
+    timelineLoadError,
+    timeline,
+    setTimeline,
+  } = useTimelineStore()
   const currentProjectId = useProjectsStore((s) => s.currentProjectId)
   const projectsById = useProjectsStore((s) => s.projects)
+  const { report } = useApprovedReport()
   const [toasts, setToasts] = useState<Toast[]>([])
   const [showKeys, setShowKeys] = useState(false)
+  const prevProjectRef = useRef<string | null>(null)
+  const seededRef = useRef<string | null>(null) // tracks which projectId we already seeded
 
+  // Fetch timeline on project change; auto-save previous project before switching
   useEffect(() => {
     const name = currentProjectId ? projectsById[currentProjectId]?.name ?? 'Project' : 'Project'
+    // If switching projects, save the current state first
+    if (prevProjectRef.current && prevProjectRef.current !== currentProjectId) {
+      saveChanges()
+    }
+    prevProjectRef.current = currentProjectId
     void fetchTimeline(currentProjectId, name)
-  }, [currentProjectId, projectsById, fetchTimeline])
+  }, [currentProjectId, projectsById, fetchTimeline, saveChanges])
+
+  // Seed timeline from approved report when it has no tasks
+  useEffect(() => {
+    if (!report || !currentProjectId) return
+    if (timelineLoadStatus !== 'ready') return
+    if (timeline && timeline.tasks.length > 0) return // already has data
+    if (seededRef.current === currentProjectId) return // already seeded for this project
+    const name = projectsById[currentProjectId]?.name ?? 'Project'
+    const seeded = reportToTimeline(report, currentProjectId, name)
+    seededRef.current = currentProjectId
+    setTimeline(seeded)
+  }, [report, currentProjectId, timeline, timelineLoadStatus, projectsById, setTimeline])
+
+  // Auto-refresh from backend every 60 s while page is visible
+  useEffect(() => {
+    const run = () => void refreshFromBackend()
+    const id = window.setInterval(run, 60_000)
+    return () => window.clearInterval(id)
+  }, [refreshFromBackend])
 
   const onToast = (msg: string) => {
     const id = newId()
@@ -44,12 +86,9 @@ export function TimelinePage() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase()
-      if (key === '?' && (e.shiftKey || true)) {
-        // only show if user intentionally hits ?
-        if (e.key === '?') {
-          setShowKeys((s) => !s)
-          e.preventDefault()
-        }
+      if (key === '?' && e.key === '?') {
+        setShowKeys((s) => !s)
+        e.preventDefault()
       }
 
       const meta = e.ctrlKey || e.metaKey
@@ -62,7 +101,7 @@ export function TimelinePage() {
       if (key === 'p') {
         e.preventDefault()
         markPublished()
-        onToast('Published updates (demo).')
+        onToast('Published updates.')
       }
       if (key === 'b') {
         e.preventDefault()
@@ -79,10 +118,14 @@ export function TimelinePage() {
         toggleCriticalPath()
         onToast('Toggled critical path.')
       }
+      if (key === 'r') {
+        e.preventDefault()
+        refreshFromBackend().then(() => onToast('Pulled latest worker updates.'))
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [saveChanges, markPublished, toggleBaseline, toggleDependencies, toggleCriticalPath])
+  }, [saveChanges, markPublished, toggleBaseline, toggleDependencies, toggleCriticalPath, refreshFromBackend])
 
   const unsavedBanner = useMemo(() => {
     if (!isDirty) return null
@@ -187,26 +230,20 @@ export function TimelinePage() {
               </Button>
             </div>
             <div className="space-y-2 px-5 py-4 text-sm text-[color:var(--color-text_secondary)]">
-              <div className="flex items-center justify-between rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] px-3 py-2">
-                <span>Save changes</span>
-                <span className="font-semibold text-[color:var(--color-text)]">Ctrl + S</span>
-              </div>
-              <div className="flex items-center justify-between rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] px-3 py-2">
-                <span>Publish updates</span>
-                <span className="font-semibold text-[color:var(--color-text)]">Ctrl + P</span>
-              </div>
-              <div className="flex items-center justify-between rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] px-3 py-2">
-                <span>Toggle baseline</span>
-                <span className="font-semibold text-[color:var(--color-text)]">Ctrl + B</span>
-              </div>
-              <div className="flex items-center justify-between rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] px-3 py-2">
-                <span>Toggle dependencies</span>
-                <span className="font-semibold text-[color:var(--color-text)]">Ctrl + D</span>
-              </div>
-              <div className="flex items-center justify-between rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] px-3 py-2">
-                <span>Toggle critical path</span>
-                <span className="font-semibold text-[color:var(--color-text)]">Ctrl + C</span>
-              </div>
+              {[
+                { label: 'Save changes', shortcut: 'Ctrl + S' },
+                { label: 'Publish updates', shortcut: 'Ctrl + P' },
+                { label: 'Pull worker updates', shortcut: 'Ctrl + R' },
+                { label: 'Toggle baseline', shortcut: 'Ctrl + B' },
+                { label: 'Toggle dependencies', shortcut: 'Ctrl + D' },
+                { label: 'Toggle critical path', shortcut: 'Ctrl + C' },
+                { label: 'Show shortcuts', shortcut: '?' },
+              ].map(({ label, shortcut }) => (
+                <div key={label} className="flex items-center justify-between rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] px-3 py-2">
+                  <span>{label}</span>
+                  <span className="font-semibold text-[color:var(--color-text)]">{shortcut}</span>
+                </div>
+              ))}
               <div className="pt-2 text-xs">
                 Tip: the Gantt supports drag-to-move and resize handles. Baseline + dependencies are toggles in the chart toolbar.
               </div>
@@ -217,4 +254,3 @@ export function TimelinePage() {
     </div>
   )
 }
-
