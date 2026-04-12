@@ -7,12 +7,11 @@ export type ContributorAvatar = {
 }
 
 const DEFAULT_TEAM: ContributorAvatar[] = [
-  { name: 'Aanya Sharma', accentClass: 'bg-[linear-gradient(135deg,#2FBFAD,#1fa393)]' },
-  { name: 'Vikram Mehta', accentClass: 'bg-[linear-gradient(135deg,#3B82F6,#2563eb)]' },
-  { name: 'Priya Nair', accentClass: 'bg-[linear-gradient(135deg,#8B5CF6,#6d28d9)]' },
-  { name: 'Rahul Kapoor', accentClass: 'bg-[linear-gradient(135deg,#F59E0B,#d97706)]' },
-  { name: 'Meera Iyer', accentClass: 'bg-[linear-gradient(135deg,#EC4899,#db2777)]' },
-  { name: 'Arjun Desai', accentClass: 'bg-[linear-gradient(135deg,#14B8A6,#0d9488)]' },
+  { name: 'Yash Singhal',  accentClass: 'bg-[linear-gradient(135deg,#2FBFAD,#1fa393)]' },
+  { name: 'Sudiksha',      accentClass: 'bg-[linear-gradient(135deg,#8B5CF6,#6d28d9)]' },
+  { name: 'Tanya',         accentClass: 'bg-[linear-gradient(135deg,#EC4899,#db2777)]' },
+  { name: 'Sparsh Singhal',accentClass: 'bg-[linear-gradient(135deg,#3B82F6,#2563eb)]' },
+  { name: 'Umang Saluja',  accentClass: 'bg-[linear-gradient(135deg,#F59E0B,#d97706)]' },
 ]
 
 function initials(name: string) {
