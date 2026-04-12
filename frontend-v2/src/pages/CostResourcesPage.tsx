@@ -100,7 +100,7 @@ export function CostResourcesPage() {
     // Load planning fields from backend on mount or project change
     useEffect(() => {
       if (!project?.id) return
-      const studio = project?.planning?.sanrachnaStudio || {}
+      const studio = ((project as any).planning?.sanrachnaStudio) || {}
       if (typeof studio === 'object') {
         if (typeof studio.material === 'number') setEstMaterial(studio.material)
         if (typeof studio.labor === 'number') setEstLabor(studio.labor)
@@ -937,7 +937,7 @@ export function CostResourcesPage() {
                     setEstLoading(true)
                     setEstError(null)
                     try {
-                      const studio = project?.planning?.sanrachnaStudio || {}
+                      const studio = ((project as any).planning?.sanrachnaStudio) || {}
                       const res = await apiEstimateBudget(project.id, {
                         material: typeof studio.material === 'number' ? studio.material : 0,
                         labor: typeof studio.labor === 'number' ? studio.labor : 0,
