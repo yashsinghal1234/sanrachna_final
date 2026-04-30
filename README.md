@@ -1,14 +1,32 @@
 # 🏗️ Sanrachna — Construction Management Platform
 
-> **सनरचना** *(n.)* — Sanskrit for *"structure" or "construction"*
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?style=flat&logo=node.js)](https://nodejs.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python)](https://www.python.org)
 
-Sanrachna is a full-stack, AI-powered construction management platform built to bridge the gap between field workers, site engineers, and project stakeholders. It provides real-time project tracking, AI-assisted planning, intelligent reporting, and collaborative tools — all in one unified interface.
+> **सनरचना** *(n.)* — Sanskrit for *"structure" or "construction"*
+>
+> A full-stack, AI-powered construction management platform built to bridge the gap between field workers, site engineers, and project stakeholders.
 
 ---
 
 ## 📸 Overview
 
 Sanrachna consolidates the entire construction workflow — from initial cost estimation and AI-generated project plans to daily logs, task assignment, issue tracking, RFIs, procurement, and emergency incident management — into a role-aware, cloud-deployable platform.
+
+### 🎯 Target Users
+
+| Role | Use Case |
+|------|----------|
+| **Project Owners** | Monitor project health, costs, and progress across multiple sites |
+| **Site Engineers** | Assign tasks, review logs, manage RFIs and issues |
+| **Field Workers** | Submit daily logs, update task status, report emergencies |
+
+### 🏗️ Project Status
+
+> **Current Status**: 🟡 Active Development — Production-ready for small to medium deployments
 
 ---
 
@@ -107,21 +125,42 @@ Sanrachna/
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS v4 |
-| **State Management** | Zustand |
-| **Charts & Visualization** | Recharts, React Google Charts |
-| **Forms** | React Hook Form + Zod |
-| **Backend API** | Node.js, Express v5 |
-| **Database** | MongoDB + Mongoose |
-| **Authentication** | JWT (jsonwebtoken + bcryptjs) |
-| **File Uploads** | Multer |
-| **AI / LLM** | DeepSeek API (OpenAI-compatible) |
-| **Report Engine** | Python, FastAPI, Uvicorn |
-| **PDF Generation** | ReportLab |
-| **ML Estimation** | scikit-learn (pre-trained `.pkl` model) |
-| **Deployment** | Vercel (frontend) + Render (backend + report engine) |
+### Frontend
+| Technology | Purpose |
+|-------------|---------|
+| [React 19](https://react.dev) | UI framework |
+| [TypeScript](https://www.typescriptlang.org) | Type safety |
+| [Vite](https://vitejs.dev) | Build tool |
+| [Tailwind CSS v4](https://tailwindcss.com) | Styling |
+| [Zustand](https://zustand-demo.pmnd.rs) | State management |
+| [Recharts](https://recharts.org) | Charts & graphs |
+| [React Hook Form](https://react-hook-form.com) | Form handling |
+| [Zod](https://zod.dev) | Schema validation |
+
+### Backend
+| Technology | Purpose |
+|-------------|---------|
+| [Node.js](https://nodejs.org) | Runtime |
+| [Express v5](https://expressjs.com) | Web framework |
+| [MongoDB](https://www.mongodb.com) + [Mongoose](https://mongoosejs.com) | Database |
+| [JWT](https://jwt.io) + [bcryptjs](https://github.com/dcodeIO/bcrypt.js) | Authentication |
+| [Multer](https://github.com/expressjs/multer) | File uploads |
+| [DeepSeek API](https://platform.deepseek.com) | AI/LLM |
+
+### Report Engine (Python)
+| Technology | Purpose |
+|-------------|---------|
+| [Python ≥ 3.11](https://www.python.org) | Runtime |
+| [FastAPI](https://fastapi.tiangolo.com) | Web framework |
+| [Uvicorn](https://www.uvicorn.org) | ASGI server |
+| [ReportLab](https://www.reportlab.com) | PDF generation |
+| [scikit-learn](https://scikit-learn.org) | ML estimation |
+
+### Deployment
+| Service | Target |
+|---------|--------|
+| [Vercel](https://vercel.com) | Frontend |
+| [Render](https://render.com) | Backend + Report Engine |
 
 ---
 
@@ -129,10 +168,12 @@ Sanrachna/
 
 ### Prerequisites
 
-- Node.js ≥ 18
-- Python ≥ 3.11
-- MongoDB (Atlas URI or local)
-- DeepSeek API key
+| Tool | Version | Purpose |
+|------|---------|---------|
+| [Node.js](https://nodejs.org) | ≥ 18 | Backend runtime |
+| [Python](https://www.python.org) | ≥ 3.11 | Report engine runtime |
+| [MongoDB](https://www.mongodb.com) | Atlas or local | Database |
+| [DeepSeek API Key](https://platform.deepseek.com) | — | AI features |
 
 ---
 
@@ -148,41 +189,70 @@ cd sanrachna
 ### 2. Backend Setup
 
 ```bash
+# Navigate to backend directory
 cd backend
+
+# Install dependencies
 npm install
 ```
 
-Create a `.env` file (see `.env.example`):
+Create a `.env` file in `backend/` directory:
 
 ```env
+# Server Configuration
 PORT=5000
+
+# Database
 MONGODB_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/sanrachna
-JWT_SECRET=your_jwt_secret
+
+# Authentication
+JWT_SECRET=your_jwt_secret_key_here
 JWT_EXPIRES_IN=7d
+
+# CORS
 CORS_ORIGIN=http://localhost:5173
+
+# AI Configuration
 DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxx
 ```
 
-Start the dev server:
+Start the development server:
 
 ```bash
 npm run dev
 ```
 
+> ✅ Backend running at **http://localhost:5000**
+
 ---
 
-### 3. Report Engine Setup
+### 3. Report Engine Setup (Python)
 
 ```bash
+# Navigate to report engine directory
 cd report-engine
+
+# Create virtual environment (recommended)
+python -m venv venv
+
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-Create a `.env` file:
+Create a `.env` file in `report-engine/` directory:
 
 ```env
+# CORS Configuration
 CORS_ORIGINS=http://localhost:5173
-HF_TOKEN=hf_xxxxxxxxxxxxxxxx   # Optional: HuggingFace token if using HF router
+
+# HuggingFace Token (optional - for advanced AI features)
+HF_TOKEN=hf_xxxxxxxxxxxxxxxx
 ```
 
 Start the report engine:
@@ -191,29 +261,44 @@ Start the report engine:
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
+> ✅ Report engine running at **http://localhost:8000**
+
 ---
 
 ### 4. Frontend Setup
 
 ```bash
+# Navigate to frontend directory
 cd frontend-v2
+
+# Install dependencies
 npm install
 ```
 
-Create a `.env` file (see `.env.example`):
+Create a `.env` file in `frontend-v2/` directory:
 
 ```env
+# Backend API URLs
 VITE_BACKEND_URL=http://localhost:5000
 VITE_PLANNING_API_BASE=http://localhost:8000
 ```
 
-Start the dev server:
+Start the development server:
 
 ```bash
 npm run dev
 ```
 
-The app will be available at **http://localhost:5173**
+> ✅ Frontend running at **http://localhost:5173**
+
+---
+
+### 5. Verify Installation
+
+Open your browser and navigate to:
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:5000/api/health (if available)
+- **Report Engine**: http://localhost:8000/docs (Swagger UI)
 
 ---
 
@@ -225,129 +310,305 @@ Sanrachna is configured for one-command deployment on **Render** (backend + repo
 
 A `render.yaml` is included at the root. Import your repo in [Render Dashboard](https://dashboard.render.com) and it will auto-detect both services.
 
-Set the following in Render's environment dashboard:
-- `MONGODB_URI`
-- `JWT_SECRET`
-- `CORS_ORIGIN` → your Vercel URL
-- `DEEPSEEK_API_KEY`
-- `HF_TOKEN` (report engine)
-- `CORS_ORIGINS` (report engine) → your Vercel URL
+#### Environment Variables (Render Dashboard)
+
+| Variable | Value | Description |
+|----------|-------|-------------|
+| `MONGODB_URI` | `mongodb+srv://...` | MongoDB Atlas connection string |
+| `JWT_SECRET` | `your-secret-key` | Secret for JWT signing |
+| `CORS_ORIGIN` | `https://your-app.vercel.app` | Your Vercel frontend URL |
+| `DEEPSEEK_API_KEY` | `sk-...` | DeepSeek API key |
+
+#### Report Engine Variables
+
+| Variable | Value | Description |
+|----------|-------|-------------|
+| `CORS_ORIGINS` | `https://your-app.vercel.app` | Your Vercel frontend URL |
+| `HF_TOKEN` | `hf_...` | HuggingFace token (optional) |
+
+---
 
 ### Vercel (Frontend)
 
-Push `frontend-v2/` or import the repo in [Vercel](https://vercel.com). Set:
-- `VITE_BACKEND_URL` → your Render backend URL
-- `VITE_PLANNING_API_BASE` → your Render report engine URL
+1. Push `frontend-v2/` folder to GitHub, or import the entire repo in [Vercel](https://vercel.com)
+2. Configure the following environment variables:
 
-A `vercel.json` is included for SPA routing support.
+| Variable | Value | Description |
+|----------|-------|-------------|
+| `VITE_BACKEND_URL` | `https://your-backend.onrender.com` | Your Render backend URL |
+| `VITE_PLANNING_API_BASE` | `https://your-report-engine.onrender.com` | Your Render report engine URL |
+
+> 📝 A `vercel.json` is included in `frontend-v2/` for SPA routing support.
 
 ---
 
-## 📡 API Reference (Key Endpoints)
+### Quick Deploy Buttons
 
-### Auth
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/api/auth/register` | Create new user account |
-| POST | `/api/auth/login` | Authenticate and receive JWT |
+> ⬇️ *Coming soon - Add deploy buttons for one-click deployment*
+
+---
+
+## 📡 API Reference
+
+### Authentication Endpoints
+
+| Method | Endpoint | Description | Body Parameters |
+|--------|----------|-------------|-----------------|
+| POST | `/api/auth/register` | Create new user account | `name`, `email`, `password`, `role` |
+| POST | `/api/auth/login` | Authenticate and receive JWT | `email`, `password` |
+| POST | `/api/auth/refresh` | Refresh expired JWT token | `refreshToken` |
+| GET | `/api/auth/me` | Get current user profile | — |
 
 ### Projects & Workspaces
+
 | Method | Endpoint | Description |
-|---|---|---|
+|--------|----------|-------------|
 | GET | `/api/workspaces` | List user's workspaces (projects) |
 | POST | `/api/workspaces` | Create a new project |
-| GET | `/api/projects/:id/tasks` | Get tasks for a project |
-| POST | `/api/projects/:id/tasks` | Create a task |
-| POST | `/api/projects/:id/issues` | Raise an issue |
-| GET | `/api/projects/:id/rfis` | List RFIs |
-| POST | `/api/projects/:id/logs` | Submit a daily log |
+| GET | `/api/projects/:id` | Get project details |
+| PUT | `/api/projects/:id` | Update project |
+| DELETE | `/api/projects/:id` | Delete project |
+
+### Tasks
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/projects/:id/tasks` | Get all tasks for a project |
+| POST | `/api/projects/:id/tasks` | Create a new task |
+| PUT | `/api/tasks/:id` | Update task status |
+| DELETE | `/api/tasks/:id` | Delete a task |
+
+### Issues & RFIs
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/projects/:id/issues` | Raise a new issue |
+| GET | `/api/projects/:id/issues` | List all issues |
+| POST | `/api/projects/:id/rfis` | Submit a new RFI |
+| GET | `/api/projects/:id/rfis` | List all RFIs |
+
+### Daily Logs
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/projects/:id/logs` | Submit a daily progress log |
+| GET | `/api/projects/:id/logs` | Get log history for a project |
+| PUT | `/api/logs/:id` | Update log entry |
+| PUT | `/api/logs/:id/approve` | Engineer approval of log |
+
+### Documents
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/projects/:id/documents` | Upload a document |
+| GET | `/api/projects/:id/documents` | List project documents |
+| GET | `/api/documents/:id` | Download a document |
+| DELETE | `/api/documents/:id` | Delete a document |
 
 ### Report Engine (FastAPI — port 8000)
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/generate-report` | Generate AI construction report |
-| POST | `/export-pdf` | Export report to PDF |
-| POST | `/plan` | Generate AI project plan |
+
+| Method | Endpoint | Description | Body Parameters |
+|--------|----------|-------------|-----------------|
+| POST | `/generate-report` | Generate AI construction report | `project_id`, `phase`, `include_cost`, `include_timeline` |
+| POST | `/export-pdf` | Export report to PDF | `report_data` |
+| POST | `/plan` | Generate AI project plan | `project_brief`, `budget`, `timeline` |
+
+> 📖 Full API documentation available at `/docs` endpoint when running the report engine.
 
 ---
 
-## 🗂️ Environment Variables
+## ⚙️ Environment Variables
 
-### Backend (`.env`)
-| Variable | Description |
-|---|---|
-| `PORT` | Server port (default 5000) |
-| `MONGODB_URI` | MongoDB connection string |
-| `JWT_SECRET` | Secret key for JWT signing |
-| `JWT_EXPIRES_IN` | Token expiry (e.g. `7d`) |
-| `CORS_ORIGIN` | Allowed frontend origin |
-| `DEEPSEEK_API_KEY` | DeepSeek API key for AI Copilot |
+### Backend (`backend/.env`)
 
-### Frontend (`.env`)
-| Variable | Description |
-|---|---|
-| `VITE_BACKEND_URL` | Base URL of the Express backend |
-| `VITE_PLANNING_API_BASE` | Base URL of the Python report engine |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | ✅ | `5000` | Server port number |
+| `MONGODB_URI` | ✅ | — | MongoDB connection string (Atlas or local) |
+| `JWT_SECRET` | ✅ | — | Secret key for JWT token signing |
+| `JWT_EXPIRES_IN` | ❌ | `7d` | Token expiry time (e.g., `7d`, `24h`) |
+| `CORS_ORIGIN` | ✅ | — | Allowed frontend origin (for CORS) |
+| `DEEPSEEK_API_KEY` | ✅ | — | DeepSeek API key for AI features |
 
-### Report Engine (`.env`)
-| Variable | Description |
-|---|---|
-| `CORS_ORIGINS` | Comma-separated allowed origins |
-| `HF_TOKEN` | HuggingFace API token (optional) |
+### Frontend (`frontend-v2/.env`)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VITE_BACKEND_URL` | ✅ | — | Base URL of the Express backend |
+| `VITE_PLANNING_API_BASE` | ✅ | — | Base URL of the Python report engine |
+
+### Report Engine (`report-engine/.env`)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `CORS_ORIGINS` | ✅ | — | Comma-separated list of allowed origins |
+| `HF_TOKEN` | ❌ | — | HuggingFace API token (optional, for advanced AI) |
 
 ---
 
 ## 🔮 Roadmap & Future Features
 
-### 🗺️ Live Site Blueprint & Worker Map *(In Development)*
+### � In Development
+
+#### 🗺️ Live Site Blueprint & Worker Map
 One of the most exciting features planned for Sanrachna is a **real-time interactive site map / blueprint system**:
-- **Live Floor Plan View** — Upload a 2D architectural blueprint (DWG/PDF/image). Workers and engineers will appear as **live pins** on the map based on their assigned zones or GPS check-in.
-- **Worker Location Tracking** — Workers scan a QR code at entry/exit points to mark their current zone. The dashboard shows a live heatmap of workforce distribution across the site.
-- **Engineer Zone Assignment** — Engineers can divide the blueprint into named zones (Foundation, Block A, Electrical Wing, etc.) and assign teams to each zone.
-- **Task-to-Zone Linking** — Tasks are pinned to a physical location on the blueprint so everyone knows exactly *where* work is happening.
-- **Incident Markers** — Emergency incidents and safety issues automatically drop markers on the relevant blueprint location.
 
-### 🧱 3D Building Model Viewer *(Planned)*
-- **Interactive 3D Model** — Upload a `.glb` / `.gltf` building model (from Revit, AutoCAD, or SketchUp). Sanrachna will render it in-browser using **Three.js** or **Babylon.js**.
-- **Progress Overlay** — Completed floors/sections are color-coded (green = done, yellow = in-progress, red = blocked) directly on the 3D model.
-- **Click-to-Inspect** — Click on any structural element to see its associated tasks, issues, materials used, and engineer responsible.
-- **BIM Integration** — Planned support for IFC (Industry Foundation Classes) format for deep BIM (Building Information Modeling) data integration.
-- **Time-Lapse Simulation** — Animate the 3D model to simulate construction progress over the project timeline — a visual way to review schedule adherence.
+| Feature | Description |
+|---------|-------------|
+| **Live Floor Plan View** | Upload a 2D architectural blueprint (DWG/PDF/image). Workers and engineers appear as **live pins** on the map based on their assigned zones or GPS check-in. |
+| **Worker Location Tracking** | Workers scan QR codes at entry/exit points to mark their current zone. The dashboard shows a live heatmap of workforce distribution. |
+| **Engineer Zone Assignment** | Engineers can divide blueprints into named zones (Foundation, Block A, Electrical Wing, etc.) and assign teams. |
+| **Task-to-Zone Linking** | Tasks are pinned to physical locations on the blueprint for location-based tracking. |
+| **Incident Markers** | Emergency incidents and safety issues automatically drop markers on relevant blueprint locations. |
 
-### 🤖 Other Upcoming Features
-- **Offline-First PWA Mode** — Workers on remote sites with no connectivity can submit logs and tasks offline, which sync automatically when back online.
-- **Push Notifications** — Real-time alerts for new task assignments, issue escalations, and RFI responses via web push.
-- **WhatsApp / SMS Integration** — Send task and emergency alerts to workers who don't have the app via WhatsApp Business API or SMS.
-- **Advanced ML Estimations** — Expand the cost estimation model to include regional material pricing, weather delays, and labor productivity variations.
-- **Document OCR** — Automatically extract and index data from uploaded drawing PDFs using OCR for searchability.
-- **Multi-Language Support** — UI translations in Hindi, Marathi, Tamil, and other regional languages for on-ground workers.
-- **Subcontractor Portal** — A limited-access view for subcontractors to view their scope, submit progress, and upload invoices.
+---
+
+### 🟢 Planned Features
+
+#### 🧱 3D Building Model Viewer
+- **Interactive 3D Model** — Upload `.glb` / `.gltf` building models (from Revit, AutoCAD, SketchUp) and render in-browser using **Three.js** or **Babylon.js**
+- **Progress Overlay** — Completed floors/sections color-coded (green = done, yellow = in-progress, red = blocked)
+- **Click-to-Inspect** — Click any structural element to see associated tasks, issues, materials, and responsible engineer
+- **BIM Integration** — Planned IFC (Industry Foundation Classes) support for deep BIM data integration
+- **Time-Lapse Simulation** — Animate construction progress over the project timeline
+
+#### 🤖 AI & Automation
+- **Offline-First PWA Mode** — Workers submit logs/tasks offline, auto-sync when back online
+- **Push Notifications** — Real-time alerts for task assignments, issue escalations, RFI responses
+- **WhatsApp / SMS Integration** — Send task and emergency alerts via WhatsApp Business API or SMS
+- **Document OCR** — Auto-extract and index data from drawing PDFs for searchability
+
+#### 📊 Advanced Features
+- **Advanced ML Estimations** — Regional material pricing, weather delays, labor productivity variations
+- **Multi-Language Support** — UI translations in Hindi, Marathi, Tamil, and other regional languages
+- **Subcontractor Portal** — Limited-access view for subcontractors to view scope, submit progress, upload invoices
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! If you'd like to contribute:
+Contributions are welcome! Whether you want to report a bug, suggest a feature, or contribute code — help make Sanrachna better for the construction industry.
 
-1. Fork the repository
-2. Create a new branch: `git checkout -b feature/your-feature-name`
-3. Commit your changes: `git commit -m 'feat: add your feature'`
-4. Push to the branch: `git push origin feature/your-feature-name`
-5. Open a Pull Request
+### 🐛 Reporting Issues
 
-Please follow conventional commits and keep PRs focused on a single feature or fix.
+Found a bug or have a feature request? Please [open an issue](https://github.com/your-username/sanrachna/issues) with:
+- Clear description of the issue
+- Steps to reproduce (for bugs)
+- Expected vs actual behavior
+- Screenshots if applicable
+
+### 💻 Code Contributions
+
+1. **Fork** the repository
+2. **Clone** your fork:
+   ```bash
+   git clone https://github.com/your-username/sanrachna.git
+   ```
+3. **Create** a new branch:
+   ```bash
+   git checkout -b feature/your-feature-name
+   # or
+   git checkout -b fix/bug-description
+   ```
+4. **Make your changes** and commit:
+   ```bash
+   git commit -m 'feat: add your feature'
+   # or
+   git commit -m 'fix: resolve issue description'
+   ```
+5. **Push** to your branch:
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+6. **Open a Pull Request** against the `main` branch
+
+### 📋 Commit Message Convention
+
+We follow [Conventional Commits](https://www.conventionalcommits.org):
+
+| Type | Description |
+|------|-------------|
+| `feat:` | New feature |
+| `fix:` | Bug fix |
+| `docs:` | Documentation changes |
+| `style:` | Code style changes (formatting, no logic) |
+| `refactor:` | Code refactoring |
+| `test:` | Adding/updating tests |
+| `chore:` | Maintenance tasks |
+
+### 🎯 PR Guidelines
+
+- Keep PRs focused on a single feature or fix
+- Include a clear description of what the PR does
+- Link any related issues
+- Ensure all tests pass before submitting
+- Update documentation if needed
 
 ---
 
 ## 📜 License
 
-This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
+This project is licensed under the **MIT License**.
+
+```
+MIT License
+
+Copyright (c) 2024 Sanrachna
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+See [LICENSE](LICENSE) for the full license text.
 
 ---
 
 ## 🙏 Acknowledgements
 
-- [DeepSeek](https://platform.deepseek.com) — LLM powering the AI Copilot and Planning Studio
+| Tool/Service | Description |
+|--------------|-------------|
+| [DeepSeek](https://platform.deepseek.com) | LLM powering the AI Copilot and Planning Studio |
+| [MongoDB Atlas](https://www.mongodb.com/atlas) | Cloud database hosting |
+| [Vercel](https://vercel.com) | Frontend deployment platform |
+| [Render](https://render.com) | Backend deployment platform |
+| [React](https://react.dev) | UI library |
+| [FastAPI](https://fastapi.tiangolo.com) | Python web framework |
+
+---
+
+## 📊 Project Statistics
+
+| Metric | Value |
+|--------|-------|
+| Stars | ⭐ Add your repo stars here |
+| Forks | 🍴 Add your repo forks here |
+| Contributors | 👥 Add contributor count |
+| Last Updated | 📅 April 2026 |
+
+---
+
+<div align="center">
+
+### 🚀 Built with ❤️ for the Construction Industry
+
+*Made with care for builders, engineers, and dreamers.*
+
+</div>
 - [HuggingFace](https://huggingface.co) — Model hosting for the report generation pipeline
 - [ReportLab](https://www.reportlab.com) — PDF generation library
 - [Recharts](https://recharts.org) — Chart components
