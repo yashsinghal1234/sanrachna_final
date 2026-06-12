@@ -1,11 +1,11 @@
 const CopilotThread = require('../models/CopilotThread')
-const { serializeDoc, serializeDocs } = require('../utils/serialize')
+const { serializeDoc } = require('../utils/serialize')
 const { buildProjectContext, detectModules, buildFollowUps } = require('../services/deepseek.service')
 const { buildExtractiveAnswer } = require('../services/rag.service')
-// ─── helpers ──────────────────────────────────────────────────────────────────
 
 function threadToDto(row) {
   const obj = serializeDoc(row)
+
   return {
     id: obj.id,
     projectId: obj.project?.toString() || '',
@@ -29,12 +29,14 @@ function threadToDto(row) {
   }
 }
 
-// ─── controllers ──────────────────────────────────────────────────────────────
-
 async function listThreads(req, res) {
-  const rows = await CopilotThread.find({ project: req.project._id, user: req.user._id })
+  const rows = await CopilotThread.find({
+    project: req.project._id,
+    user: req.user._id,
+  })
     .sort({ updatedAt: -1 })
     .limit(50)
+
   res.json({ threads: rows.map(threadToDto) })
 }
 
@@ -63,6 +65,7 @@ Ask natural-language questions like "Which tasks are delayed?" or "What issues a
       },
     ],
   })
+
   res.status(201).json({ thread: threadToDto(row) })
 }
 
@@ -72,10 +75,12 @@ async function getThread(req, res) {
     project: req.project._id,
     user: req.user._id,
   })
+
   if (!row) {
     res.status(404).json({ message: 'Thread not found.' })
     return
   }
+
   res.json({ thread: threadToDto(row) })
 }
 
@@ -85,63 +90,61 @@ async function addMessage(req, res) {
     project: req.project._id,
     user: req.user._id,
   })
+
   if (!row) {
     res.status(404).json({ message: 'Thread not found.' })
     return
   }
 
   const prompt = String(req.body.content || '').trim()
+
   if (!prompt) {
     res.status(400).json({ message: 'content is required.' })
     return
   }
 
-  // Add the user message
   row.messages.push({ role: 'user', content: prompt })
 
   let answerText = ''
   let usedModules = ['Project']
   let followUps = []
+  let ragResult = {
+    citations: [],
+    contexts: [],
+  }
 
   try {
-    // Build live project context from database
     const systemContext = await buildProjectContext(req.project, req.user.role)
 
-    // Pass previous conversation (excluding the welcome message and the message just added)
-    const history = row.messages
-      .slice(0, -1) // exclude the message we just added
-      .filter((m) => m.content.trim().length > 0)
-      .slice(-20) // last 20 messages for context window management
-
-    // Call DeepSeek
-    const ragResult = buildExtractiveAnswer(prompt, systemContext)
+    ragResult = await buildExtractiveAnswer(prompt, systemContext)
 
     answerText = ragResult.answer
+
+    if (!answerText || typeof answerText !== 'string') {
+      answerText = 'I generated a response, but it was empty. Please try again.'
+    }
+
     usedModules = detectModules(prompt, answerText)
     followUps = buildFollowUps(answerText, req.user.role)
-
-    row.messages.push({
-      role: 'assistant',
-      content: answerText,
-      citations: ragResult.citations,
-      usedModules,
-      followUps,
-      contexts: ragResult.contexts,
-      actions: [],
-      structured: null,
-    })
   } catch (err) {
-    console.error('[DeepSeek] Error:', err?.message || err)
-    // Graceful fallback so the chat doesn't crash
-    answerText = 'I encountered an issue calling the AI service. Please try again in a moment.'
-    if (!process.env.DEEPSEEK_API_KEY) {
-      answerText = 'DeepSeek API key is not configured on the server. Please set DEEPSEEK_API_KEY in the backend .env file.'
-    }
+    console.error('[Copilot RAG] Error:', err?.message || err)
+
+    answerText = 'I encountered an issue generating the Copilot response. Please try again in a moment.'
     usedModules = ['Project']
     followUps = ['Which tasks are delayed?', 'Show unresolved issues']
   }
 
-  // Auto-title the thread from the first user message
+  row.messages.push({
+    role: 'assistant',
+    content: answerText,
+    citations: ragResult.citations || [],
+    usedModules,
+    followUps,
+    contexts: ragResult.contexts || [],
+    actions: [],
+    structured: null,
+  })
+
   if (row.title === 'New chat') {
     row.title = prompt.slice(0, 60)
   }
@@ -149,6 +152,7 @@ async function addMessage(req, res) {
   await row.save()
 
   const lastMsg = row.messages[row.messages.length - 1]
+
   res.status(201).json({
     thread: threadToDto(row),
     message: {
@@ -162,30 +166,42 @@ async function addMessage(req, res) {
   })
 }
 
-// Patch thread title (rename)
 async function patchThread(req, res) {
   const row = await CopilotThread.findOne({
     _id: req.params.threadId,
     project: req.project._id,
     user: req.user._id,
   })
+
   if (!row) {
     res.status(404).json({ message: 'Thread not found.' })
     return
   }
-  if (req.body.title) row.title = String(req.body.title).slice(0, 80)
+
+  if (req.body.title) {
+    row.title = String(req.body.title).slice(0, 80)
+  }
+
   await row.save()
+
   res.json({ thread: threadToDto(row) })
 }
 
-// Delete a thread
 async function deleteThread(req, res) {
   await CopilotThread.deleteOne({
     _id: req.params.threadId,
     project: req.project._id,
     user: req.user._id,
   })
+
   res.json({ success: true })
 }
 
-module.exports = { listThreads, createThread, getThread, addMessage, patchThread, deleteThread }
+module.exports = {
+  listThreads,
+  createThread,
+  getThread,
+  addMessage,
+  patchThread,
+  deleteThread,
+}

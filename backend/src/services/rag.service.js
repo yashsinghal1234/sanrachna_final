@@ -1,5 +1,6 @@
 const fs = require('fs')
 const path = require('path')
+const { askGroq } = require('./groq.service')
 
 const RAG_DOCS_DIR = path.join(__dirname, '..', 'data', 'rag_docs')
 
@@ -107,9 +108,7 @@ function getIntentSources(queryTokens) {
 
   for (const token of queryTokens) {
     const mapped = DOC_BOOSTS[token]
-    if (mapped) {
-      mapped.forEach((source) => sources.add(source))
-    }
+    if (mapped) mapped.forEach((source) => sources.add(source))
   }
 
   return sources
@@ -161,7 +160,7 @@ function cleanChunkForAnswer(text) {
     .trim()
 }
 
-function buildExtractiveAnswer(question, projectContext) {
+async function buildExtractiveAnswer(question, projectContext) {
   const chunks = retrieveRelevantChunks(question, projectContext, 4)
 
   if (!chunks.length) {
@@ -173,17 +172,31 @@ function buildExtractiveAnswer(question, projectContext) {
     }
   }
 
-  const answerLines = [
-    'Based on the retrieved project data and construction knowledge:',
-    '',
-    ...chunks.map((chunk) => {
-      const label = chunk.title || chunk.source
-      return `**${label}**\n${cleanChunkForAnswer(chunk.text)}`
-    }),
-  ]
+  const contextText = chunks
+    .slice(0, 6)
+    .map((chunk, index) => {
+      return `SOURCE ${index + 1}: ${chunk.source}\n${cleanChunkForAnswer(chunk.text)}`
+    })
+    .join('\n\n---\n\n')
+
+  let finalAnswer
+
+  try {
+    finalAnswer = await askGroq(question, contextText)
+    console.log('[GROQ] Answer generated successfully')
+  } catch (err) {
+    console.error('[GROQ] Failed:', err?.message || err)
+
+    finalAnswer =
+      'Based on the retrieved project data and construction knowledge:\n\n' +
+      chunks
+        .slice(0, 4)
+        .map((chunk) => `• ${cleanChunkForAnswer(chunk.text)}`)
+        .join('\n\n')
+  }
 
   return {
-    answer: answerLines.join('\n\n'),
+    answer: finalAnswer,
     citations: [...new Set(chunks.map((chunk) => chunk.source))],
     contexts: chunks.map((chunk) => chunk.id),
   }
