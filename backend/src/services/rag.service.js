@@ -5,22 +5,45 @@ const { askGroq } = require('./groq.service')
 const RAG_DOCS_DIR = path.join(__dirname, '..', 'data', 'rag_docs')
 
 const DOC_BOOSTS = {
+  health: ['live_project_data'],
+  summary: ['live_project_data'],
+  summarize: ['live_project_data'],
+  overall: ['live_project_data'],
+  status: ['live_project_data'],
+  progress: ['live_project_data'],
+
+  phase: ['live_project_data'],
+  attention: ['live_project_data'],
+  immediate: ['live_project_data'],
+  critical: ['live_project_data'],
+  urgent: ['live_project_data'],
+  priority: ['live_project_data'],
+
   safety: ['construction_safety.md'],
   helmet: ['construction_safety.md'],
+  ppe: ['construction_safety.md'],
   worker: ['construction_safety.md', 'daily_log_examples.md'],
-  delay: ['delay_risk_guide.md'],
+
+  delay: ['delay_risk_guide.md', 'live_project_data'],
+  delayed: ['delay_risk_guide.md', 'live_project_data'],
   risk: ['delay_risk_guide.md'],
   blocked: ['delay_risk_guide.md', 'live_project_data'],
+
   boq: ['boq_bom_guide.md'],
   bom: ['boq_bom_guide.md'],
   material: ['material_estimation.md', 'boq_bom_guide.md'],
   estimate: ['material_estimation.md'],
   estimation: ['material_estimation.md'],
+
   rfi: ['rfi_examples.md', 'live_project_data'],
+  rfis: ['rfi_examples.md', 'live_project_data'],
   log: ['daily_log_examples.md', 'live_project_data'],
+  logs: ['daily_log_examples.md', 'live_project_data'],
   daily: ['daily_log_examples.md', 'live_project_data'],
   task: ['live_project_data'],
+  tasks: ['live_project_data'],
   issue: ['live_project_data'],
+  issues: ['live_project_data'],
 }
 
 function normalizeText(text) {
@@ -29,6 +52,45 @@ function normalizeText(text) {
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+function expandQuestion(question) {
+  const q = normalizeText(question)
+  const additions = []
+
+  if (
+    q.includes('project health') ||
+    q.includes('summarize') ||
+    q.includes('summary') ||
+    q.includes('overall') ||
+    q.includes('status')
+  ) {
+    additions.push('project stats tasks issues rfis daily logs progress blocked delayed critical open')
+  }
+
+  if (
+    q.includes('phase') ||
+    q.includes('attention') ||
+    q.includes('immediate') ||
+    q.includes('urgent') ||
+    q.includes('critical')
+  ) {
+    additions.push('tasks phase blocked delayed issues critical rfis open progress daily logs')
+  }
+
+  if (q.includes('delayed') || q.includes('delay')) {
+    additions.push('tasks delayed blocked daily logs material delivery concrete pump schedule risk')
+  }
+
+  if (q.includes('open') && (q.includes('rfi') || q.includes('rfis'))) {
+    additions.push('rfi rfis open in progress pending status')
+  }
+
+  if (q.includes('unresolved') || q.includes('issue') || q.includes('issues')) {
+    additions.push('issues open in progress critical unresolved status')
+  }
+
+  return `${question} ${additions.join(' ')}`
 }
 
 function tokenize(text) {
@@ -136,7 +198,8 @@ function scoreChunk(queryTokens, chunk) {
 }
 
 function retrieveRelevantChunks(question, projectContext, limit = 4) {
-  const queryTokens = tokenize(question)
+  const expandedQuestion = expandQuestion(question)
+  const queryTokens = tokenize(expandedQuestion)
 
   const chunks = [
     ...getLiveChunks(projectContext),
