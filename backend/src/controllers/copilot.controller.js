@@ -1,7 +1,7 @@
 const CopilotThread = require('../models/CopilotThread')
 const { serializeDoc, serializeDocs } = require('../utils/serialize')
-const { buildProjectContext, detectModules, buildFollowUps, callGemini } = require('../services/deepseek.service')
-
+const { buildProjectContext, detectModules, buildFollowUps } = require('../services/deepseek.service')
+const { buildExtractiveAnswer } = require('../services/rag.service')
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function threadToDto(row) {
@@ -114,9 +114,22 @@ async function addMessage(req, res) {
       .slice(-20) // last 20 messages for context window management
 
     // Call DeepSeek
-    answerText = await callGemini(systemContext, history, prompt)
+    const ragResult = buildExtractiveAnswer(prompt, systemContext)
+
+    answerText = ragResult.answer
     usedModules = detectModules(prompt, answerText)
     followUps = buildFollowUps(answerText, req.user.role)
+
+    row.messages.push({
+      role: 'assistant',
+      content: answerText,
+      citations: ragResult.citations,
+      usedModules,
+      followUps,
+      contexts: ragResult.contexts,
+      actions: [],
+      structured: null,
+    })
   } catch (err) {
     console.error('[DeepSeek] Error:', err?.message || err)
     // Graceful fallback so the chat doesn't crash
@@ -127,18 +140,6 @@ async function addMessage(req, res) {
     usedModules = ['Project']
     followUps = ['Which tasks are delayed?', 'Show unresolved issues']
   }
-
-  // Store the assistant reply
-  row.messages.push({
-    role: 'assistant',
-    content: answerText,
-    citations: usedModules.map((m) => `${m} module`),
-    usedModules,
-    followUps,
-    contexts: usedModules,
-    actions: [],
-    structured: null,
-  })
 
   // Auto-title the thread from the first user message
   if (row.title === 'New chat') {
