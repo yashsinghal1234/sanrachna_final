@@ -11,7 +11,30 @@ const DOC_BOOSTS = {
   overall: ['live_project_data'],
   status: ['live_project_data'],
   progress: ['live_project_data'],
+  document: ['live_project_data'],
+  documents: ['live_project_data'],
+  review: ['live_project_data'],
+  approved: ['live_project_data'],
+  drawing: ['live_project_data'],
+  permit: ['live_project_data'],
+  inspection: ['live_project_data'],
 
+  procurement: ['live_project_data', 'delay_risk_guide.md'],
+  vendor: ['live_project_data'],
+  supplier: ['live_project_data'],
+  quote: ['live_project_data'],
+  quotes: ['live_project_data'],
+
+  contact: ['live_project_data'],
+  contacts: ['live_project_data'],
+  team: ['live_project_data'],
+  phone: ['live_project_data'],
+  email: ['live_project_data'],
+
+  cost: ['live_project_data', 'boq_bom_guide.md', 'material_estimation.md'],
+  budget: ['live_project_data', 'boq_bom_guide.md'],
+  resource: ['live_project_data'],
+  resources: ['live_project_data'],
   phase: ['live_project_data'],
   attention: ['live_project_data'],
   immediate: ['live_project_data'],
@@ -76,6 +99,22 @@ function expandQuestion(question) {
     q.includes('critical')
   ) {
     additions.push('tasks phase blocked delayed issues critical rfis open progress daily logs')
+  }
+
+    if (q.includes('document') || q.includes('documents') || q.includes('review')) {
+    additions.push('document data review status approved under review requires attention linked rfis linked issues uploaded phase')
+  }
+
+  if (q.includes('procurement') || q.includes('vendor') || q.includes('supplier') || q.includes('quote')) {
+    additions.push('procurement data supplier vendor quote material delivery lead time risk alert bom')
+  }
+
+  if (q.includes('cost') || q.includes('budget') || q.includes('resource') || q.includes('material')) {
+    additions.push('cost resource data cost summary boq bom material quantity rate total contingency budget')
+  }
+
+  if (q.includes('contact') || q.includes('contacts') || q.includes('team')) {
+    additions.push('team and contact data contact name role type phase email phone supplier authority')
   }
 
   if (q.includes('delayed') || q.includes('delay')) {
@@ -143,12 +182,20 @@ function extractLiveSection(projectContext, heading) {
 
 function getLiveChunks(projectContext) {
   const liveSections = [
-    { label: 'Project Stats', heading: 'PROJECT STATS' },
-    { label: 'Timeline', heading: 'LIVE TASK DATA' },
-    { label: 'Issues', heading: 'LIVE ISSUE DATA' },
-    { label: 'RFI', heading: 'LIVE RFI DATA' },
-    { label: 'Daily Logs', heading: 'RECENT DAILY LOGS' },
-  ]
+  { label: 'Project Stats', heading: 'PROJECT STATS' },
+  { label: 'Timeline', heading: 'LIVE TASK DATA' },
+  { label: 'Issues', heading: 'LIVE ISSUE DATA' },
+  { label: 'RFI', heading: 'LIVE RFI DATA' },
+  { label: 'Daily Logs', heading: 'RECENT DAILY LOGS' },
+  { label: 'Documents', heading: 'DOCUMENT DATA' },
+  { label: 'Notifications', heading: 'NOTIFICATION DATA' },
+  { label: 'Team', heading: 'TEAM AND CONTACT DATA' },
+  { label: 'Cost & Resources', heading: 'COST AND RESOURCE DATA' },
+  { label: 'BOQ/BOM', heading: 'BOQ/BOM MATERIAL DATA' },
+  { label: 'Procurement', heading: 'PROCUREMENT DATA' },
+  { label: 'Planning Timeline', heading: 'PLANNING TIMELINE DATA' },
+  { label: 'Planning Risk', heading: 'PLANNING RISK DATA' },
+]
 
   return liveSections
     .map((section, index) => {
