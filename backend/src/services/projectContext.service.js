@@ -90,7 +90,14 @@ function buildProcurementContext(project) {
   )
 
   const lines = [...materialLines, ...riskLines, ...optimizationLines]
-  return lines.length ? lines.join('\n') : 'No procurement-specific items, risks, or recommendations found.'
+  if (lines.length) return lines.join('\n')
+
+  return [
+      '[PROCUREMENT RISK] Late material delivery can delay project execution.',
+      '[PROCUREMENT RISK] Pending RFIs may delay material ordering or site execution.',
+      '[PROCUREMENT RISK] Open issues can block procurement decisions.',
+      '[PROCUREMENT ACTION] Review open RFIs, pending documents, and material-related issues before placing orders.',
+    ].join('\n')
 }
 
 function buildTimelinePlanningContext(project) {

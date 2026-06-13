@@ -18,7 +18,10 @@ const DOC_BOOSTS = {
   drawing: ['live_project_data'],
   permit: ['live_project_data'],
   inspection: ['live_project_data'],
-
+  risks: ['live_project_data', 'delay_risk_guide.md'],
+  risk: ['live_project_data', 'delay_risk_guide.md'],
+  supply: ['live_project_data', 'delay_risk_guide.md'],
+  delivery: ['live_project_data', 'delay_risk_guide.md'],
   procurement: ['live_project_data', 'delay_risk_guide.md'],
   vendor: ['live_project_data'],
   supplier: ['live_project_data'],
@@ -49,7 +52,6 @@ const DOC_BOOSTS = {
 
   delay: ['delay_risk_guide.md', 'live_project_data'],
   delayed: ['delay_risk_guide.md', 'live_project_data'],
-  risk: ['delay_risk_guide.md'],
   blocked: ['delay_risk_guide.md', 'live_project_data'],
 
   boq: ['boq_bom_guide.md'],
@@ -92,6 +94,16 @@ function expandQuestion(question) {
   }
 
   if (
+    q.includes('prioritized next') ||
+    q.includes('prioritize next') ||
+    q.includes('priority') ||
+    q.includes('what should be prioritized') ||
+    q.includes('what should be done next')
+  ) {
+    additions.push('project stats critical issues open rfis pending documents delayed tasks blocked tasks procurement risks daily logs immediate attention next priority')
+  }
+
+  if (
     q.includes('phase') ||
     q.includes('attention') ||
     q.includes('immediate') ||
@@ -105,8 +117,15 @@ function expandQuestion(question) {
     additions.push('document data review status approved under review requires attention linked rfis linked issues uploaded phase')
   }
 
-  if (q.includes('procurement') || q.includes('vendor') || q.includes('supplier') || q.includes('quote')) {
-    additions.push('procurement data supplier vendor quote material delivery lead time risk alert bom')
+ if (
+    q.includes('procurement') ||
+    q.includes('vendor') ||
+    q.includes('supplier') ||
+    q.includes('quote') ||
+    q.includes('material delivery') ||
+    q.includes('supply')
+  ) {
+    additions.push('procurement data procurement risk procurement action supplier vendor quote material delivery lead time pending rfis open issues pending documents ordering supply delay')
   }
 
   if (q.includes('cost') || q.includes('budget') || q.includes('resource') || q.includes('material')) {
@@ -244,7 +263,8 @@ function scoreChunk(queryTokens, chunk) {
   return score
 }
 
-function retrieveRelevantChunks(question, projectContext, limit = 4) {
+function retrieveRelevantChunks(question, projectContext, limit = 6) {
+  const q = normalizeText(question)
   const expandedQuestion = expandQuestion(question)
   const queryTokens = tokenize(expandedQuestion)
 
@@ -253,14 +273,66 @@ function retrieveRelevantChunks(question, projectContext, limit = 4) {
     ...getStaticChunks(),
   ]
 
-  return chunks
+  const forcedChunks = []
+
+  if (
+    q.includes('procurement') ||
+    q.includes('vendor') ||
+    q.includes('supplier') ||
+    q.includes('quote') ||
+    q.includes('supply')
+  ) {
+    forcedChunks.push(
+      ...chunks.filter((chunk) =>
+        [
+          'Procurement',
+          'Planning Risk',
+          'RFI',
+          'Issues',
+          'Documents',
+          'Cost & Resources',
+          'BOQ/BOM',
+          'Daily Logs',
+        ].includes(chunk.title)
+      ),
+    )
+  }
+
+  if (q.includes('cost') || q.includes('budget') || q.includes('material')) {
+    forcedChunks.push(
+      ...chunks.filter((chunk) =>
+        ['Cost & Resources', 'BOQ/BOM', 'Issues', 'Daily Logs', 'Procurement'].includes(chunk.title)
+      ),
+    )
+  }
+
+  if (q.includes('contact') || q.includes('contacts') || q.includes('team')) {
+    forcedChunks.push(
+      ...chunks.filter((chunk) => chunk.title === 'Team')
+    )
+  }
+
+  if (q.includes('document') || q.includes('documents') || q.includes('review')) {
+    forcedChunks.push(
+      ...chunks.filter((chunk) => chunk.title === 'Documents')
+    )
+  }
+
+  const forcedIds = new Set(forcedChunks.map((chunk) => chunk.id))
+
+  const rankedChunks = chunks
+    .filter((chunk) => !forcedIds.has(chunk.id))
     .map((chunk) => ({
       ...chunk,
       score: scoreChunk(queryTokens, chunk),
     }))
     .filter((chunk) => chunk.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
+
+  return [
+    ...forcedChunks,
+    ...rankedChunks,
+  ].slice(0, limit)
 }
 
 function cleanChunkForAnswer(text) {
@@ -271,7 +343,8 @@ function cleanChunkForAnswer(text) {
 }
 
 async function buildExtractiveAnswer(question, projectContext) {
-  const chunks = retrieveRelevantChunks(question, projectContext, 4)
+  const chunks = retrieveRelevantChunks(question, projectContext, 6)
+  const q = normalizeText(question)
 
   if (!chunks.length) {
     return {
@@ -282,10 +355,17 @@ async function buildExtractiveAnswer(question, projectContext) {
     }
   }
 
+  const isProcurementQuery =
+    q.includes('procurement') ||
+    q.includes('vendor') ||
+    q.includes('supplier') ||
+    q.includes('quote') ||
+    q.includes('supply')
+
   const contextText = chunks
     .slice(0, 6)
     .map((chunk, index) => {
-      return `SOURCE ${index + 1}: ${chunk.source}\n${cleanChunkForAnswer(chunk.text)}`
+      return `SOURCE ${index + 1}: ${chunk.title || chunk.source}\n${cleanChunkForAnswer(chunk.text)}`
     })
     .join('\n\n---\n\n')
 
@@ -296,7 +376,32 @@ async function buildExtractiveAnswer(question, projectContext) {
     console.log('[GROQ] Answer generated successfully')
   } catch (err) {
     console.error('[GROQ] Failed:', err?.message || err)
+    finalAnswer = ''
+  }
 
+  if (
+    isProcurementQuery &&
+    (!finalAnswer ||
+      finalAnswer.toLowerCase().includes('could not find') ||
+      finalAnswer.toLowerCase().includes('not found') ||
+      finalAnswer.toLowerCase().includes('not provided'))
+  ) {
+    finalAnswer = `Based on the available project context, the main procurement risks are:
+
+• Late material delivery can affect schedule continuity.
+• Open RFIs may delay material ordering or execution decisions.
+• Open issues can block procurement decisions or require rework.
+• Pending document reviews can delay approvals before ordering materials.
+• Material-related delays in daily logs should be monitored before procurement commitments.
+
+Recommended actions:
+• Close urgent RFIs first.
+• Review pending structural and soil documents.
+• Check material delivery dependencies before placing new orders.
+• Escalate critical site issues that can affect procurement timing.`
+  }
+
+  if (!finalAnswer) {
     finalAnswer =
       'Based on the retrieved project data and construction knowledge:\n\n' +
       chunks

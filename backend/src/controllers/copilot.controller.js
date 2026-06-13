@@ -1,6 +1,6 @@
 const CopilotThread = require('../models/CopilotThread')
 const { serializeDoc } = require('../utils/serialize')
-const { buildProjectContext, detectModules, buildFollowUps } = require('../services/deepseek.service')
+const { buildProjectContext, detectModules, buildFollowUps } = require('../services/projectContext.service')
 const { buildExtractiveAnswer } = require('../services/rag.service')
 
 function threadToDto(row) {
