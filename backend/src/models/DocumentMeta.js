@@ -38,6 +38,21 @@ const documentMetaSchema = new mongoose.Schema(
     },
     linked_rfis: { type: Number, default: 0 },
     linked_issues: { type: Number, default: 0 },
+    extracted_text: {
+      type: String,
+      default: '',
+    },
+
+    text_chunks: {
+      type: [String],
+      default: [],
+    },
+
+    embedding_status: {
+      type: String,
+      enum: ['pending', 'processed', 'failed'],
+      default: 'pending',
+    },
     current_version: { type: Number, default: 1 },
     versions: { type: [versionEntrySchema], default: [] },
   },

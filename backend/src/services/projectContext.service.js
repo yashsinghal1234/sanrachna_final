@@ -164,10 +164,14 @@ async function buildProjectContext(project, userRole) {
       `[LOG] Date: ${safeDate(l.date || l.createdAt)} | Workers present: ${l.workers_present ?? '?'} | Tasks: ${l.tasks_completed || '—'} | Issues/Notes: ${l.issues || '—'}`
   )
 
-  const documentLines = documents.slice(0, 40).map(
-    (d) =>
-      `[DOCUMENT] ${d.title || 'Document'} | Type: ${d.doc_type || 'other'} | Phase: ${d.phase || '?'} | Review: ${d.review_status || '?'} | Access: ${d.access || '?'} | Version: v${d.current_version || 1} | Linked RFIs: ${d.linked_rfis || 0} | Linked Issues: ${d.linked_issues || 0} | Uploaded: ${safeDate(d.uploaded_at || d.createdAt)} | Tags: ${(d.tags || []).join(', ') || 'none'}`
-  )
+  const documentLines = documents.slice(0, 40).map((d) => {
+  const chunks = Array.isArray(d.text_chunks) ? d.text_chunks : []
+  const preview = chunks.length
+    ? chunks.slice(0, 2).join(' ').slice(0, 1200)
+    : ''
+
+  return `[DOCUMENT] ${d.title || 'Document'} | File: ${d.original_filename || '?'} | Type: ${d.doc_type || 'other'} | Phase: ${d.phase || '?'} | Review: ${d.review_status || '?'} | Access: ${d.access || '?'} | Version: v${d.current_version || 1} | Linked RFIs: ${d.linked_rfis || 0} | Linked Issues: ${d.linked_issues || 0} | Uploaded: ${safeDate(d.uploaded_at || d.createdAt)} | Extraction: ${d.embedding_status || 'pending'} | Tags: ${(d.tags || []).join(', ') || 'none'}${preview ? ` | Extracted Text Preview: ${preview}` : ''}`
+})
 
   const notificationLines = notifications.slice(0, 25).map(
     (n) =>
