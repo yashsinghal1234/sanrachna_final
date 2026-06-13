@@ -1,6 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const { askGroq } = require('./groq.service')
+const { semanticRankChunks } = require('./semanticRag.service')
 
 const RAG_DOCS_DIR = path.join(__dirname, '..', 'data', 'rag_docs')
 
@@ -263,10 +264,9 @@ function scoreChunk(queryTokens, chunk) {
   return score
 }
 
-function retrieveRelevantChunks(question, projectContext, limit = 6) {
+async function retrieveRelevantChunks(question, projectContext, limit = 6) {
   const q = normalizeText(question)
   const expandedQuestion = expandQuestion(question)
-  const queryTokens = tokenize(expandedQuestion)
 
   const chunks = [
     ...getLiveChunks(projectContext),
@@ -307,32 +307,35 @@ function retrieveRelevantChunks(question, projectContext, limit = 6) {
   }
 
   if (q.includes('contact') || q.includes('contacts') || q.includes('team')) {
-    forcedChunks.push(
-      ...chunks.filter((chunk) => chunk.title === 'Team')
-    )
+    forcedChunks.push(...chunks.filter((chunk) => chunk.title === 'Team'))
   }
 
   if (q.includes('document') || q.includes('documents') || q.includes('review')) {
-    forcedChunks.push(
-      ...chunks.filter((chunk) => chunk.title === 'Documents')
-    )
+    forcedChunks.push(...chunks.filter((chunk) => chunk.title === 'Documents'))
   }
 
   const forcedIds = new Set(forcedChunks.map((chunk) => chunk.id))
+  const remainingChunks = chunks.filter((chunk) => !forcedIds.has(chunk.id))
 
-  const rankedChunks = chunks
-    .filter((chunk) => !forcedIds.has(chunk.id))
-    .map((chunk) => ({
-      ...chunk,
-      score: scoreChunk(queryTokens, chunk),
-    }))
-    .filter((chunk) => chunk.score > 0)
-    .sort((a, b) => b.score - a.score)
+  let semanticChunks = []
 
-  return [
-    ...forcedChunks,
-    ...rankedChunks,
-  ].slice(0, limit)
+  try {
+    semanticChunks = await semanticRankChunks(expandedQuestion, remainingChunks, limit)
+  } catch (err) {
+    console.error('[SEMANTIC RAG] Falling back to keyword ranking:', err?.message || err)
+
+    const queryTokens = tokenize(expandedQuestion)
+    semanticChunks = remainingChunks
+      .map((chunk) => ({
+        ...chunk,
+        score: scoreChunk(queryTokens, chunk),
+      }))
+      .filter((chunk) => chunk.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+  }
+
+  return [...forcedChunks, ...semanticChunks].slice(0, limit)
 }
 
 function cleanChunkForAnswer(text) {
@@ -342,8 +345,20 @@ function cleanChunkForAnswer(text) {
     .trim()
 }
 
-async function buildExtractiveAnswer(question, projectContext) {
-  const chunks = retrieveRelevantChunks(question, projectContext, 6)
+async function buildExtractiveAnswer(
+  question,
+  projectContext,
+  history = []
+) {
+  const retrievalQuery =
+  buildConversationQuery(question, history)
+
+const chunks =
+  await retrieveRelevantChunks(
+    retrievalQuery,
+    projectContext,
+    6
+  )
   const q = normalizeText(question)
 
   if (!chunks.length) {
@@ -410,16 +425,39 @@ Recommended actions:
         .join('\n\n')
   }
 
+  const citations = chunks.map((chunk, index) => {
+  const label = chunk.title || chunk.source
+  return `Source ${index + 1}: ${label} (${chunk.source})`
+  })
+
   return {
     answer: finalAnswer,
-    citations: [...new Set(chunks.map((chunk) => chunk.source))],
+    citations,
     contexts: chunks.map((chunk) => chunk.id),
   }
+}
+
+function buildConversationQuery(question, history = []) {
+  const recentHistory = history
+    .slice(-4)
+    .map((m) => m.content)
+    .join('\n')
+
+  return `
+Previous conversation:
+
+${recentHistory}
+
+Current question:
+
+${question}
+`
 }
 
 module.exports = {
   loadStaticDocs,
   getStaticChunks,
   retrieveRelevantChunks,
+  buildConversationQuery,
   buildExtractiveAnswer,
 }

@@ -115,8 +115,11 @@ async function addMessage(req, res) {
 
   try {
     const systemContext = await buildProjectContext(req.project, req.user.role)
-
-    ragResult = await buildExtractiveAnswer(prompt, systemContext)
+    const history = row.messages
+      .slice(0, -1)
+      .filter((m) => m.content && m.content.trim().length > 0)
+      .slice(-6)
+    ragResult = await buildExtractiveAnswer(prompt, systemContext, history)
 
     answerText = ragResult.answer
 

@@ -11,13 +11,16 @@ async function askGroq(question, context) {
       {
         role: 'system',
         content: `
-You are Sanrachna AI.
+You are Sanrachna AI, a construction project management assistant.
 
-Answer ONLY from the provided context.
-If the answer is not present in the context, say:
-"I could not find this information in the project data."
+Answer ONLY using the provided context.
+Do not invent facts.
+If the context does not contain the answer, say that clearly.
 
-Be concise and use bullet points when appropriate.
+Use concise bullet points when useful.
+
+At the end of your answer, add a short "Sources used:" section.
+Mention source labels exactly as they appear in the context, such as SOURCE 1, SOURCE 2.
         `,
       },
       {
@@ -34,8 +37,9 @@ ${question}
       },
     ],
     temperature: 0.2,
-    max_tokens: 600,
+    max_tokens: 700,
   })
+
   const content = completion?.choices?.[0]?.message?.content
 
   if (!content || typeof content !== 'string') {
