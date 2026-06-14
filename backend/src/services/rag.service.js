@@ -2,6 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const { askGroq } = require('./groq.service')
 const { semanticRankChunks } = require('./semanticRag.service')
+const { getDocumentVectorChunks } = require('./documentVector.service')
 
 const RAG_DOCS_DIR = path.join(__dirname, '..', 'data', 'rag_docs')
 
@@ -264,7 +265,7 @@ function scoreChunk(queryTokens, chunk) {
   return score
 }
 
-async function retrieveRelevantChunks(question, projectContext, limit = 6) {
+async function retrieveRelevantChunks(question, projectContext, limit = 6, projectId = null) {
   const q = normalizeText(question)
   const expandedQuestion = expandQuestion(question)
 
@@ -334,8 +335,17 @@ async function retrieveRelevantChunks(question, projectContext, limit = 6) {
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
   }
+  let documentVectorChunks = []
 
-  return [...forcedChunks, ...semanticChunks].slice(0, limit)
+if (projectId) {
+  try {
+      documentVectorChunks = await getDocumentVectorChunks(projectId, expandedQuestion, 4)
+    } catch (err) {
+      console.error('[DOCUMENT VECTOR RAG] Failed:', err?.message || err)
+    }
+  }
+
+  return [...documentVectorChunks, ...forcedChunks, ...semanticChunks,].slice(0, limit)
 }
 
 function cleanChunkForAnswer(text) {
@@ -345,19 +355,15 @@ function cleanChunkForAnswer(text) {
     .trim()
 }
 
-async function buildExtractiveAnswer(
-  question,
-  projectContext,
-  history = []
-) {
+async function buildExtractiveAnswer(question, projectContext, history = [], projectId = null) {
   const retrievalQuery =
   buildConversationQuery(question, history)
 
-const chunks =
-  await retrieveRelevantChunks(
+const chunks = await retrieveRelevantChunks(
     retrievalQuery,
     projectContext,
-    6
+    6,
+    projectId
   )
   const q = normalizeText(question)
 

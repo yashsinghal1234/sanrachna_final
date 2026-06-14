@@ -119,7 +119,12 @@ async function addMessage(req, res) {
       .slice(0, -1)
       .filter((m) => m.content && m.content.trim().length > 0)
       .slice(-6)
-    ragResult = await buildExtractiveAnswer(prompt, systemContext, history)
+    ragResult = await buildExtractiveAnswer(
+      prompt,
+      systemContext,
+      history,
+      req.project._id
+    )
 
     answerText = ragResult.answer
 
