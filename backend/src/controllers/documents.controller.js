@@ -1,7 +1,7 @@
 const path = require('path')
 const fs = require('fs')
 const DocumentMeta = require('../models/DocumentMeta')
-const { extractPdfText } = require('../services/documentText.service')
+const { extractPdfText, embedChunks } = require('../services/documentText.service')
 const uploadsRoot = path.join(__dirname, '..', '..', 'uploads')
 const documentsRootResolved = path.resolve(uploadsRoot, 'documents')
 
@@ -190,6 +190,7 @@ async function createDocument(req, res) {
   }
   let extracted_text = ''
   let text_chunks = []
+  let chunk_embeddings = []
   let embedding_status = 'pending'
 
   if (req.file && mime_type === 'application/pdf') {
@@ -198,7 +199,11 @@ async function createDocument(req, res) {
       const extracted = await extractPdfText(absPath)
       extracted_text = extracted.text
       text_chunks = extracted.chunks
-      embedding_status = extracted.text ? 'processed' : 'failed'
+      if (text_chunks.length) {
+        chunk_embeddings = await embedChunks(text_chunks)
+      }
+
+      embedding_status = text_chunks.length && chunk_embeddings.length ? 'processed' : 'failed'
     } catch (err) {
       console.error('[Document Text] PDF extraction failed:', err?.message || err)
       embedding_status = 'failed'
@@ -227,6 +232,7 @@ async function createDocument(req, res) {
     storage_rel,
     extracted_text,
     text_chunks,
+    chunk_embeddings,
     embedding_status,
     original_filename,
     mime_type,
@@ -265,7 +271,7 @@ async function bulkCreateDocuments(req, res) {
     let extracted_text = ''
     let text_chunks = []
     let embedding_status = 'pending'
-
+    let chunk_embeddings = []
     const mime_type = file.mimetype || ''
 
     if (mime_type === 'application/pdf') {
@@ -274,7 +280,12 @@ async function bulkCreateDocuments(req, res) {
         const extracted = await extractPdfText(absPath)
         extracted_text = extracted.text
         text_chunks = extracted.chunks
-        embedding_status = extracted.text ? 'processed' : 'failed'
+
+        if (text_chunks.length) {
+          chunk_embeddings = await embedChunks(text_chunks)
+        }
+
+        embedding_status = text_chunks.length && chunk_embeddings.length ? 'processed' : 'failed'
       } catch (err) {
         console.error('[Document Text] Bulk PDF extraction failed:', err?.message || err)
         embedding_status = 'failed'
@@ -291,6 +302,7 @@ async function bulkCreateDocuments(req, res) {
       storage_rel,
       extracted_text,
       text_chunks,
+      chunk_embeddings,
       embedding_status,
       original_filename: file.originalname || file.filename,
       mime_type: file.mimetype || '',

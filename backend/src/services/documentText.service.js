@@ -1,5 +1,6 @@
 const fs = require('fs')
 const pdfParse = require('pdf-parse')
+const { embedText } = require('./embedding.service')
 
 function chunkText(text, chunkSize = 1000) {
   const chunks = []
@@ -10,6 +11,17 @@ function chunkText(text, chunkSize = 1000) {
   }
 
   return chunks
+}
+
+async function embedChunks(chunks) {
+  const vectors = []
+
+  for (const chunk of chunks) {
+    const vector = await embedText(chunk)
+    vectors.push(vector)
+  }
+
+  return vectors
 }
 
 async function extractPdfText(filePath) {
@@ -28,4 +40,5 @@ async function extractPdfText(filePath) {
 
 module.exports = {
   extractPdfText,
+  embedChunks,
 }

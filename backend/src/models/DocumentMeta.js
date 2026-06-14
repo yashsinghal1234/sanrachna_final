@@ -47,6 +47,11 @@ const documentMetaSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    
+    chunk_embeddings: {
+      type: [[Number]],
+      default: [],
+    },
 
     embedding_status: {
       type: String,
