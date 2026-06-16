@@ -420,7 +420,7 @@ function WorkerEmergencyPanel() {
 
 function EngineerCommandPanel() {
   const { user, role } = useAuth()
-  const { incidents, activeIncidents, updateIncident, archiveIncident } = useEmergency()
+  const { incidents, activeIncidents, updateIncident } = useEmergency()
 
   const resolvedRole: Role = role ?? 'engineer'
   const list = resolvedRole === 'engineer' ? activeIncidents : incidents
