@@ -719,6 +719,7 @@ export function AICopilotPage() {
                           </div>
                         </div>
                       )}
+                    </div>
                   </div>
                 )
               })}
