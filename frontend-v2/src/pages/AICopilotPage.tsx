@@ -175,6 +175,8 @@ export function AICopilotPage() {
 
   const activeThread = threads[activeIdx] ?? null
 
+  const sendRef = useRef<(textArg?: string) => Promise<void>>(async () => {})
+
   // ── load threads from backend ─────────────────────────────────────────────
   const loadThreads = useCallback(async () => {
     if (!currentProjectId || !isBackendConfigured()) return
@@ -267,13 +269,19 @@ export function AICopilotPage() {
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
         stream.getTracks().forEach((track) => track.stop())
+        
+        if (audioBlob.size === 0) {
+          setDraft('Error: No audio recorded')
+          return
+        }
+
         setDraft('Transcribing voice...')
 
         const formData = new FormData()
         formData.append('audio', audioBlob, 'voice.webm')
 
         try {
-          const res = await apiFetch(`/api/v1/workspaces/${currentProjectId}/copilot/transcribe`, {
+          const res = await apiFetch(`/api/v1/projects/${currentProjectId}/copilot/transcribe`, {
             method: 'POST',
             body: formData
           })
@@ -282,15 +290,16 @@ export function AICopilotPage() {
             const text = data.text || ''
             if (text) {
               setDraft(text)
-              void send(text)
+              void sendRef.current(text)
             } else {
-              setDraft('')
+              setDraft('Could not hear anything, please try again.')
             }
           } else {
-            setDraft('')
+            const err = await res.text()
+            setDraft(`Error: ${res.status} ${err}`)
           }
-        } catch {
-          setDraft('')
+        } catch (err) {
+          setDraft(`Network error during transcription.`)
         }
       }
 
@@ -408,11 +417,17 @@ export function AICopilotPage() {
         next[activeIdx] = { ...next[activeIdx]!, messages: [...next[activeIdx]!.messages, errMsg] }
         return next
       })
+      console.error(err)
+      setDraft(text)
     } finally {
       setSending(false)
       setStreamText('')
     }
   }
+
+  useEffect(() => {
+    sendRef.current = send
+  }, [draft, sending, activeThread, currentProjectId, threads])
 
   // ── auto-scroll ───────────────────────────────────────────────────────────
   useEffect(() => {
