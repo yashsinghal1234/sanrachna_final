@@ -41,31 +41,37 @@ type PersistedAuth = {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(null)
-
-  useEffect(() => {
+  const [user, setUser] = useState<User | null>(() => {
     const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return
+    if (!raw) return null
     try {
       const parsed = JSON.parse(raw) as PersistedAuth | User
       if (parsed && typeof parsed === 'object' && 'user' in parsed) {
         const p = parsed as PersistedAuth
-        if (p?.user?.id && p?.user?.emailOrPhone) {
-          setUser(p.user)
-          setToken(typeof p.token === 'string' ? p.token : null)
-        }
+        if (p?.user?.id && p?.user?.emailOrPhone) return p.user
       } else {
         const legacy = parsed as User
-        if (legacy?.id && legacy?.emailOrPhone) {
-          setUser(legacy)
-          setToken(null)
-        }
+        if (legacy?.id && legacy?.emailOrPhone) return legacy
       }
     } catch {
       // ignore
     }
-  }, [])
+    return null
+  })
+
+  const [token, setToken] = useState<string | null>(() => {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    try {
+      const parsed = JSON.parse(raw) as PersistedAuth
+      if (parsed && typeof parsed === 'object' && 'token' in parsed) {
+        return typeof parsed.token === 'string' ? parsed.token : null
+      }
+    } catch {
+      // ignore
+    }
+    return null
+  })
 
   const persist = (next: PersistedAuth | null) => {
     try {
