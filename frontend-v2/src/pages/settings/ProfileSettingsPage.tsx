@@ -1,33 +1,50 @@
-import { ShieldCheck, User } from 'lucide-react'
-import type { FormEvent } from 'react'
-import { useMemo, useState } from 'react'
+import { ShieldCheck, User, Save, Loader2, Info } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import * as z from 'zod'
 
 import { useAuth, type Role } from '@/auth/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
-type ProfileForm = {
-  fullName: string
-  email: string
-  phone: string
-  departmentCrew: string
-  employeeId: string
-  companyName: string
-  businessAddress: string
-  specialization: string
-  assignedProjects: string
-  crewType: string
-  supervisorName: string
-}
+import { apiGetProfile, apiUpdateProfile } from '@/api/profileApi'
+
+const profileSchema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().optional(),
+  departmentCrew: z.string().optional(),
+  employeeId: z.string().optional(),
+  companyName: z.string().optional(),
+  businessAddress: z.string().optional(),
+  specialization: z.string().optional(),
+  assignedProjects: z.string().optional(),
+  crewType: z.string().optional(),
+  supervisorName: z.string().optional(),
+})
+
+type ProfileFormValues = z.infer<typeof profileSchema>
 
 export function ProfileSettingsPage() {
-  const { role, user } = useAuth()
+  const { role, user, login, token } = useAuth()
   const resolvedRole: Role = role ?? 'engineer'
 
-  const initial = useMemo<ProfileForm>(
-    () => ({
-      fullName: user?.name ?? '',
-      email: user?.emailOrPhone ?? '',
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      name: '',
+      email: '',
       phone: '',
       departmentCrew: '',
       employeeId: '',
@@ -37,262 +54,232 @@ export function ProfileSettingsPage() {
       assignedProjects: '',
       crewType: '',
       supervisorName: '',
-    }),
-    [resolvedRole, user],
-  )
+    },
+  })
 
-  const [form, setForm] = useState(initial)
-  const [draft, setDraft] = useState(initial)
-  const [editing, setEditing] = useState(false)
+  useEffect(() => {
+    async function fetchProfile() {
+      if (!token) return
+      try {
+        const { user: profile } = await apiGetProfile()
+        reset({
+          name: profile.name || '',
+          email: profile.email || '',
+          phone: profile.phone || '',
+          departmentCrew: profile.departmentCrew || '',
+          employeeId: profile.employeeId || '',
+          companyName: profile.companyName || '',
+          businessAddress: profile.businessAddress || '',
+          specialization: profile.specialization || '',
+          assignedProjects: profile.assignedProjects || '',
+          crewType: profile.crewType || '',
+          supervisorName: profile.supervisorName || '',
+        })
+      } catch (err: any) {
+        setErrorMsg(err.message || 'Failed to load profile.')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchProfile()
+  }, [token, reset])
 
-  const cancel = () => {
-    setDraft(form)
-    setEditing(false)
-  }
-
-  const save = (e: FormEvent) => {
-    e.preventDefault()
-    if (!draft.fullName.trim() || !draft.email.trim() || !draft.phone.trim() || !draft.departmentCrew.trim()) return
-    if (extraOwner && (!draft.companyName.trim() || !draft.businessAddress.trim())) return
-    if (extraEngineer && (!draft.specialization.trim() || !draft.assignedProjects.trim())) return
-    if (extraWorker && (!draft.crewType.trim() || !draft.supervisorName.trim())) return
-    setForm(draft)
-    setEditing(false)
+  const onSubmit = async (data: ProfileFormValues) => {
+    setIsSaving(true)
+    setSuccessMsg(null)
+    setErrorMsg(null)
+    try {
+      const { user: updatedUser } = await apiUpdateProfile(data)
+      
+      // Sync local context so sidebar/header updates instantly
+      if (user && token) {
+        login({ user: { ...user, name: updatedUser.name, emailOrPhone: updatedUser.email, phone: updatedUser.phone }, token })
+      }
+      
+      // Update form state to reset dirty fields
+      reset({
+        name: updatedUser.name || '',
+        email: updatedUser.email || '',
+        phone: updatedUser.phone || '',
+        departmentCrew: updatedUser.departmentCrew || '',
+        employeeId: updatedUser.employeeId || '',
+        companyName: updatedUser.companyName || '',
+        businessAddress: updatedUser.businessAddress || '',
+        specialization: updatedUser.specialization || '',
+        assignedProjects: updatedUser.assignedProjects || '',
+        crewType: updatedUser.crewType || '',
+        supervisorName: updatedUser.supervisorName || '',
+      })
+      setSuccessMsg('Profile updated successfully.')
+      setTimeout(() => setSuccessMsg(null), 3000)
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to update profile.')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const extraOwner = resolvedRole === 'owner'
   const extraEngineer = resolvedRole === 'engineer'
   const extraWorker = resolvedRole === 'worker'
 
-  const fieldDisabled = !editing
+  if (isLoading) {
+    return (
+      <div className="flex h-40 items-center justify-center">
+        <Loader2 className="size-6 animate-spin text-[color:var(--color-text_muted)]" />
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="size-4 text-[color:var(--color-primary_dark)]" />
-            Profile
+    <div className="mx-auto max-w-4xl space-y-6">
+      <Card className="border-none shadow-sm ring-1 ring-[color:var(--color-border)]">
+        <CardHeader className="bg-[color:var(--color-bg)] pb-6 border-b border-[color:var(--color-border)]">
+          <CardTitle className="flex items-center gap-2 text-xl">
+            <User className="size-5 text-[color:var(--color-primary_dark)]" />
+            Profile Settings
           </CardTitle>
-          <CardDescription>Manage your personal info.</CardDescription>
+          <CardDescription>Manage your personal information and contact details.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <form className="space-y-4" onSubmit={save}>
-          <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex size-12 items-center justify-center rounded-[var(--radius-xl)] bg-[color:var(--color-primary_light)]/25 text-[color:var(--color-primary_dark)]">
-                  <User className="size-5" />
+        <CardContent className="pt-6">
+          <form className="space-y-8" onSubmit={handleSubmit(onSubmit)}>
+            
+            {/* Header Badge */}
+            <div className="flex items-start justify-between gap-3 rounded-[var(--radius-xl)] border border-[color:var(--color-primary)]/20 bg-[color:var(--color-primary_light)]/5 p-4">
+              <div className="flex items-center gap-4">
+                <div className="flex size-14 items-center justify-center rounded-[var(--radius-xl)] bg-[color:var(--color-primary)] text-white shadow-sm">
+                  <User className="size-6" />
                 </div>
                 <div>
-                  <div className="text-base font-bold">{form.fullName}</div>
-                  <div className="mt-1 inline-flex items-center gap-2 text-xs font-semibold text-[color:var(--color-text_secondary)]">
-                    <ShieldCheck className="size-4 text-[color:var(--color-success)]" />
+                  <div className="text-lg font-bold">{user?.name || 'User'}</div>
+                  <div className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-[color:var(--color-success)]/10 px-2.5 py-0.5 text-xs font-semibold text-[color:var(--color-success)]">
+                    <ShieldCheck className="size-3.5" />
                     {resolvedRole.toUpperCase()}
                   </div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-xs text-[color:var(--color-text_muted)]">Member since</div>
-                <div className="text-sm font-semibold">{resolvedRole === 'owner' ? 'Jan 2025' : resolvedRole === 'engineer' ? 'Mar 2025' : 'Oct 2025'}</div>
+            </div>
+
+            {errorMsg && (
+              <div className="rounded-md bg-[color:var(--color-error)]/10 p-3 text-sm font-medium text-[color:var(--color-error)]">
+                {errorMsg}
               </div>
-            </div>
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium" htmlFor="fullName">
-                Full Name <span className="text-[color:var(--color-error)]">*</span>
-              </label>
-              <Input
-                id="fullName"
-                value={draft.fullName}
-                disabled={fieldDisabled}
-                onChange={(e) => setDraft((p) => ({ ...p, fullName: e.target.value }))}
-                className="mt-1.5"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium" htmlFor="email">
-                Email <span className="text-[color:var(--color-error)]">*</span>
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={draft.email}
-                disabled={fieldDisabled}
-                onChange={(e) => setDraft((p) => ({ ...p, email: e.target.value }))}
-                className="mt-1.5"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium" htmlFor="phone">
-                Phone <span className="text-[color:var(--color-error)]">*</span>
-              </label>
-              <Input
-                id="phone"
-                value={draft.phone}
-                disabled={fieldDisabled}
-                onChange={(e) => setDraft((p) => ({ ...p, phone: e.target.value }))}
-                className="mt-1.5"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium" htmlFor="departmentCrew">
-                Department / Crew <span className="text-[color:var(--color-error)]">*</span>
-              </label>
-              <Input
-                id="departmentCrew"
-                value={draft.departmentCrew}
-                disabled={fieldDisabled}
-                onChange={(e) => setDraft((p) => ({ ...p, departmentCrew: e.target.value }))}
-                className="mt-1.5"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium" htmlFor="employeeId">
-                Employee ID (optional)
-              </label>
-              <Input
-                id="employeeId"
-                value={draft.employeeId}
-                disabled={fieldDisabled}
-                onChange={(e) => setDraft((p) => ({ ...p, employeeId: e.target.value }))}
-                className="mt-1.5"
-              />
-            </div>
-          </div>
-
-          {(extraOwner || extraEngineer || extraWorker) ? (
-            <div className="rounded-[var(--radius-2xl)] border border-[color:var(--color-border)] bg-[color:var(--color-card)] p-4">
-              <div className="text-sm font-bold">Tier details</div>
-              <div className="mt-3 grid gap-4 lg:grid-cols-2">
-                {extraOwner ? (
-                  <>
-                    <div>
-                      <label className="text-sm font-medium" htmlFor="companyName">
-                        Company Name <span className="text-[color:var(--color-error)]">*</span>
-                      </label>
-                      <Input
-                        id="companyName"
-                        value={draft.companyName}
-                        disabled={fieldDisabled}
-                        onChange={(e) => setDraft((p) => ({ ...p, companyName: e.target.value }))}
-                        className="mt-1.5"
-                        required={extraOwner}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium" htmlFor="businessAddress">
-                        Business Address <span className="text-[color:var(--color-error)]">*</span>
-                      </label>
-                      <Input
-                        id="businessAddress"
-                        value={draft.businessAddress}
-                        disabled={fieldDisabled}
-                        onChange={(e) => setDraft((p) => ({ ...p, businessAddress: e.target.value }))}
-                        className="mt-1.5"
-                        required={extraOwner}
-                      />
-                    </div>
-                  </>
-                ) : null}
-
-                {extraEngineer ? (
-                  <>
-                    <div>
-                      <label className="text-sm font-medium" htmlFor="specialization">
-                        Specialization <span className="text-[color:var(--color-error)]">*</span>
-                      </label>
-                      <Input
-                        id="specialization"
-                        value={draft.specialization}
-                        disabled={fieldDisabled}
-                        onChange={(e) => setDraft((p) => ({ ...p, specialization: e.target.value }))}
-                        className="mt-1.5"
-                        required={extraEngineer}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium" htmlFor="assignedProjects">
-                        Assigned Projects <span className="text-[color:var(--color-error)]">*</span>
-                      </label>
-                      <Input
-                        id="assignedProjects"
-                        value={draft.assignedProjects}
-                        disabled={fieldDisabled}
-                        onChange={(e) => setDraft((p) => ({ ...p, assignedProjects: e.target.value }))}
-                        className="mt-1.5"
-                        required={extraEngineer}
-                      />
-                    </div>
-                  </>
-                ) : null}
-
-                {extraWorker ? (
-                  <>
-                    <div>
-                      <label className="text-sm font-medium" htmlFor="crewType">
-                        Crew Type <span className="text-[color:var(--color-error)]">*</span>
-                      </label>
-                      <Input
-                        id="crewType"
-                        value={draft.crewType}
-                        disabled={fieldDisabled}
-                        onChange={(e) => setDraft((p) => ({ ...p, crewType: e.target.value }))}
-                        className="mt-1.5"
-                        required={extraWorker}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium" htmlFor="supervisorName">
-                        Supervisor Name <span className="text-[color:var(--color-error)]">*</span>
-                      </label>
-                      <Input
-                        id="supervisorName"
-                        value={draft.supervisorName}
-                        disabled={fieldDisabled}
-                        onChange={(e) => setDraft((p) => ({ ...p, supervisorName: e.target.value }))}
-                        className="mt-1.5"
-                        required={extraWorker}
-                      />
-                    </div>
-                  </>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            {!editing ? (
-              <Button type="button" onClick={() => setEditing(true)} className="sm:w-auto">
-                Edit Profile
-              </Button>
-            ) : (
-              <>
-                <Button type="submit" className="sm:w-auto">
-                  Save Changes
-                </Button>
-                <Button type="button" variant="outline" onClick={cancel} className="sm:w-auto">
-                  Cancel
-                </Button>
-              </>
             )}
-          </div>
+            
+            {successMsg && (
+              <div className="rounded-md bg-[color:var(--color-success)]/10 p-3 text-sm font-medium text-[color:var(--color-success)]">
+                {successMsg}
+              </div>
+            )}
+
+            {/* Personal Information Section */}
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-[color:var(--color-text_secondary)] mb-4">Personal Information</h3>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Full Name <span className="text-[color:var(--color-error)]">*</span>
+                  </label>
+                  <Input {...register('name')} placeholder="e.g. Arjun Singh" className={errors.name ? 'border-[color:var(--color-error)]' : ''} />
+                  {errors.name && <p className="text-xs text-[color:var(--color-error)]">{errors.name.message}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">
+                    Email Address <span className="text-[color:var(--color-error)]">*</span>
+                  </label>
+                  <Input {...register('email')} type="email" placeholder="e.g. arjun@company.com" className={errors.email ? 'border-[color:var(--color-error)]' : ''} />
+                  {errors.email && <p className="text-xs text-[color:var(--color-error)]">{errors.email.message}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Phone Number</label>
+                  <Input {...register('phone')} placeholder="+91 98XXX XXXXX" />
+                  {errors.phone && <p className="text-xs text-[color:var(--color-error)]">{errors.phone.message}</p>}
+                </div>
+              </div>
+            </div>
+
+            <div className="h-px w-full bg-[color:var(--color-border)]" />
+
+            {/* Work Details Section */}
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-[color:var(--color-text_secondary)] mb-4">Work Details</h3>
+              <div className="grid gap-6 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Department / Crew</label>
+                  <Input {...register('departmentCrew')} placeholder="e.g. Engineering" />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Employee ID</label>
+                  <Input {...register('employeeId')} placeholder="e.g. EMP-041" />
+                </div>
+
+                {extraOwner && (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Company Name</label>
+                      <Input {...register('companyName')} placeholder="Your Company Ltd" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Business Address</label>
+                      <Input {...register('businessAddress')} placeholder="City, State" />
+                    </div>
+                  </>
+                )}
+
+                {extraEngineer && (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Specialization</label>
+                      <Input {...register('specialization')} placeholder="e.g. Structural Planning" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Assigned Projects</label>
+                      <Input {...register('assignedProjects')} placeholder="e.g. Sunrise Residency" />
+                    </div>
+                  </>
+                )}
+
+                {extraWorker && (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Crew Type</label>
+                      <Input {...register('crewType')} placeholder="e.g. Masons, Electricians" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Supervisor Name</label>
+                      <Input {...register('supervisorName')} placeholder="e.g. Rahul Sharma" />
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-4">
+              <div className="flex items-center gap-2 text-sm text-[color:var(--color-text_muted)]">
+                <Info className="size-4" />
+                Changes may take a moment to reflect across the workspace.
+              </div>
+              <Button type="submit" disabled={isSaving || !isDirty} className="min-w-[140px]">
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 size-4" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </div>
+
           </form>
         </CardContent>
       </Card>
-
-
     </div>
   )
 }
-

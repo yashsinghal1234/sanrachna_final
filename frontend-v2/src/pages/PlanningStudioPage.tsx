@@ -115,7 +115,7 @@ export function PlanningStudioPage() {
       {toast ? (
         <div
           role="status"
-          className="fixed bottom-24 left-1/2 z-50 max-w-sm -translate-x-1/2 rounded-[var(--radius-xl)] bg-[color:var(--color-text)] px-4 py-2 text-center text-sm font-semibold text-white shadow-[var(--shadow-card)]"
+          className="fixed bottom-24 left-1/2 z-50 max-w-sm -translate-x-1/2 rounded-[var(--radius-xl)] bg-[color:var(--color-text)] px-4 py-2 text-center text-sm font-semibold text-[color:var(--color-bg)] shadow-[var(--shadow-card)]"
         >
           {toast}
         </div>

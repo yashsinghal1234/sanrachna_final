@@ -85,6 +85,7 @@ async function getThread(req, res) {
 }
 
 async function addMessage(req, res) {
+  console.log('addMessage called with threadId:', req.params.threadId, 'projectId:', req.project._id);
   const row = await CopilotThread.findOne({
     _id: req.params.threadId,
     project: req.project._id,

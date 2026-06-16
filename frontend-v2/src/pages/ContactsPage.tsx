@@ -431,7 +431,7 @@ export function ContactsPage() {
       {toast ? (
         <div
           role="status"
-          className="fixed bottom-24 right-6 z-[60] max-w-sm rounded-[var(--radius-2xl)] bg-[color:var(--color-text)] px-4 py-3 text-sm font-semibold text-white shadow-[var(--shadow-card)]"
+          className="fixed bottom-24 right-6 z-[60] max-w-sm rounded-[var(--radius-2xl)] bg-[color:var(--color-text)] px-4 py-3 text-sm font-semibold text-[color:var(--color-bg)] shadow-[var(--shadow-card)]"
           onClick={() => setToast(null)}
         >
           {toast}

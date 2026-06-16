@@ -54,36 +54,41 @@
 
   .dark {
     color-scheme: dark;
-    --color-bg: #09090b;
-    --color-card: #18181b;
-    --color-sidebar: #09090b;
+    --color-bg: #000000;
+    --color-card: #0a0a0a;
+    --color-sidebar: #000000;
 
-    --color-text: #fafafa;
-    --color-text_secondary: #a1a1aa;
-    --color-text_muted: #71717a;
+    /* Override primary with CASPER */
+    --color-primary: #a3b1b9;
+    --color-primary_dark: #8698a1;
+    --color-primary_light: #c6d0d5;
 
-    --color-border: #27272a;
-    --color-border_strong: #3f3f46;
+    --color-text: #ffffff;
+    --color-text_secondary: #a3b1b9; /* Casper for secondary text */
+    --color-text_muted: #686b6c; /* Dove grey for muted text */
+
+    --color-border: #1f1f1f;
+    --color-border_strong: #686b6c; /* Dove grey */
 
     --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.6);
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.6), 0 18px 42px rgba(0, 0, 0, 0.8);
 
-    --color-nav_active_bg: rgba(255, 255, 255, 0.1);
-    --color-nav_active_text: #fafafa;
-    --color-nav_active_ring: rgba(255, 255, 255, 0.2);
-    --color-nav_hover_bg: rgba(255, 255, 255, 0.06);
-    --color-nav_hover_text: #fafafa;
-    --color-sidebar_border: #27272a;
-    --color-sidebar_logo_bg: rgba(255, 255, 255, 0.1);
-    --color-sidebar_logo_ring: rgba(255, 255, 255, 0.2);
-    --color-sidebar_logo_fg: #fafafa;
-    --color-settings_strip: rgba(255, 255, 255, 0.03);
-    --color-settings_icon_bg: #18181b;
-    --color-settings_icon_ring: #27272a;
-    --color-surface_hover: #27272a;
-    --color-surface_muted: #27272a;
-    --color-header_scrim: rgba(9, 9, 11, 0.85);
-    --color-filter_segment_bg: #27272a;
+    --color-nav_active_bg: #111111;
+    --color-nav_active_text: #ffffff;
+    --color-nav_active_ring: #686b6c;
+    --color-nav_hover_bg: #141414;
+    --color-nav_hover_text: #ffffff;
+    --color-sidebar_border: #1f1f1f;
+    --color-sidebar_logo_bg: #111111;
+    --color-sidebar_logo_ring: #1f1f1f;
+    --color-sidebar_logo_fg: #ffffff;
+    --color-settings_strip: rgba(255, 255, 255, 0.02);
+    --color-settings_icon_bg: #0a0a0a;
+    --color-settings_icon_ring: #1f1f1f;
+    --color-surface_hover: #141414;
+    --color-surface_muted: #0a0a0a;
+    --color-header_scrim: rgba(0, 0, 0, 0.85);
+    --color-filter_segment_bg: #141414;
   }
 
   .dark .bg-white {

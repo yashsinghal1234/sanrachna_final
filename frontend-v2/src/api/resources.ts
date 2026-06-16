@@ -71,13 +71,38 @@ export async function fetchWorkspaceEmergency(projectId: string): Promise<unknow
   return Array.isArray(res) ? res : (res as any)?.incidents ?? []
 }
 
+function dataURLtoBlob(dataurl: string) {
+  const arr = dataurl.split(',')
+  const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/jpeg'
+  const bstr = atob(arr[1] || '')
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) u8arr[n] = bstr.charCodeAt(n)
+  return new Blob([u8arr], { type: mime })
+}
+
 export async function createWorkspaceEmergency(
   projectId: string,
   body: Record<string, unknown>,
 ): Promise<unknown> {
+  let finalBody: BodyInit
+  if (body.photoDataUrl && typeof body.photoDataUrl === 'string') {
+    const fd = new FormData()
+    fd.append('type', String(body.type || ''))
+    fd.append('severity', String(body.severity || 'high'))
+    fd.append('zone', String(body.zone || ''))
+    fd.append('description', String(body.description || ''))
+    if (body.reported_by) fd.append('reported_by', String(body.reported_by))
+    
+    fd.append('photo', dataURLtoBlob(body.photoDataUrl), 'emergency.jpg')
+    finalBody = fd
+  } else {
+    finalBody = JSON.stringify(body)
+  }
+
   const res = await apiJson<{ incident: unknown }>(
     `/api/projects/${encodeURIComponent(projectId)}/emergency`,
-    { method: 'POST', body: JSON.stringify(body) },
+    { method: 'POST', body: finalBody },
   )
   return res.incident
 }

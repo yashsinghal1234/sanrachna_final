@@ -220,7 +220,7 @@ export function EmergencyProvider({ children }: { children: ReactNode }) {
   }, [activeIncidents])
 
   const trigger = useCallback(
-    (input: TriggerInput): string => {
+    async (input: TriggerInput): Promise<string> => {
       const at = Date.now()
       const localId = makeId('inc')
       const by = actorFromUser(user, role)
@@ -252,30 +252,33 @@ export function EmergencyProvider({ children }: { children: ReactNode }) {
       setIncidents((prev) => [newIncident, ...prev])
       setLastEvent({ kind: 'broadcast_sent', at, incidentId: localId })
 
-      // Persist to DB — all team members will see it on next poll
-      if (currentProjectId) {
-        createWorkspaceEmergency(currentProjectId, {
+      if (!currentProjectId) {
+        return localId
+      }
+
+      try {
+        const saved: any = await createWorkspaceEmergency(currentProjectId, {
           type: input.type,
           severity,
           zone: input.zone,
           description: input.description || '',
           reported_by: by.name,
-        }).then((saved: any) => {
-          if (saved?.id) {
-            // Replace local incident with server version
-            serverIdMap.current[localId] = saved.id
-            const serverIncident = normalizeBackendIncident(saved)
-            serverIncident.photoDataUrl = input.photoDataUrl // keep local photo
-            setIncidents((prev) =>
-              prev.map((inc) => (inc.id === localId ? { ...serverIncident, id: localId, _serverId: saved.id } : inc)),
-            )
-          }
-        }).catch(() => {
-          // Keep local version if API fails
+          photoDataUrl: input.photoDataUrl,
         })
+        if (saved?.id) {
+          serverIdMap.current[localId] = saved.id
+          const serverIncident = normalizeBackendIncident(saved)
+          serverIncident.photoDataUrl = input.photoDataUrl // keep local photo
+          setIncidents((prev) =>
+            prev.map((inc) => (inc.id === localId ? { ...serverIncident, id: localId, _serverId: saved.id } : inc)),
+          )
+        }
+        return localId
+      } catch (err) {
+        // Revert optimistic add on failure to avoid false sense of security
+        setIncidents((prev) => prev.filter((inc) => inc.id !== localId))
+        throw new Error('Failed to broadcast emergency. Please try again or use phone contact.')
       }
-
-      return localId
     },
     [user, role, currentProjectId],
   )

@@ -111,7 +111,7 @@ router.post('/:projectId/documents', optionalSingleDocumentUpload, asyncHandler(
 router.get('/:projectId/documents/:documentId/file', asyncHandler(getDocumentFile))
 
 router.get('/:projectId/emergency', asyncHandler(listEmergency))
-router.post('/:projectId/emergency', asyncHandler(createEmergency))
+router.post('/:projectId/emergency', uploadLogPhotoMiddleware, asyncHandler(createEmergency))
 router.patch('/:projectId/emergency/:incidentId', asyncHandler(updateEmergency))
 
 router.get('/:projectId/tasks', asyncHandler(listTasks))

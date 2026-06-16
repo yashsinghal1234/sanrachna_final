@@ -26,7 +26,7 @@ async function listEmergency(req, res) {
 }
 
 async function createEmergency(req, res) {
-  const { type, severity, zone, description, photo_url, reported_by } = req.body
+  const { type, severity, zone, description, reported_by } = req.body
   const zoneName = String(zone || '').trim()
   const typeName = String(type || '').trim()
   if (!typeName || !zoneName) {
@@ -35,6 +35,7 @@ async function createEmergency(req, res) {
   }
 
   const reporterName = reported_by || req.user?.name || req.user?.email || 'Unknown'
+  const photoUrl = req.file ? `/uploads/logs/${req.file.filename}` : null
 
   const incident = await EmergencyIncident.create({
     project: req.project._id,
@@ -42,7 +43,7 @@ async function createEmergency(req, res) {
     severity: ['low', 'medium', 'high', 'critical'].includes(severity) ? severity : 'high',
     zone: zoneName,
     description: String(description || ''),
-    photo_url: photo_url || null,
+    photo_url: photoUrl,
     reported_by: reporterName,
     audit: [
       {

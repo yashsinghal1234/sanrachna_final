@@ -24,7 +24,7 @@ import {
   X,
 } from 'lucide-react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useAuth } from '@/auth/AuthContext'
 import { WorkspaceBootstrap } from '@/components/WorkspaceBootstrap'
@@ -261,8 +261,14 @@ export function AppLayout() {
     return () => window.clearTimeout(id)
   }, [toast])
 
+  const handledEventRef = useRef<number | null>(null)
+
   useEffect(() => {
     if (!lastEvent) return
+    if (handledEventRef.current === lastEvent.at) return
+    
+    handledEventRef.current = lastEvent.at
+
     if (lastEvent.kind === 'broadcast_sent') {
       const inc = getIncident(lastEvent.incidentId)
       if (inc) {
@@ -369,7 +375,7 @@ export function AppLayout() {
       {toast ? (
         <div
           role="status"
-          className="fixed bottom-24 right-6 z-[60] max-w-sm rounded-[var(--radius-2xl)] bg-[color:var(--color-text)] px-4 py-3 text-sm font-semibold text-white shadow-[var(--shadow-card)]"
+          className="fixed bottom-24 right-6 z-[60] max-w-sm rounded-[var(--radius-2xl)] bg-[color:var(--color-text)] px-4 py-3 text-sm font-semibold text-[color:var(--color-bg)] shadow-[var(--shadow-card)]"
           onClick={() => setToast(null)}
         >
           {toast}

@@ -822,13 +822,13 @@ export function AICopilotPage() {
               onChange={(e) => setChatLanguage(e.target.value)}
               className="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-[color:var(--color-border)] bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-[color:var(--color-bg)] placeholder:text-[color:var(--color-text_muted)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
             >
-              <option value="English">English</option>
-              <option value="Hindi">Hindi</option>
-              <option value="Marathi">Marathi</option>
-              <option value="Gujarati">Gujarati</option>
-              <option value="Bengali">Bengali</option>
-              <option value="Tamil">Tamil</option>
-              <option value="Telugu">Telugu</option>
+              <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" value="English">English</option>
+              <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" value="Hindi">Hindi</option>
+              <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" value="Marathi">Marathi</option>
+              <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" value="Gujarati">Gujarati</option>
+              <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" value="Bengali">Bengali</option>
+              <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" value="Tamil">Tamil</option>
+              <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" value="Telugu">Telugu</option>
             </select>
           </div>
         </div>

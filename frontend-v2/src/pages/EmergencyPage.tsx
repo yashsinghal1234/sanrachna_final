@@ -76,20 +76,8 @@ function timeAgo(ts: number) {
   return `${days}d ago`
 }
 
-function workerZones() {
-  return [
-    'Tower A — Ground',
-    'Tower A — Level 1',
-    'Tower A — Level 3',
-    'Tower A — Stair Core East',
-    'Tower A — Scaffold Zone',
-    'Tower A — MEP Shaft',
-    'Site Entry Gate',
-    'Material Yard',
-  ]
-}
 
-function useGeo() {
+function useGeo(onLocation?: (lat: number, lng: number) => void) {
   const [pos, setPos] = useState<{ lat: number; lng: number } | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
@@ -100,7 +88,10 @@ function useGeo() {
       return
     }
     navigator.geolocation.getCurrentPosition(
-      (p) => setPos({ lat: p.coords.latitude, lng: p.coords.longitude }),
+      (p) => {
+        setPos({ lat: p.coords.latitude, lng: p.coords.longitude })
+        if (onLocation) onLocation(p.coords.latitude, p.coords.longitude)
+      },
       () => setErr('Unable to fetch location (permission denied or unavailable).'),
       { enableHighAccuracy: true, timeout: 6000, maximumAge: 10000 },
     )
@@ -111,18 +102,22 @@ function useGeo() {
 
 function WorkerEmergencyPanel() {
   const { user, role } = useAuth()
-  const { trigger } = useEmergency()
+  const { trigger, loading } = useEmergency()
 
   const [incidentType, setIncidentType] = useState<IncidentTypeOption>(typeOptions[0])
-  const [zone, setZone] = useState(workerZones()[2])
+  const [zone, setZone] = useState('')
   const [desc, setDesc] = useState('')
+
   const [photoDataUrl, setPhotoDataUrl] = useState<string | undefined>(undefined)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [sending, setSending] = useState(false)
   const [sentId, setSentId] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
+  const cameraRef = useRef<HTMLInputElement | null>(null)
 
-  const { pos, err, request } = useGeo()
+  const { pos, err, request } = useGeo((lat, lng) => {
+    setZone((prev) => prev ? prev : `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`)
+  })
 
   useEffect(() => {
     request()
@@ -148,37 +143,34 @@ function WorkerEmergencyPanel() {
     setConfirmOpen(true)
   }
 
-  const send = () => {
+  const send = async () => {
     if (!canTrigger || sending) return
     setSending(true)
-    const id = trigger({
-      type: incidentType.type,
-      severity: incidentType.severity,
-      zone,
-      description: desc,
-      photoDataUrl,
-      location: pos ?? undefined,
-    })
-    window.setTimeout(() => {
+    try {
+      const id = await trigger({
+        type: incidentType.type,
+        severity: incidentType.severity,
+        zone,
+        description: desc,
+        photoDataUrl,
+        location: pos ?? undefined,
+      })
       setSentId(id)
       setSending(false)
       setConfirmOpen(false)
-    }, 450)
+    } catch (error: any) {
+      alert(error.message || 'Emergency trigger failed.')
+      setSending(false)
+      setConfirmOpen(false)
+    }
   }
 
   const reporterName = user?.name ?? 'User'
   const resolvedRole: Role = role ?? 'worker'
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-      <Card className="overflow-hidden">
-        <CardHeader className="border-b border-[color:var(--color-border)] bg-[color:var(--color-bg)]">
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="size-5 text-[color:var(--color-error)]" />
-            Emergency Trigger
-          </CardTitle>
-          <CardDescription>Raise an emergency in under 10 seconds. This is a demo workflow.</CardDescription>
-        </CardHeader>
+    <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+      <Card className="overflow-hidden min-w-0">
         <CardContent className="space-y-5 pt-6">
           <div className="rounded-[var(--radius-2xl)] border border-[color:var(--color-border)] bg-white p-5 shadow-[var(--shadow-soft)]">
             <Button
@@ -237,18 +229,13 @@ function WorkerEmergencyPanel() {
             <div>
               <div className="text-xs font-semibold tracking-widest text-[color:var(--color-text_muted)]">LOCATION / ZONE</div>
               <div className="mt-2 flex items-center gap-2">
-                <select
+                <Input
                   value={zone}
                   onChange={(e) => setZone(e.target.value)}
-                  className="w-full appearance-none rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm"
-                >
-                  {workerZones().map((z) => (
-                    <option key={z} value={z}>
-                      {z}
-                    </option>
-                  ))}
-                </select>
-                <Button type="button" variant="outline" size="sm" onClick={request} title="Refresh location (device)">
+                  placeholder="Enter specific zone or location"
+                  className="w-full"
+                />
+                <Button type="button" variant="outline" size="sm" onClick={request} title="Auto-fill with GPS">
                   <Crosshair className="size-4" />
                 </Button>
               </div>
@@ -299,8 +286,11 @@ function WorkerEmergencyPanel() {
                 className="hidden"
                 onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
               />
-              <Button type="button" variant="secondary" onClick={() => fileRef.current?.click()}>
-                Upload Photo
+              <Button type="button" variant="secondary" onClick={() => setShowCamera(true)}>
+                Take Photo
+              </Button>
+              <Button type="button" variant="outline" onClick={() => fileRef.current?.click()}>
+                Upload File
               </Button>
               {photoDataUrl ? (
                 <Button type="button" variant="outline" onClick={() => setPhotoDataUrl(undefined)}>
@@ -312,11 +302,17 @@ function WorkerEmergencyPanel() {
         </CardContent>
       </Card>
 
-      <div className="space-y-4">
+      <div className="space-y-4 min-w-0">
         <Card>
-          <CardHeader>
-            <CardTitle className="text-base">After sending</CardTitle>
-            <CardDescription>Immediate broadcast receipt + who was notified.</CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-base truncate">After sending</CardTitle>
+              <CardDescription className="truncate">Immediate broadcast receipt + who was notified.</CardDescription>
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5 text-xs text-[color:var(--color-text_secondary)] mt-1 whitespace-nowrap">
+              <span className={`inline-block size-2 rounded-full ${loading ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
+              {loading ? 'Syncing…' : 'Live — auto-refreshes every 15s'}
+            </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {sentId ? (
@@ -375,8 +371,8 @@ function WorkerEmergencyPanel() {
       <Modal
         open={confirmOpen}
         onOpenChange={(o) => (sending ? null : setConfirmOpen(o))}
-        title="Confirm emergency broadcast"
-        description="Broadcast emergency to the project team?"
+        title="Confirm Emergency Broadcast"
+        description="Are you sure you want to broadcast this emergency alert? This action is immediate and cannot be undone."
         footer={
           <>
             <Button type="button" variant="secondary" onClick={() => setConfirmOpen(false)} disabled={sending}>
@@ -400,7 +396,7 @@ function WorkerEmergencyPanel() {
             {desc.trim() ? <div className="mt-2 text-xs">Note: {desc.trim()}</div> : null}
           </div>
           <div className="text-xs">
-            This demo simulates a broadcast and incident record. In production this would notify Owner, Engineers, Safety Officer and relevant supervisors.
+            This action immediately broadcasts the emergency incident to the Owner, Engineers, Safety Officer, and relevant supervisors. Support will be dispatched immediately.
           </div>
         </div>
       </Modal>
@@ -853,27 +849,6 @@ export function EmergencyPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="text-xs font-semibold tracking-widest text-[color:var(--color-text_muted)]">INCIDENT COMMAND</div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight">Emergency</h1>
-          <p className="mt-1 text-sm text-[color:var(--color-text_secondary)]">
-            {resolvedRole === 'owner'
-              ? 'Oversight, escalation, and audit trail.'
-              : resolvedRole === 'engineer'
-                ? 'Respond and coordinate incident response.'
-                : 'Raise an emergency quickly and safely.'}
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <div className="inline-flex items-center gap-2 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm font-semibold shadow-sm">
-            <HardHat className="size-4 text-[color:var(--color-primary_dark)]" />
-            {resolvedRole === 'owner' ? 'Owner view' : resolvedRole === 'engineer' ? 'Senior engineer view' : 'Worker / supervisor view'}
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <span className={`inline-block size-2 rounded-full ${loading ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
-            {loading ? 'Syncing…' : 'Live — auto-refreshes every 15s'}
-          </div>
-        </div>
       </div>
 
       {resolvedRole === 'owner' ? <OwnerEmergencyDashboard /> : resolvedRole === 'engineer' ? <EngineerCommandPanel /> : <WorkerEmergencyPanel />}
