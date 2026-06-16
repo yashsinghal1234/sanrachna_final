@@ -11,6 +11,7 @@ function toDto(row) {
     zone: obj.zone,
     description: obj.description || '',
     reported_by: obj.reported_by,
+    photoDataUrl: obj.photo_url || null,
     assignment: obj.assignment || {},
     audit: Array.isArray(obj.audit) ? obj.audit : [],
     createdAt: obj.createdAt,
@@ -35,7 +36,7 @@ async function createEmergency(req, res) {
   }
 
   const reporterName = reported_by || req.user?.name || req.user?.email || 'Unknown'
-  const photoUrl = req.file ? `/uploads/logs/${req.file.filename}` : null
+  const photoUrl = req.body.photoDataUrl || null
 
   const incident = await EmergencyIncident.create({
     project: req.project._id,

@@ -3,11 +3,15 @@ import { Link } from 'react-router-dom'
 
 import { useAuth } from '@/auth/AuthContext'
 import { canSendEmergency } from '@/auth/rbac'
+import { useEmergency } from '@/emergency/EmergencyContext'
 import { Button } from '@/components/ui/Button'
 
 export function EmergencyButton() {
   const { role } = useAuth()
+  const { activeIncidents } = useEmergency()
+  
   if (!canSendEmergency(role)) return null
+  if (activeIncidents.length === 0) return null
 
   return (
     <Link to="/app/emergency" className="fixed bottom-6 right-6 z-50">

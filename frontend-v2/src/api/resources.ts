@@ -85,20 +85,7 @@ export async function createWorkspaceEmergency(
   projectId: string,
   body: Record<string, unknown>,
 ): Promise<unknown> {
-  let finalBody: BodyInit
-  if (body.photoDataUrl && typeof body.photoDataUrl === 'string') {
-    const fd = new FormData()
-    fd.append('type', String(body.type || ''))
-    fd.append('severity', String(body.severity || 'high'))
-    fd.append('zone', String(body.zone || ''))
-    fd.append('description', String(body.description || ''))
-    if (body.reported_by) fd.append('reported_by', String(body.reported_by))
-    
-    fd.append('photo', dataURLtoBlob(body.photoDataUrl), 'emergency.jpg')
-    finalBody = fd
-  } else {
-    finalBody = JSON.stringify(body)
-  }
+  const finalBody = JSON.stringify(body)
 
   const res = await apiJson<{ incident: unknown }>(
     `/api/projects/${encodeURIComponent(projectId)}/emergency`,

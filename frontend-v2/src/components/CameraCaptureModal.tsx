@@ -23,7 +23,12 @@ export function CameraCaptureModal({ onCapture, onClose }: CameraCaptureModalPro
         activeStream = mediaStream
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream
-          await videoRef.current.play()
+          // Ignore interruption errors if the component unmounts before play resolves
+          await videoRef.current.play().catch(e => {
+            if (e.name !== 'AbortError' && !e.message.includes('interrupted')) {
+              throw e
+            }
+          })
         }
       } catch (err: any) {
         setError(err.message || 'Could not access the camera. Please ensure permissions are granted.')

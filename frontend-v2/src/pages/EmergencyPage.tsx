@@ -22,6 +22,7 @@ import { Modal } from '@/components/ui/Modal'
 import { CameraCaptureModal } from '@/components/CameraCaptureModal'
 import { useEmergency } from '@/emergency/EmergencyContext'
 import type { EmergencyIncident, EmergencyIncidentType, EmergencySeverity, EmergencyStatus } from '@/emergency/types'
+import { getBackendBaseUrl } from '@/api/http'
 import { cn } from '@/utils/cn'
 
 type IncidentTypeOption = {
@@ -159,6 +160,8 @@ function WorkerEmergencyPanel() {
       setSentId(id)
       setSending(false)
       setConfirmOpen(false)
+      setPhotoDataUrl(undefined)
+      setDesc('')
     } catch (error: any) {
       alert(error.message || 'Emergency trigger failed.')
       setSending(false)
@@ -170,15 +173,15 @@ function WorkerEmergencyPanel() {
   const resolvedRole: Role = role ?? 'worker'
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] min-w-0 max-w-full">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] min-w-0 max-w-full">
       <Card className="overflow-hidden min-w-0">
-        <CardContent className="space-y-5 pt-6">
-          <div className="rounded-[var(--radius-2xl)] border border-[color:var(--color-border)] bg-white p-5 shadow-[var(--shadow-soft)]">
+        <CardContent className="space-y-4 pt-4">
+          <div className="rounded-[var(--radius-2xl)] border border-[color:var(--color-border)] bg-white p-4 shadow-[var(--shadow-soft)]">
             <Button
               type="button"
               variant="danger"
               size="lg"
-              className="h-16 w-full rounded-[var(--radius-2xl)] text-base shadow-[var(--shadow-card)]"
+              className="h-14 w-full rounded-[var(--radius-2xl)] text-base shadow-[var(--shadow-card)]"
               onClick={submit}
               disabled={!canTrigger}
             >
@@ -197,9 +200,9 @@ function WorkerEmergencyPanel() {
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div className="text-xs font-semibold tracking-widest text-[color:var(--color-text_muted)]">INCIDENT TYPE</div>
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-1.5 sm:grid-cols-2">
               {typeOptions.map((opt) => {
                 const Icon = opt.icon
                 const active = opt.type === incidentType.type
@@ -209,7 +212,7 @@ function WorkerEmergencyPanel() {
                     type="button"
                     onClick={() => setIncidentType(opt)}
                     className={cn(
-                      'flex items-center gap-3 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-3 text-left text-sm font-semibold shadow-sm transition',
+                      'flex items-center gap-3 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-2 text-left text-sm font-semibold shadow-sm transition',
                       active
                         ? 'ring-2 ring-[color:var(--color-primary)]/40'
                         : 'hover:border-[color:var(--color-border_strong)] hover:bg-[color:var(--color-bg)]',
@@ -226,7 +229,7 @@ function WorkerEmergencyPanel() {
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-3 lg:grid-cols-2">
             <div>
               <div className="text-xs font-semibold tracking-widest text-[color:var(--color-text_muted)]">LOCATION / ZONE</div>
               <div className="mt-2 flex items-center gap-2">
@@ -268,7 +271,7 @@ function WorkerEmergencyPanel() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-center">
-            <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-3 text-sm text-[color:var(--color-text_secondary)]">
+            <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 text-sm text-[color:var(--color-text_secondary)]">
               <div className="font-semibold text-[color:var(--color-text)]">Photo (optional)</div>
               <div className="mt-1 text-xs">Attach a quick snapshot to help responders triage.</div>
               {photoDataUrl ? (
@@ -303,7 +306,7 @@ function WorkerEmergencyPanel() {
         </CardContent>
       </Card>
 
-      <div className="space-y-4 min-w-0">
+      <div className="space-y-3 min-w-0">
         <Card className="overflow-hidden min-w-0">
           <CardHeader className="flex flex-row items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
@@ -315,9 +318,9 @@ function WorkerEmergencyPanel() {
               <span className="truncate">{loading ? 'Syncing…' : 'Live — auto-refreshes every 15s'}</span>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
+          <CardContent className="space-y-2 text-sm">
             {sentId ? (
-              <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-4">
+              <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-3">
                 <div className="flex items-center gap-2 font-semibold text-[color:var(--color-success)]">
                   <CheckCircle2 className="size-4" />
                   Emergency Broadcast Sent
@@ -334,7 +337,7 @@ function WorkerEmergencyPanel() {
                 </ul>
               </div>
             ) : (
-              <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--color-border)] bg-white p-6 text-center text-[color:var(--color-text_secondary)]">
+              <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--color-border)] bg-white p-4 text-center text-[color:var(--color-text_secondary)]">
                 Trigger an emergency to see the receipt.
               </div>
             )}
@@ -574,7 +577,7 @@ function EngineerCommandPanel() {
 
                 {selected.photoDataUrl ? (
                   <img
-                    src={selected.photoDataUrl}
+                    src={selected.photoDataUrl.startsWith('data:') || selected.photoDataUrl.startsWith('http') ? selected.photoDataUrl : `${getBackendBaseUrl() || ''}${selected.photoDataUrl.startsWith('/') ? '' : '/'}${selected.photoDataUrl}`}
                     alt="Incident photo"
                     className="h-56 w-full rounded-[var(--radius-2xl)] object-cover ring-1 ring-[color:var(--color-border)]"
                   />
@@ -857,10 +860,7 @@ export function EmergencyPage() {
   const resolvedRole: Role = role ?? 'engineer'
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-      </div>
-
+    <div className="space-y-2">
       {resolvedRole === 'owner' ? <OwnerEmergencyDashboard /> : resolvedRole === 'engineer' ? <EngineerCommandPanel /> : <WorkerEmergencyPanel />}
     </div>
   )
