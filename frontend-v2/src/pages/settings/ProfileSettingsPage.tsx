@@ -6,8 +6,6 @@ import { useAuth, type Role } from '@/auth/AuthContext'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
-import { cn } from '@/utils/cn'
-
 type ProfileForm = {
   fullName: string
   email: string
