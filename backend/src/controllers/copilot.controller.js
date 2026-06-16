@@ -205,6 +205,25 @@ async function deleteThread(req, res) {
   res.json({ success: true })
 }
 
+const { transcribeAudio: transcribeGroq } = require('../services/groq.service')
+
+async function transcribeAudioController(req, res) {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No audio file provided.' })
+    }
+
+    const fileBuffer = req.file.buffer
+    const filename = req.file.originalname || 'audio.webm'
+
+    const transcription = await transcribeGroq(fileBuffer, filename)
+    res.json({ text: transcription.text || '' })
+  } catch (err) {
+    console.error('[Copilot Transcribe] Error:', err?.message || err)
+    res.status(500).json({ message: 'Failed to transcribe audio.', error: err?.message })
+  }
+}
+
 module.exports = {
   listThreads,
   createThread,
@@ -212,4 +231,5 @@ module.exports = {
   addMessage,
   patchThread,
   deleteThread,
+  transcribeAudio: transcribeAudioController,
 }

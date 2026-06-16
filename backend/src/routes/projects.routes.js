@@ -44,6 +44,7 @@ const {
   addMessage,
   patchThread,
   deleteThread,
+  transcribeAudio,
 } = require('../controllers/copilot.controller')
 const {
   getProjectSettings,
@@ -134,6 +135,10 @@ router.get('/:projectId/copilot/threads/:threadId', asyncHandler(getThread))
 router.patch('/:projectId/copilot/threads/:threadId', asyncHandler(patchThread))
 router.delete('/:projectId/copilot/threads/:threadId', asyncHandler(deleteThread))
 router.post('/:projectId/copilot/threads/:threadId/messages', asyncHandler(addMessage))
+
+const multer = require('multer')
+const upload = multer({ storage: multer.memoryStorage() })
+router.post('/:projectId/copilot/transcribe', upload.single('audio'), asyncHandler(transcribeAudio))
 
 router.get('/:projectId/settings/project', asyncHandler(getProjectSettings))
 router.patch('/:projectId/settings/project', asyncHandler(updateProjectSettings))

@@ -1,9 +1,5 @@
 import {
-  Archive,
-  ChevronRight,
-  FileText,
   Loader2,
-  PanelRight,
   Pin,
   Plus,
   Search,
@@ -11,7 +7,10 @@ import {
   Settings,
   Sparkles,
   Trash2,
+  Mic,
 } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
@@ -24,7 +23,7 @@ import {
   apiSendMessage,
   type BackendThread,
 } from '@/api/copilotApi'
-import { isBackendConfigured } from '@/api/http'
+import { isBackendConfigured, apiFetch } from '@/api/http'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -112,7 +111,36 @@ function defaultWelcome(projectName: string, role: CopilotRole): LocalMessage {
   }
 }
 
+// ─── globals ──────────────────────────────────────────────────────────────────
+const threadsCache: Record<string, LocalThread[]> = {}
+
 // ─── component ────────────────────────────────────────────────────────────────
+
+const StreamingText = ({ content, isRecent }: { content: string, isRecent: boolean }) => {
+  const [displayed, setDisplayed] = useState(isRecent ? '' : content)
+  
+  useEffect(() => {
+    if (!isRecent) return
+    let i = 0
+    const interval = setInterval(() => {
+      setDisplayed(content.slice(0, i))
+      i += 3
+      if (i > content.length) {
+        setDisplayed(content)
+        clearInterval(interval)
+      }
+    }, 15)
+    return () => clearInterval(interval)
+  }, [content, isRecent])
+
+  const textWithCursor = displayed + (displayed.length < content.length ? ' ▋' : '')
+
+  return (
+    <div className="space-y-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h3]:font-bold [&_h3]:mt-4 [&_strong]:font-semibold [&_p]:min-h-[1em] [&_table]:w-full [&_table]:my-3 [&_th]:border [&_th]:border-[color:var(--color-border)] [&_th]:px-3 [&_th]:py-2 [&_th]:bg-black/10 [&_th]:dark:bg-white/10 [&_td]:border [&_td]:border-[color:var(--color-border)] [&_td]:px-3 [&_td]:py-2">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{textWithCursor}</ReactMarkdown>
+    </div>
+  )
+}
 
 export function AICopilotPage() {
   const navigate = useNavigate()
@@ -132,21 +160,31 @@ export function AICopilotPage() {
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)          // waiting for Gemini
   const [streamText, setStreamText] = useState('')
-  const [rightOpen, setRightOpen] = useState(true)
-  const [activeSources, setActiveSources] = useState<CopilotSource[]>([])
-  const [activeUsedModules, setActiveUsedModules] = useState<string[]>([])
+  // sources sidebar removed
   const [renameOpen, setRenameOpen] = useState(false)
   const [renameValue, setRenameValue] = useState('')
   const [loadingThreads, setLoadingThreads] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
 
   const endRef = useRef<HTMLDivElement | null>(null)
   const lastUrlPromptRef = useRef<string>('')
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const [recordingTime, setRecordingTime] = useState(0)
 
   const activeThread = threads[activeIdx] ?? null
 
   // ── load threads from backend ─────────────────────────────────────────────
   const loadThreads = useCallback(async () => {
     if (!currentProjectId || !isBackendConfigured()) return
+    
+    if (threadsCache[currentProjectId]) {
+      setThreads(threadsCache[currentProjectId])
+      setActiveIdx(0)
+      return
+    }
+
     setLoadingThreads(true)
     try {
       const backendThreads = await apiListThreads(currentProjectId)
@@ -185,6 +223,12 @@ export function AICopilotPage() {
     void loadThreads()
   }, [loadThreads])
 
+  useEffect(() => {
+    if (currentProjectId && threads.length > 0) {
+      threadsCache[currentProjectId] = threads
+    }
+  }, [threads, currentProjectId])
+
   // ── new chat ──────────────────────────────────────────────────────────────
   const startNewChat = () => {
     const fresh: LocalThread = {
@@ -197,9 +241,67 @@ export function AICopilotPage() {
     }
     setThreads((prev) => [fresh, ...prev])
     setActiveIdx(0)
-    setActiveSources([])
-    setActiveUsedModules([])
+
     setDraft('')
+  }
+
+  // ── recording ─────────────────────────────────────────────────────────────
+  const handleRecord = async () => {
+    if (isRecording) {
+      mediaRecorderRef.current?.stop()
+      setIsRecording(false)
+      if (timerRef.current) clearInterval(timerRef.current)
+      return
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data)
+      }
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        stream.getTracks().forEach((track) => track.stop())
+        setDraft('Transcribing voice...')
+
+        const formData = new FormData()
+        formData.append('audio', audioBlob, 'voice.webm')
+
+        try {
+          const res = await apiFetch(`/api/v1/workspaces/${currentProjectId}/copilot/transcribe`, {
+            method: 'POST',
+            body: formData
+          })
+          if (res.ok) {
+            const data = await res.json()
+            const text = data.text || ''
+            if (text) {
+              setDraft(text)
+              void send(text)
+            } else {
+              setDraft('')
+            }
+          } else {
+            setDraft('')
+          }
+        } catch {
+          setDraft('')
+        }
+      }
+
+      setRecordingTime(0)
+      mediaRecorder.start()
+      setIsRecording(true)
+      timerRef.current = setInterval(() => setRecordingTime(prev => prev + 1), 1000)
+    } catch (err) {
+      console.error('Mic error:', err)
+      alert('Could not access microphone.')
+    }
   }
 
   // ── suggested prompts ─────────────────────────────────────────────────────
@@ -223,7 +325,7 @@ export function AICopilotPage() {
   }, [resolvedRole])
 
   // ── send message ──────────────────────────────────────────────────────────
-  const send = async (textArg?: string) => {
+  async function send(textArg?: string) {
     const text = (textArg ?? draft).trim()
     if (!text || sending) return
     setDraft('')
@@ -266,8 +368,7 @@ export function AICopilotPage() {
           sources: (reply.usedModules ?? []).map(moduleToSource),
           followUps: reply.followUps ?? [],
         }
-        setActiveSources(assistantMsg.sources ?? [])
-        setActiveUsedModules(assistantMsg.usedModules ?? [])
+
         setThreads((prev) => {
           const next = [...prev]
           const t = { ...next[activeIdx]!, messages: [...next[activeIdx]!.messages, assistantMsg], updatedAt: Date.now() }
@@ -417,15 +518,11 @@ export function AICopilotPage() {
                       type="button"
                       onClick={() => {
                         setActiveIdx(t.idx)
-                        const last = [...t.messages].reverse().find((m) => m.role === 'assistant')
-                        if (last?.sources?.length) {
-                          setActiveSources(last.sources)
-                          setActiveUsedModules(last.usedModules ?? [])
-                        }
+
                       }}
                       className={cn(
-                        'w-full px-4 py-3 text-left transition hover:bg-[color:var(--color-bg)]',
-                        active ? 'bg-[color:var(--color-bg)]' : '',
+                        'w-full px-4 py-3 text-left transition-all duration-200 border-l-2',
+                        active ? 'border-[color:var(--color-primary)] bg-gradient-to-r from-[color:var(--color-primary)]/10 to-transparent' : 'border-transparent hover:bg-[color:var(--color-bg)]',
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -455,9 +552,9 @@ export function AICopilotPage() {
         </div>
       </Card>
 
-      {/* Main chat area + sources panel */}
-      <div className={cn('grid gap-4', rightOpen ? 'xl:grid-cols-[1fr_340px]' : 'xl:grid-cols-1')}>
-        <Card className="flex min-h-[60vh] flex-col overflow-hidden lg:min-h-[calc(100vh-130px)]">
+      {/* Main chat area */}
+      <div className="grid gap-4">
+        <Card className="flex h-[calc(100vh-130px)] flex-col overflow-hidden">
           {/* Chat header */}
           <div className="border-b border-[color:var(--color-border)] p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -468,14 +565,11 @@ export function AICopilotPage() {
                     Project: {projectName}
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-purple-50 to-blue-50 px-2 py-1 text-[11px] font-semibold text-purple-700">
-                    <Sparkles className="size-3" /> Gemini 2.0 Flash
+                    <Sparkles className="size-3" /> Groq AI
                   </span>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="secondary" size="icon" onClick={() => setRightOpen((v) => !v)} aria-label="Toggle sources">
-                  <PanelRight className="size-4" />
-                </Button>
                 <Button
                   variant="secondary"
                   size="icon"
@@ -507,21 +601,6 @@ export function AICopilotPage() {
                     <Button
                       variant="secondary"
                       size="icon"
-                      onClick={() => {
-                        setThreads((prev) => {
-                          const next = [...prev]
-                          next[activeIdx] = { ...next[activeIdx]!, archived: true }
-                          return next
-                        })
-                        setActiveIdx(0)
-                      }}
-                      aria-label="Archive"
-                    >
-                      <Archive className="size-4" />
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="icon"
                       onClick={() => void deleteThread(activeIdx)}
                       aria-label="Delete"
                     >
@@ -534,77 +613,38 @@ export function AICopilotPage() {
           </div>
 
           {/* Messages */}
-          <CardContent className="flex-1 overflow-auto p-4">
-            <div className="space-y-4">
+          <CardContent className="flex-1 overflow-auto p-6">
+            <div className="mx-auto max-w-3xl space-y-6">
               {activeThread?.messages.map((m) => {
                 const isUser = m.role === 'user'
                 return (
-                  <div key={m.id} className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
+                  <div key={m.id} className={cn('flex animate-in fade-in slide-in-from-bottom-2 duration-500', isUser ? 'justify-end' : 'justify-start')}>
+                    {!isUser && (
+                      <div className="mr-4 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-[0_0_12px_rgba(99,102,241,0.4)]">
+                        <Sparkles className="size-4 text-white" />
+                      </div>
+                    )}
                     <div
                       className={cn(
-                        'max-w-[min(92%,720px)] rounded-2xl border px-4 py-3 text-sm shadow-sm',
+                        'max-w-[min(90%,720px)] text-[15px] leading-relaxed',
                         isUser
-                          ? 'border-[color:var(--color-nav_active_ring)] bg-[color:var(--color-nav_active_bg)] text-[color:var(--color-text)]'
-                          : 'border-[color:var(--color-border)] bg-white text-[color:var(--color-text_secondary)]',
+                          ? 'rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 px-5 py-3.5 text-white shadow-md'
+                          : 'text-[color:var(--color-text)] pt-1'
                       )}
                     >
-                      {/* Render markdown-lite: bold, newlines */}
-                      <div className="whitespace-pre-wrap leading-relaxed">
-                        {m.content.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-                          part.startsWith('**') && part.endsWith('**')
-                            ? <strong key={i} className="font-semibold text-[color:var(--color-text)]">{part.slice(2, -2)}</strong>
-                            : part,
-                        )}
-                      </div>
-
-                      {!isUser && (m.usedModules?.length || m.sources?.length) ? (
-                        <div className="mt-3 space-y-2 border-t border-[color:var(--color-border)] pt-3">
-                          {m.usedModules?.length ? (
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-[11px] font-semibold text-[color:var(--color-text_muted)]">Modules:</span>
-                              {m.usedModules.map((x) => (
-                                <span key={x} className="rounded-full bg-[color:var(--color-bg)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--color-text_secondary)]">
-                                  {x}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null}
-                          {m.sources?.length ? (
-                            <div className="flex flex-wrap gap-2">
-                              {m.sources.map((s) => (
-                                <button
-                                  key={s.id}
-                                  type="button"
-                                  className="rounded-full border border-[color:var(--color-border)] bg-white px-3 py-1.5 text-left text-xs font-semibold text-[color:var(--color-text_secondary)] transition hover:bg-[color:var(--color-bg)]"
-                                  onClick={() => {
-                                    setActiveSources(m.sources ?? [])
-                                    setActiveUsedModules(m.usedModules ?? [])
-                                    setRightOpen(true)
-                                    if (s.to) navigate(s.to)
-                                  }}
-                                >
-                                  {s.label} · {s.module}
-                                </button>
-                              ))}
-                            </div>
-                          ) : null}
-                          {m.followUps?.length ? (
-                            <div className="flex flex-wrap gap-2">
-                              {m.followUps.map((q) => (
-                                <button
-                                  key={q}
-                                  type="button"
-                                  className="rounded-full bg-[color:var(--color-bg)] px-3 py-1.5 text-xs font-semibold text-[color:var(--color-text_secondary)] hover:bg-white"
-                                  onClick={() => void send(q)}
-                                  disabled={sending}
-                                >
-                                  {q}
-                                </button>
-                              ))}
-                            </div>
-                          ) : null}
+                      {/* Render markdown properly */}
+                      {isUser ? (
+                        <div className="space-y-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h3]:font-bold [&_h3]:mt-4 [&_strong]:font-semibold [&_p]:min-h-[1em] [&_table]:w-full [&_table]:my-3 [&_th]:border [&_th]:border-white/20 [&_th]:px-3 [&_th]:py-2 [&_th]:bg-black/20 [&_td]:border [&_td]:border-white/20 [&_td]:px-3 [&_td]:py-2">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
                         </div>
-                      ) : null}
+                      ) : (
+                        <StreamingText 
+                          content={m.content.replace(/(\n\s*)?\*?\*?Sources?( used)?(:|-)\*?\*?[\s\S]*$/i, '').trim()} 
+                          isRecent={Date.now() - m.createdAt < 5000} 
+                        />
+                      )}
+
+
                     </div>
                   </div>
                 )
@@ -612,12 +652,15 @@ export function AICopilotPage() {
 
               {sending ? (
                 <div className="flex justify-start">
-                  <div className="max-w-[min(92%,720px)] rounded-2xl border border-[color:var(--color-border)] bg-white px-4 py-3 text-sm text-[color:var(--color-text_secondary)] shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <Loader2 className="size-4 animate-spin text-[color:var(--color-primary)]" />
-                      <span>Gemini is thinking…</span>
+                  <div className="mr-4 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-[0_0_12px_rgba(99,102,241,0.4)] animate-pulse">
+                    <Sparkles className="size-4 text-white" />
+                  </div>
+                  <div className="flex items-center gap-3 pt-2 text-sm text-[color:var(--color-text_secondary)]">
+                    <div className="flex gap-1">
+                      <div className="size-1.5 animate-bounce rounded-full bg-[color:var(--color-primary)] [animation-delay:-0.3s]" />
+                      <div className="size-1.5 animate-bounce rounded-full bg-[color:var(--color-primary)] [animation-delay:-0.15s]" />
+                      <div className="size-1.5 animate-bounce rounded-full bg-[color:var(--color-primary)]" />
                     </div>
-                    <div className="mt-2 h-1 w-24 animate-pulse rounded-full bg-[color:var(--color-primary)]" />
                   </div>
                 </div>
               ) : null}
@@ -627,107 +670,62 @@ export function AICopilotPage() {
           </CardContent>
 
           {/* Input area */}
-          <div className="border-t border-[color:var(--color-border)] p-4">
-            <div className="flex flex-wrap gap-2">
-              {suggestedPrompts.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  className="rounded-full border border-[color:var(--color-border)] bg-white px-3 py-2 text-xs font-semibold text-[color:var(--color-text_secondary)] transition hover:bg-[color:var(--color-bg)]"
-                  onClick={() => void send(p)}
-                  disabled={sending}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-
+          <div className="p-4 pt-0">
             <form
-              className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end"
+              className="relative mx-auto flex w-full max-w-3xl items-center"
               onSubmit={(e) => {
                 e.preventDefault()
                 void send()
               }}
             >
-              <Input
-                className="flex-1"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder="Ask anything about this project…"
-                disabled={sending}
-              />
-              <Button type="submit" disabled={sending || !draft.trim()} className="sm:shrink-0">
-                {sending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
-                Send
+              {isRecording ? (
+                <div className="min-h-[56px] w-full flex items-center justify-between rounded-[28px] border border-red-500/30 bg-red-50/80 dark:bg-red-950/40 backdrop-blur-xl pl-6 pr-16 py-4 text-[15px] shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all animate-in fade-in zoom-in-95 duration-200">
+                  <div className="flex items-center gap-3">
+                    <div className="size-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.6)]" />
+                    <span className="text-red-500 font-medium">Recording audio...</span>
+                  </div>
+                  <div className="text-red-500/80 font-mono pr-[42px]">
+                    {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                  </div>
+                </div>
+              ) : (
+                <Input
+                  className="min-h-[56px] w-full rounded-[28px] border border-white/20 dark:border-white/10 bg-white/60 dark:bg-black/40 backdrop-blur-xl pl-6 pr-28 py-4 text-[15px] shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] focus-visible:ring-2 focus-visible:ring-indigo-400 transition-all"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder="Message Copilot..."
+                  disabled={sending}
+                />
+              )}
+              <Button 
+                type="button" 
+                size="icon"
+                onClick={handleRecord}
+                disabled={sending} 
+                className={cn(
+                  "absolute right-[52px] top-1/2 -translate-y-1/2 h-[42px] w-[42px] rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-[color:var(--color-text_secondary)] transition-all",
+                  isRecording && "animate-pulse text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20"
+                )}
+                variant="ghost"
+              >
+                <Mic className="size-4" />
+              </Button>
+              <Button 
+                type="submit" 
+                size="icon"
+                disabled={sending || (!draft.trim() && !isRecording)} 
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-[42px] w-[42px] rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white hover:scale-105 active:scale-95 transition-all shadow-md disabled:opacity-40 disabled:hover:scale-100 border-none"
+              >
+                {sending ? <Loader2 className="size-4 animate-spin text-white" /> : <Send className="size-4 ml-0.5 text-white" />}
               </Button>
             </form>
-            <p className="mt-2 text-xs text-[color:var(--color-text_secondary)]">
-              Your history is private to this account, role, and current project. Workers only see task-safe answers.
+            <p className="mt-3 text-center text-xs text-[color:var(--color-text_secondary)]">
+              Copilot can make mistakes. Check important info.
             </p>
           </div>
         </Card>
 
-        {/* Sources panel */}
-        {rightOpen ? (
-          <Card className="h-auto max-h-[480px] overflow-hidden xl:max-h-[calc(100vh-130px)]">
-            <div className="flex items-center justify-between border-b border-[color:var(--color-border)] p-4">
-              <div>
-                <div className="text-sm font-semibold">Sources</div>
-                <div className="mt-0.5 text-xs text-[color:var(--color-text_secondary)]">Click a chip in a reply to open the page</div>
-              </div>
-              <Button variant="secondary" size="icon" className="xl:hidden" onClick={() => setRightOpen(false)} aria-label="Close sources">
-                <ChevronRight className="size-4" />
-              </Button>
-            </div>
-            <CardContent className="max-h-[360px] space-y-3 overflow-auto p-4 xl:max-h-[calc(100vh-200px)]">
-              {activeUsedModules.length ? (
-                <div className="flex flex-wrap gap-2">
-                  {activeUsedModules.map((m) => (
-                    <span key={m} className="rounded-full bg-[color:var(--color-bg)] px-2 py-0.5 text-[11px] font-semibold text-[color:var(--color-text_secondary)]">
-                      {m}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
 
-              {activeSources.length ? (
-                activeSources.map((s) => (
-                  <div key={s.id} className="rounded-2xl border border-[color:var(--color-border)] bg-white p-3">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold">{s.label}</div>
-                        <div className="mt-1 text-xs text-[color:var(--color-text_secondary)]">{s.module}</div>
-                      </div>
-                      {s.to ? (
-                        <Button variant="secondary" className="shrink-0" onClick={() => navigate(s.to!)}>
-                          Open
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-4 text-sm text-[color:var(--color-text_secondary)]">
-                  Ask a question — module sources will appear here after the assistant replies.
-                </div>
-              )}
-
-              <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-3 text-xs text-[color:var(--color-text_secondary)]">
-                <div className="flex items-center gap-2 font-semibold text-[color:var(--color-text)]">
-                  <FileText className="size-4 shrink-0" />
-                  Role-based access
-                </div>
-                <p className="mt-2">
-                  {resolvedRole === 'worker'
-                    ? 'Workers: assigned tasks, own logs/issues, and safe summaries only.'
-                    : resolvedRole === 'engineer'
-                      ? 'Engineers: full operational visibility across modules linked in the app.'
-                      : 'Owners: strategic + financial summaries where available in the product.'}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
       </div>
 
       {/* Rename modal */}
