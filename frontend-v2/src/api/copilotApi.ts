@@ -42,10 +42,11 @@ export async function apiSendMessage(
   projectId: string,
   threadId: string,
   content: string,
+  language: string = 'English'
 ): Promise<{ thread: BackendThread; message: BackendMessage }> {
   return apiJson<{ thread: BackendThread; message: BackendMessage }>(
     `/api/projects/${encodeURIComponent(projectId)}/copilot/threads/${encodeURIComponent(threadId)}/messages`,
-    { method: 'POST', body: JSON.stringify({ content }) },
+    { method: 'POST', body: JSON.stringify({ content, language }) },
   )
 }
 

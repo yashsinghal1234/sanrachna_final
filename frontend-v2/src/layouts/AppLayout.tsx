@@ -658,28 +658,6 @@ export function AppLayout() {
             ) : null}
           </nav>
 
-          <div className={cn('border-t border-[color:var(--color-sidebar_border)] p-3', sidebarState === 'collapsed' && 'px-2')}>
-            <button
-              type="button"
-              className={cn(
-                'w-full rounded-[var(--radius-xl)] border border-[color:var(--color-sidebar_border)] bg-[color:var(--color-settings_strip)] p-2 text-left',
-                sidebarState === 'collapsed' && 'flex justify-center p-2',
-              )}
-              title={sidebarState === 'collapsed' ? 'Settings' : undefined}
-            >
-              <div className={cn('flex items-center gap-2', sidebarState === 'collapsed' && 'justify-center')}>
-                <span className="inline-flex size-8 items-center justify-center rounded-lg bg-[color:var(--color-settings_icon_bg)] ring-1 ring-[color:var(--color-settings_icon_ring)]">
-                  <Settings className="size-4 text-[color:var(--color-text_secondary)]" />
-                </span>
-                {sidebarState === 'expanded' ? (
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold">{user?.name || 'Demo User'}</div>
-                    <div className="truncate text-[11px] text-[color:var(--color-text_secondary)]">{user?.emailOrPhone || resolvedRole.toUpperCase()}</div>
-                  </div>
-                ) : null}
-              </div>
-            </button>
-          </div>
         </aside>
 
         {/* Mobile off-canvas */}

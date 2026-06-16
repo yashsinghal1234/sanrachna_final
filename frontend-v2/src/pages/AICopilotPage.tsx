@@ -8,6 +8,9 @@ import {
   Sparkles,
   Trash2,
   Mic,
+  Copy,
+  Volume2,
+  VolumeX,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -165,6 +168,8 @@ export function AICopilotPage() {
   const [renameValue, setRenameValue] = useState('')
   const [loadingThreads, setLoadingThreads] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
+  const [chatLanguage, setChatLanguage] = useState('English')
+  const [readingMessageId, setReadingMessageId] = useState<string | null>(null)
 
   const endRef = useRef<HTMLDivElement | null>(null)
   const lastUrlPromptRef = useRef<string>('')
@@ -367,7 +372,7 @@ export function AICopilotPage() {
 
       if (thread?.backendId && currentProjectId && isBackendConfigured()) {
         // Call backend → Gemini
-        const { message: reply } = await apiSendMessage(currentProjectId, thread.backendId, text)
+        const { message: reply } = await apiSendMessage(currentProjectId, thread.backendId, text, chatLanguage)
         const assistantMsg: LocalMessage = {
           id: reply.id || uid('m'),
           role: 'assistant',
@@ -582,6 +587,19 @@ export function AICopilotPage() {
                   <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-purple-50 to-blue-50 px-2 py-1 text-[11px] font-semibold text-purple-700">
                     <Sparkles className="size-3" /> Groq AI
                   </span>
+                  <select
+                    value={chatLanguage}
+                    onChange={(e) => setChatLanguage(e.target.value)}
+                    className="appearance-none rounded-full bg-[color:var(--color-bg)] px-2 py-1 font-medium border border-[color:var(--color-border)] text-[color:var(--color-text)] outline-none focus:ring-1 focus:ring-[color:var(--color-primary)] cursor-pointer"
+                  >
+                    <option value="English">English</option>
+                    <option value="Hindi">Hindi</option>
+                    <option value="Marathi">Marathi</option>
+                    <option value="Gujarati">Gujarati</option>
+                    <option value="Bengali">Bengali</option>
+                    <option value="Tamil">Tamil</option>
+                    <option value="Telugu">Telugu</option>
+                  </select>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -647,20 +665,60 @@ export function AICopilotPage() {
                           : 'text-[color:var(--color-text)] pt-1'
                       )}
                     >
-                      {/* Render markdown properly */}
                       {isUser ? (
                         <div className="space-y-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h3]:font-bold [&_h3]:mt-4 [&_strong]:font-semibold [&_p]:min-h-[1em] [&_table]:w-full [&_table]:my-3 [&_th]:border [&_th]:border-white/20 [&_th]:px-3 [&_th]:py-2 [&_th]:bg-black/20 [&_td]:border [&_td]:border-white/20 [&_td]:px-3 [&_td]:py-2">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
                         </div>
                       ) : (
-                        <StreamingText 
-                          content={m.content.replace(/(\n\s*)?\*?\*?Sources?( used)?(:|-)\*?\*?[\s\S]*$/i, '').trim()} 
-                          isRecent={Date.now() - m.createdAt < 5000} 
-                        />
+                        <div className="group relative flex flex-col">
+                          <StreamingText 
+                            content={m.content.replace(/(\n\s*)?\*?\*?Sources?( used)?(:|-)\*?\*?[\s\S]*$/i, '').trim()} 
+                            isRecent={Date.now() - m.createdAt < 5000} 
+                          />
+                          <div className="mt-2 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => {
+                                navigator.clipboard.writeText(m.content)
+                              }}
+                            >
+                              <Copy className="mr-1.5 size-3" />
+                              Copy
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs"
+                              onClick={() => {
+                                if (readingMessageId === m.id) {
+                                  window.speechSynthesis.cancel()
+                                  setReadingMessageId(null)
+                                } else {
+                                  window.speechSynthesis.cancel()
+                                  const utterance = new SpeechSynthesisUtterance(m.content.replace(/[*#]/g, ''))
+                                  utterance.onend = () => setReadingMessageId(null)
+                                  setReadingMessageId(m.id)
+                                  window.speechSynthesis.speak(utterance)
+                                }
+                              }}
+                            >
+                              {readingMessageId === m.id ? (
+                                <>
+                                  <VolumeX className="mr-1.5 size-3" /> Stop
+                                </>
+                              ) : (
+                                <>
+                                  <Volume2 className="mr-1.5 size-3" /> Read Aloud
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
                       )}
-
-
-                    </div>
                   </div>
                 )
               })}

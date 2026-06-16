@@ -96,14 +96,17 @@ async function addMessage(req, res) {
     return
   }
 
-  const prompt = String(req.body.content || '').trim()
+  const originalContent = String(req.body.content || '').trim()
+  const language = req.body.language || 'English'
 
-  if (!prompt) {
+  if (!originalContent) {
     res.status(400).json({ message: 'content is required.' })
     return
   }
 
-  row.messages.push({ role: 'user', content: prompt })
+  row.messages.push({ role: 'user', content: originalContent })
+  
+  const prompt = originalContent + (language !== 'English' ? ` (Please reply in ${language})` : '')
 
   let answerText = ''
   let usedModules = ['Project']
