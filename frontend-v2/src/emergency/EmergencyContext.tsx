@@ -128,7 +128,7 @@ function normalizeBackendIncident(raw: Record<string, unknown>): EmergencyIncide
     type: (raw.type as EmergencyIncidentType) ?? 'other',
     location: { zone, lat: undefined, lng: undefined },
     description: raw.description ? String(raw.description) : undefined,
-    photoDataUrl: undefined, // base64 not stored server-side; keep undefined
+    photoDataUrl: raw.photoDataUrl ? String(raw.photoDataUrl) : undefined,
     reportedBy: { id: 'server', name: reportedByName, role: 'worker' as Role },
     createdAt,
     updatedAt,
@@ -204,7 +204,7 @@ export function EmergencyProvider({ children }: { children: ReactNode }) {
 
   const activeIncidents = useMemo(() => {
     return incidents
-      .filter((x) => x.status !== 'archived')
+      .filter((x) => x.status !== 'archived' && x.status !== 'resolved')
       .sort((a, b) => b.updatedAt - a.updatedAt)
   }, [incidents])
 

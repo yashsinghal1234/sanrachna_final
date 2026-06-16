@@ -814,7 +814,7 @@ export function AppLayout() {
           </header>
         </div>
 
-        <main className="min-w-0 px-4 py-6 sm:px-8 sm:py-8">
+        <main className="min-w-0 px-4 py-4 sm:px-8 sm:py-4">
           <Outlet />
         </main>
         </div>

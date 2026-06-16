@@ -28,7 +28,7 @@ app.use(
     credentials: true,
   }),
 )
-app.use(express.json())
+app.use(express.json({ limit: '50mb' }))
 // Only daily-log photos are public; project documents are served via authenticated routes.
 app.use('/uploads/logs', express.static(path.join(__dirname, '..', 'uploads', 'logs')))
 

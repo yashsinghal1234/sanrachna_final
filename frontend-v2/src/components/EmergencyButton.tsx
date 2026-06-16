@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/Button'
 
 export function EmergencyButton() {
   const { role } = useAuth()
-  const { activeIncidents } = useEmergency()
+  const { activeBanner } = useEmergency()
   
   if (!canSendEmergency(role)) return null
-  if (activeIncidents.length === 0) return null
+  if (!activeBanner) return null
 
   return (
     <Link to="/app/emergency" className="fixed bottom-6 right-6 z-50">

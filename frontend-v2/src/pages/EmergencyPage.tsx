@@ -307,7 +307,7 @@ function WorkerEmergencyPanel() {
       </Card>
 
       <div className="space-y-3 min-w-0">
-        <Card className="overflow-hidden min-w-0">
+        <Card>
           <CardHeader className="flex flex-row items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <CardTitle className="text-base truncate">After sending</CardTitle>
@@ -344,7 +344,7 @@ function WorkerEmergencyPanel() {
           </CardContent>
         </Card>
 
-        <Card className="border-[color:var(--color-error)]/30 overflow-hidden min-w-0">
+        <Card className="border-[color:var(--color-error)]/30">
           <CardHeader>
             <CardTitle className="text-base truncate">Safety checklist</CardTitle>
             <CardDescription>Quick actions while help arrives.</CardDescription>
@@ -430,9 +430,6 @@ function EngineerCommandPanel() {
   const [note, setNote] = useState('')
   const [toast, setToast] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!selectedId && list.length) setSelectedId(list[0].id)
-  }, [selectedId, list])
 
   useEffect(() => {
     if (!toast) return
@@ -446,15 +443,12 @@ function EngineerCommandPanel() {
     if (!selected) return
     updateIncident(selected.id, { status })
     setToast(`Marked ${statusLabel(status)}.`)
+    if (status === 'resolved') {
+      setSelectedId(null)
+    }
   }
 
-  const assign = (who: 'Safety Officer' | 'Site Supervisor') => {
-    if (!selected) return
-    updateIncident(selected.id, {
-      assignment: who === 'Safety Officer' ? { safetyOfficer: 'Safety Officer' } : { siteSupervisor: 'Site Supervisor' },
-    })
-    setToast(`Assigned ${who}.`)
-  }
+
 
   const escalate = () => {
     if (!selected) return
@@ -472,23 +466,22 @@ function EngineerCommandPanel() {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
-      <Card>
-        <CardHeader>
+    <div className="grid h-[calc(100vh-120px)] gap-4 lg:grid-cols-[1fr_1.2fr]">
+      <Card className="flex flex-col overflow-hidden">
+        <CardHeader className="shrink-0">
           <CardTitle className="flex items-center gap-2">
             <HardHat className="size-4 text-[color:var(--color-primary_dark)]" />
             Active Emergency Feed
           </CardTitle>
-          <CardDescription>Track and coordinate active incidents.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="flex-1 space-y-2 overflow-hidden">
           {activeIncidents.length === 0 ? (
             <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-bg)] py-12 text-center text-sm text-[color:var(--color-text_secondary)]">
               No active emergencies right now.
             </div>
           ) : (
             <div className="space-y-2">
-              {activeIncidents.map((inc) => (
+              {activeIncidents.slice(0, 5).map((inc) => (
                 <button
                   key={inc.id}
                   type="button"
@@ -514,7 +507,7 @@ function EngineerCommandPanel() {
                     <span className="text-[color:var(--color-text_secondary)]">
                       Reported by <span className="font-semibold text-[color:var(--color-text)]">{inc.reportedBy.name}</span>
                     </span>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-[color:var(--color-text_secondary)]">
+                    <span className="rounded-full bg-[color:var(--color-bg)] px-2 py-0.5 font-semibold text-[color:var(--color-text_secondary)] ring-1 ring-[color:var(--color-border)]">
                       {statusLabel(inc.status)}
                     </span>
                   </div>
@@ -525,22 +518,21 @@ function EngineerCommandPanel() {
         </CardContent>
       </Card>
 
-      <div className="space-y-4">
+      <div className="flex flex-col space-y-4 overflow-hidden">
         {toast ? (
           <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-3 text-sm font-semibold">
             {toast}
           </div>
         ) : null}
 
-        <Card>
-          <CardHeader>
+        <Card className="flex flex-1 flex-col overflow-hidden">
+          <CardHeader className="shrink-0">
             <CardTitle className="flex items-center gap-2">
               <Shield className="size-4 text-[color:var(--color-primary_dark)]" />
               Incident Detail
             </CardTitle>
-            <CardDescription>Actions + response notes. Keep the log clean for audit.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex-1 space-y-3 overflow-hidden">
             {!selected ? (
               <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-bg)] py-12 text-center text-sm text-[color:var(--color-text_secondary)]">
                 Select an incident to begin.
@@ -560,7 +552,7 @@ function EngineerCommandPanel() {
 
                 <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-3 text-sm">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold ring-1 ring-[color:var(--color-border)]">
+                    <span className="rounded-full bg-[color:var(--color-bg)] px-2 py-0.5 text-xs font-semibold text-[color:var(--color-text_secondary)] ring-1 ring-[color:var(--color-border)]">
                       {statusLabel(selected.status)}
                     </span>
                     <span className={cn('rounded-full px-2 py-0.5 text-xs font-semibold', severityTone(selected.severity))}>
@@ -579,14 +571,12 @@ function EngineerCommandPanel() {
                   <img
                     src={selected.photoDataUrl.startsWith('data:') || selected.photoDataUrl.startsWith('http') ? selected.photoDataUrl : `${getBackendBaseUrl() || ''}${selected.photoDataUrl.startsWith('/') ? '' : '/'}${selected.photoDataUrl}`}
                     alt="Incident photo"
-                    className="h-56 w-full rounded-[var(--radius-2xl)] object-cover ring-1 ring-[color:var(--color-border)]"
+                    className="h-44 w-full rounded-[var(--radius-2xl)] object-cover ring-1 ring-[color:var(--color-border)]"
                   />
                 ) : null}
 
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <Button type="button" variant="secondary" onClick={() => mark('acknowledged')} disabled={selected.status !== 'raised'}>
-                    Acknowledge
-                  </Button>
+
                   <Button
                     type="button"
                     variant="outline"
@@ -595,18 +585,11 @@ function EngineerCommandPanel() {
                   >
                     Mark Responding
                   </Button>
-                  <Button type="button" variant="outline" onClick={() => assign('Safety Officer')}>
-                    Assign Safety Officer
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => assign('Site Supervisor')}>
-                    Assign Site Supervisor
-                  </Button>
+
                   <Button type="button" variant="danger" onClick={() => mark('resolved')} disabled={selected.status === 'resolved' || selected.status === 'archived'}>
                     Resolve Incident
                   </Button>
-                  <Button type="button" variant="secondary" onClick={() => archiveIncident(selected.id)} disabled={selected.status !== 'resolved'}>
-                    Archive
-                  </Button>
+
                 </div>
 
                 <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white p-3">
@@ -625,26 +608,6 @@ function EngineerCommandPanel() {
                   </div>
                 </div>
 
-                <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-3">
-                  <div className="text-xs font-semibold tracking-widest text-[color:var(--color-text_muted)]">AUDIT LOG</div>
-                  <div className="mt-2 space-y-2 text-xs text-[color:var(--color-text_secondary)]">
-                    {selected.audit
-                      .slice()
-                      .reverse()
-                      .slice(0, 10)
-                      .map((e, idx) => (
-                        <div key={idx} className="flex items-start justify-between gap-3">
-                          <div>
-                            <span className="font-semibold text-[color:var(--color-text)]">{e.kind}</span>{' '}
-                            <span>— {('by' in e && e.by?.name) ? e.by.name : 'System'}</span>
-                            {'note' in e && e.note ? <span className="block">{e.note}</span> : null}
-                            {'message' in e && e.message ? <span className="block">{e.message}</span> : null}
-                          </div>
-                          <div className="whitespace-nowrap text-[color:var(--color-text_muted)]">{timeAgo(e.at)}</div>
-                        </div>
-                      ))}
-                  </div>
-                </div>
               </>
             )}
           </CardContent>
@@ -826,7 +789,7 @@ function OwnerEmergencyDashboard() {
               <CardTitle className="text-base">Analytics</CardTitle>
               <CardDescription>Quick operational signals.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm text-[color:var(--color-text_secondary)]">
+            <CardContent className="space-y-3">
               <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-3">
                 <div className="text-xs font-semibold tracking-widest text-[color:var(--color-text_muted)]">MOST COMMON TYPE</div>
                 <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">
