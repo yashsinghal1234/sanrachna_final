@@ -281,7 +281,7 @@ export function AICopilotPage() {
         formData.append('audio', audioBlob, 'voice.webm')
 
         try {
-          const res = await apiFetch(`/api/v1/projects/${currentProjectId}/copilot/transcribe`, {
+          const res = await apiFetch(`/api/projects/${currentProjectId}/copilot/transcribe`, {
             method: 'POST',
             body: formData
           })
