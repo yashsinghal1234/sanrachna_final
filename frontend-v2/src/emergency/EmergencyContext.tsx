@@ -84,7 +84,7 @@ function defaultSeverityForType(t: EmergencyIncidentType): EmergencySeverity {
 
 function actorFromUser(u: User | null, role: Role | null) {
   const resolvedRole: Role = role ?? 'engineer'
-  return { id: u?.id ?? 'demo_user', name: u?.name ?? 'Demo User', role: resolvedRole }
+  return { id: u?.id ?? 'default_user', name: u?.name ?? 'User', role: resolvedRole }
 }
 
 /** Normalize a backend incident row into the frontend EmergencyIncident shape */

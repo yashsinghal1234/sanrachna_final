@@ -470,7 +470,7 @@ export function RfiPage() {
                           onClick={() => {
                             if (!can.canEscalate) return
                             escalate(projectId ?? '', r.id, 'Manual escalation by user', can.isOwner ? 'Owner' : 'Owner — K. Iyer')
-                            onToast('Escalated (demo).')
+                            onToast('Escalated.')
                           }}
                           disabled={!can.canEscalate}
                         >
@@ -560,7 +560,7 @@ export function RfiPage() {
                 <Timer className="size-4 text-[color:var(--color-primary_dark)]" />
                 Analytics / insights
               </CardTitle>
-              <CardDescription>Management view (lightweight demo).</CardDescription>
+              <CardDescription>Management view.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm text-[color:var(--color-text_secondary)]">
               <div className="rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] p-3">
@@ -579,7 +579,7 @@ export function RfiPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="size-4 text-[color:var(--color-primary_dark)]" />
-                AI assistant (demo)
+                AI assistant
               </CardTitle>
               <CardDescription>Premium feel suggestions.</CardDescription>
             </CardHeader>

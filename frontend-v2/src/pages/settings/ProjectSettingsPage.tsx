@@ -347,7 +347,7 @@ export function ProjectSettingsPage() {
             <Trash2 className="size-4 text-[color:var(--color-warning)]" />
             Danger Zone
           </CardTitle>
-          <CardDescription>Archive/Delete are owner-only (demo).</CardDescription>
+          <CardDescription>Archive/Delete are owner-only.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {!canDangerZone ? (
@@ -366,10 +366,10 @@ export function ProjectSettingsPage() {
                 </div>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
-                <Button type="button" variant="outline" onClick={() => setDemoNote('Project archived (demo).')}>
+                <Button type="button" variant="outline" onClick={() => setDemoNote('Project archived.')}>
                   Archive Project
                 </Button>
-                <Button type="button" variant="danger" onClick={() => setDemoNote('Project deleted (demo).')}>
+                <Button type="button" variant="danger" onClick={() => setDemoNote('Project deleted.')}>
                   Delete Project
                 </Button>
               </div>

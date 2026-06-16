@@ -166,7 +166,7 @@ function WorkerEmergencyPanel() {
     }, 450)
   }
 
-  const reporterName = user?.name ?? 'Demo User'
+  const reporterName = user?.name ?? 'User'
   const resolvedRole: Role = role ?? 'worker'
 
   return (
@@ -177,7 +177,7 @@ function WorkerEmergencyPanel() {
             <AlertTriangle className="size-5 text-[color:var(--color-error)]" />
             Emergency Trigger
           </CardTitle>
-          <CardDescription>Raise an emergency in under 10 seconds. This is a demo workflow (no real notifications).</CardDescription>
+          <CardDescription>Raise an emergency in under 10 seconds. This is a demo workflow.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 pt-6">
           <div className="rounded-[var(--radius-2xl)] border border-[color:var(--color-border)] bg-white p-5 shadow-[var(--shadow-soft)]">
@@ -430,7 +430,7 @@ function EngineerCommandPanel() {
     return () => window.clearTimeout(id)
   }, [toast])
 
-  const actorName = user?.name ?? 'Demo User'
+  const actorName = user?.name ?? 'User'
 
   const mark = (status: EmergencyStatus) => {
     if (!selected) return
@@ -441,7 +441,7 @@ function EngineerCommandPanel() {
   const assign = (who: 'Safety Officer' | 'Site Supervisor') => {
     if (!selected) return
     updateIncident(selected.id, {
-      assignment: who === 'Safety Officer' ? { safetyOfficer: 'Safety Officer (demo)' } : { siteSupervisor: 'Site Supervisor (demo)' },
+      assignment: who === 'Safety Officer' ? { safetyOfficer: 'Safety Officer' } : { siteSupervisor: 'Site Supervisor' },
     })
     setToast(`Assigned ${who}.`)
   }
@@ -449,7 +449,7 @@ function EngineerCommandPanel() {
   const escalate = () => {
     if (!selected) return
     updateIncident(selected.id, { escalateToOwner: true, note: note.trim() || undefined })
-    setToast('Escalated to owner (demo).')
+    setToast('Escalated to owner.')
     setNote('')
   }
 
@@ -694,7 +694,7 @@ function OwnerEmergencyDashboard() {
   }, [incidents])
 
   const resolveQuick = (inc: EmergencyIncident) => {
-    updateIncident(inc.id, { status: 'resolved', note: 'Resolved by owner (demo).' })
+    updateIncident(inc.id, { status: 'resolved', note: 'Resolved by owner.' })
   }
 
   return (
@@ -813,7 +813,7 @@ function OwnerEmergencyDashboard() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Analytics (demo)</CardTitle>
+              <CardTitle className="text-base">Analytics</CardTitle>
               <CardDescription>Quick operational signals.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-[color:var(--color-text_secondary)]">

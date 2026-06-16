@@ -105,7 +105,7 @@ function makeDemoTimeline(): ProjectTimeline {
 
   return {
     projectId: 'demo',
-    projectName: 'Demo Project',
+    projectName: 'Project',
     version: 'V1',
     status: 'At Risk',
     plannedCompletionDate: planned,

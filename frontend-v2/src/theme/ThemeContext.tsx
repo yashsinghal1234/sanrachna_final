@@ -10,7 +10,7 @@ function readStoredTheme(): Theme | null {
     const v = window.localStorage.getItem(THEME_STORAGE_KEY)
     if (v === 'dark' || v === 'light') return v
   } catch {
-    // ignore
+    
   }
   return null
 }

@@ -28,17 +28,17 @@ export function ProfileSettingsPage() {
 
   const initial = useMemo<ProfileForm>(
     () => ({
-      fullName: user?.name ?? 'Demo User',
-      email: user?.emailOrPhone ?? 'demo@company.com',
-      phone: '+91 98XXX XXXXX',
-      departmentCrew: resolvedRole === 'owner' ? 'Leadership' : resolvedRole === 'engineer' ? 'Engineering' : 'Field Crew',
-      employeeId: resolvedRole === 'worker' ? 'EMP-041' : '',
-      companyName: 'Sanrachna Construction Intelligence',
-      businessAddress: 'Pune, Maharashtra',
-      specialization: 'Structural Planning',
-      assignedProjects: 'Sunrise Residency — Tower A',
-      crewType: 'Masons',
-      supervisorName: 'Arjun Singh (Site Supervisor)',
+      fullName: user?.name ?? '',
+      email: user?.emailOrPhone ?? '',
+      phone: '',
+      departmentCrew: '',
+      employeeId: '',
+      companyName: '',
+      businessAddress: '',
+      specialization: '',
+      assignedProjects: '',
+      crewType: '',
+      supervisorName: '',
     }),
     [resolvedRole, user],
   )
@@ -76,7 +76,7 @@ export function ProfileSettingsPage() {
             <User className="size-4 text-[color:var(--color-primary_dark)]" />
             Profile
           </CardTitle>
-          <CardDescription>Manage your personal info. Demo-only — values are local to the page.</CardDescription>
+          <CardDescription>Manage your personal info.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form className="space-y-4" onSubmit={save}>
@@ -293,13 +293,7 @@ export function ProfileSettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="text-xs text-[color:var(--color-text_secondary)]">
-          <div className={cn('rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-3')}>
-            Profile editing in this MVP is demo-only. In production, these fields would be persisted to the backend per user role.
-          </div>
-        </CardContent>
-      </Card>
+
     </div>
   )
 }

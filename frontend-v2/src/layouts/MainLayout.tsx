@@ -54,7 +54,7 @@ export function MainLayout({ projectName }: MainLayoutProps) {
           ))}
         </nav>
         <div className="border-t border-slate-100 p-4 text-xs text-muted">
-          Demo workspace · CPWD / RSMeans benchmarks
+          Workspace · CPWD / RSMeans benchmarks
         </div>
       </aside>
 
@@ -69,7 +69,7 @@ export function MainLayout({ projectName }: MainLayoutProps) {
               <button
                 type="button"
                 className="relative flex size-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                aria-label="Notifications (demo)"
+                aria-label="Notifications"
               >
                 <Bell className="size-5" />
                 <span className="absolute right-2 top-2 size-2 rounded-full bg-red-500 ring-2 ring-white" />
@@ -77,7 +77,7 @@ export function MainLayout({ projectName }: MainLayoutProps) {
               <button
                 type="button"
                 className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 pr-3 shadow-sm transition hover:border-slate-300"
-                aria-label="User menu (demo)"
+                aria-label="User menu"
               >
                 <span className="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-slate-800 to-slate-600 text-xs font-bold text-white">
                   PM

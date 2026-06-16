@@ -587,19 +587,6 @@ export function AICopilotPage() {
                   <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-purple-50 to-blue-50 px-2 py-1 text-[11px] font-semibold text-purple-700">
                     <Sparkles className="size-3" /> Groq AI
                   </span>
-                  <select
-                    value={chatLanguage}
-                    onChange={(e) => setChatLanguage(e.target.value)}
-                    className="appearance-none rounded-full bg-[color:var(--color-bg)] px-2 py-1 font-medium border border-[color:var(--color-border)] text-[color:var(--color-text)] outline-none focus:ring-1 focus:ring-[color:var(--color-primary)] cursor-pointer"
-                  >
-                    <option value="English">English</option>
-                    <option value="Hindi">Hindi</option>
-                    <option value="Marathi">Marathi</option>
-                    <option value="Gujarati">Gujarati</option>
-                    <option value="Bengali">Bengali</option>
-                    <option value="Tamil">Tamil</option>
-                    <option value="Telugu">Telugu</option>
-                  </select>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -700,6 +687,15 @@ export function AICopilotPage() {
                                 } else {
                                   window.speechSynthesis.cancel()
                                   const utterance = new SpeechSynthesisUtterance(m.content.replace(/[*#]/g, ''))
+                                  switch(chatLanguage) {
+                                    case 'Hindi': utterance.lang = 'hi-IN'; break;
+                                    case 'Marathi': utterance.lang = 'mr-IN'; break;
+                                    case 'Gujarati': utterance.lang = 'gu-IN'; break;
+                                    case 'Bengali': utterance.lang = 'bn-IN'; break;
+                                    case 'Tamil': utterance.lang = 'ta-IN'; break;
+                                    case 'Telugu': utterance.lang = 'te-IN'; break;
+                                    default: utterance.lang = 'en-US'; break;
+                                  }
                                   utterance.onend = () => setReadingMessageId(null)
                                   setReadingMessageId(m.id)
                                   window.speechSynthesis.speak(utterance)
@@ -802,19 +798,40 @@ export function AICopilotPage() {
 
       </div>
 
-      {/* Rename modal */}
+      {/* Settings modal */}
       <Modal
         open={renameOpen}
         onOpenChange={setRenameOpen}
-        title="Rename chat"
-        description="Pick a short title so you can find this session later."
+        title="Chat Settings"
+        description="Update chat title and preferred language."
         footer={
           <Button onClick={() => void onRename()} disabled={!renameValue.trim()}>
             Save
           </Button>
         }
       >
-        <Input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} placeholder="e.g., Cement + procurement" />
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Chat Title</label>
+            <Input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} placeholder="e.g., Cement + procurement" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Preferred Language</label>
+            <select
+              value={chatLanguage}
+              onChange={(e) => setChatLanguage(e.target.value)}
+              className="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-[color:var(--color-border)] bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-[color:var(--color-bg)] placeholder:text-[color:var(--color-text_muted)] focus:outline-none focus:ring-1 focus:ring-[color:var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1"
+            >
+              <option value="English">English</option>
+              <option value="Hindi">Hindi</option>
+              <option value="Marathi">Marathi</option>
+              <option value="Gujarati">Gujarati</option>
+              <option value="Bengali">Bengali</option>
+              <option value="Tamil">Tamil</option>
+              <option value="Telugu">Telugu</option>
+            </select>
+          </div>
+        </div>
       </Modal>
     </div>
   )

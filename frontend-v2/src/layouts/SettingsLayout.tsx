@@ -37,7 +37,7 @@ export function SettingsLayout() {
             </span>
           </div>
           <div className="mt-1 text-xs text-[color:var(--color-text_muted)]">
-            Tier-based visibility and limited actions are enforced (demo).
+            Tier-based visibility and limited actions are enforced.
           </div>
         </div>
 

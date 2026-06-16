@@ -162,7 +162,7 @@ export function TeamMembersTable({ viewer, projectId, members, onRefresh, onToas
         title="Reassign role"
         description={
           reassignFor
-            ? `Choose a new app role for ${reassignFor.name}. This updates their login role (demo behaviour).`
+            ? `Choose a new app role for ${reassignFor.name}. This updates their login role.`
             : undefined
         }
         footer={

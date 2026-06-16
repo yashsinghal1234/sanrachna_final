@@ -63,7 +63,7 @@ export function RecoveryRecommendations({ onToast }: { onToast: (msg: string) =>
                   variant="secondary"
                   onClick={() => {
                     applyRecoveryAction(a.id)
-                    onToast('Applied suggestion (demo effect).')
+                    onToast('Applied suggestion.')
                   }}
                 >
                   <Wand2 className="size-4" />

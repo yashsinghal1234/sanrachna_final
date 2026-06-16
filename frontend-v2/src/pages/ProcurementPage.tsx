@@ -406,7 +406,7 @@ export function ProcurementPage() {
                             variant="outline"
                             onClick={() => {
                               setIsDirty(true)
-                              setToast('Supplier overridden (demo).')
+                              setToast('Supplier overridden.')
                               window.setTimeout(() => setToast(null), 2600)
                             }}
                           >
@@ -416,7 +416,7 @@ export function ProcurementPage() {
                             size="sm"
                             variant="secondary"
                             onClick={() => {
-                              setToast('Contact supplier (demo).')
+                              setToast('Contact supplier.')
                               window.setTimeout(() => setToast(null), 2600)
                             }}
                           >

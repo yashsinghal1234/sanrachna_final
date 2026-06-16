@@ -360,7 +360,7 @@ export function DailyLogsPage() {
       <Card>
         <CardHeader>
           <CardTitle>Recent logs</CardTitle>
-          <CardDescription>{backendOk ? 'From your project database' : 'Demo workspace feed'}</CardDescription>
+          <CardDescription>{backendOk ? 'From your project database' : 'workspace feed'}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {items.length === 0 && !loading ? (

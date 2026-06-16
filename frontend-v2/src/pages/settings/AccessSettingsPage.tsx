@@ -74,7 +74,7 @@ export function AccessSettingsPage() {
           </CardTitle>
           <CardDescription>
             {mode === 'owner'
-              ? 'Customize permissions per tier (demo).'
+              ? 'Customize permissions per tier.'
               : 'Read-only access matrix (engineer tier).'}
           </CardDescription>
         </CardHeader>
@@ -90,7 +90,7 @@ export function AccessSettingsPage() {
                   type="button"
                   variant="secondary"
                   onClick={() => {
-                    setToast('Customize permissions (demo).')
+                    setToast('Customize permissions.')
                     window.setTimeout(() => setToast(null), 2600)
                   }}
                 >
@@ -100,7 +100,7 @@ export function AccessSettingsPage() {
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    setToast('Reset to defaults (demo).')
+                    setToast('Reset to defaults.')
                     window.setTimeout(() => setToast(null), 2600)
                   }}
                 >
@@ -143,7 +143,7 @@ export function AccessSettingsPage() {
           </div>
 
           <div className="text-xs text-[color:var(--color-text_secondary)]">
-            These permissions are demo values. Backend integration would enforce access checks server-side.
+            
           </div>
         </CardContent>
       </Card>

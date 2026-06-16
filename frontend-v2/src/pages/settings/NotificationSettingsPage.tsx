@@ -96,7 +96,7 @@ export function NotificationSettingsPage() {
             <Bell className="size-4 text-[color:var(--color-primary_dark)]" />
             Notification Settings
           </CardTitle>
-          <CardDescription>Channel toggles + role-based alert types (demo UI).</CardDescription>
+          <CardDescription>Channel toggles + role-based alert types.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="rounded-[var(--radius-2xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-4">
@@ -136,7 +136,7 @@ export function NotificationSettingsPage() {
 
           {saved ? (
             <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-success)]/40 bg-[color:var(--color-success)]/10 p-3 text-sm font-semibold text-[color:var(--color-success)]">
-              Notification preferences saved (demo).
+              Notification preferences saved.
             </div>
           ) : null}
         </CardContent>

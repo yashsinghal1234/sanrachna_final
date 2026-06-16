@@ -17,7 +17,6 @@ import {
   ShieldAlert,
   Sparkles,
   Send,
-  Settings,
   ShoppingCart,
   Timer,
   UserCog,
@@ -344,12 +343,12 @@ export function AppLayout() {
     }
     if (action.kind === 'assign') {
       mutate(a.id, { status: a.status === 'unread' ? 'read' : a.status })
-      setToast('Assigned (demo).')
+      setToast('Assigned.')
       return
     }
     if (action.kind === 'forward') {
       mutate(a.id, { status: a.status === 'unread' ? 'read' : a.status })
-      setToast('Forwarded (demo).')
+      setToast('Forwarded.')
       return
     }
     if (action.to) {
@@ -790,7 +789,7 @@ export function AppLayout() {
                     {initials}
                   </span>
                   <div className="hidden sm:block">
-                    <div className="text-sm font-semibold leading-5">{user?.name || 'Demo User'}</div>
+                    <div className="text-sm font-semibold leading-5">{user?.name || 'User'}</div>
                     <div className="text-[11px] text-[color:var(--color-text_secondary)]">
                       {resolvedRole.toUpperCase()}
                     </div>

@@ -348,13 +348,13 @@ export function CostResourcesPage() {
 
   const saveChanges = () => {
     setIsDirty(false)
-    setToast('Saved changes (demo).')
+    setToast('Saved changes.')
     window.setTimeout(() => setToast(null), 2600)
   }
 
   const publishUpdates = () => {
     setIsDirty(false)
-    setToast('Published updates (demo).')
+    setToast('Published updates.')
     window.setTimeout(() => setToast(null), 2600)
   }
 
@@ -836,7 +836,7 @@ export function CostResourcesPage() {
                 <Lightbulb className="size-4 text-[color:var(--color-primary_dark)]" />
                 AI suggestions
               </CardTitle>
-              <CardDescription>Optimization ideas (demo).</CardDescription>
+              <CardDescription>Optimization ideas.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               {[

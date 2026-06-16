@@ -258,7 +258,7 @@ export function SignupPage() {
               </Link>
               <span className="inline-flex items-center gap-2 text-[color:var(--color-text_secondary)]">
                 <ShieldCheck className="size-4 text-[color:var(--color-success)]" />
-                Demo safe
+                Safe
               </span>
             </div>
           </form>

@@ -201,7 +201,7 @@ export function simulateTimelineWhatIf(tl: ProjectTimeline, params: SimulationPa
 
   const afterRisk = computeRiskPct(tl, normalized)
 
-  const costDeltaFromWorkers = workersDelta * 2_10_000 * 4 // ~₹2.1L / worker / month (demo)
+  const costDeltaFromWorkers = workersDelta * 2_10_000 * 4 // ~₹2.1L / worker / month
   const costDeltaFromAccel = (taskAccelerationPct / 100) * 0.06 * baseCost // overtime / rework buffer
   const budgetAdj = (budgetAdjustmentPct / 100) * baseCost
   const finalCost = Math.round(baseCost + costDeltaFromWorkers + costDeltaFromAccel + budgetAdj)
