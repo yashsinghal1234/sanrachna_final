@@ -170,7 +170,7 @@ export function AICopilotPage() {
   const lastUrlPromptRef = useRef<string>('')
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [recordingTime, setRecordingTime] = useState(0)
 
   const activeThread = threads[activeIdx] ?? null

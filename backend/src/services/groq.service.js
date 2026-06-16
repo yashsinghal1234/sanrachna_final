@@ -18,6 +18,7 @@ Do not invent facts.
 If the context does not contain the answer, say that clearly.
 
 Use concise bullet points when useful.
+Always end your reply with a polite sign-off like "Thank you" or "Hope this helps!".
         `,
       },
       {
@@ -58,19 +59,9 @@ async function transcribeAudio(fileBuffer, filename = 'audio.webm') {
   // Best approach for groq audio from buffer:
   const file = await Groq.toFile(fileBuffer, filename)
 
-  const transcription = await groq.audio.transcriptions.create({
-    file,
-    model: 'whisper-large-v3',
-    response_format: 'text', // or 'json'
-    language: 'en', // Can be omitted for auto-detection
-  })
-
-  // Since we want auto-detection of languages like Hindi, Marathi etc, we OMIT the language parameter.
-  // Actually, wait, let's omit the language param so whisper auto-detects and transcribes/translates.
   const transcriptionAuto = await groq.audio.transcriptions.create({
     file,
     model: 'whisper-large-v3',
-    // Omit response_format to get the default JSON { text: '...' } format
   })
 
   return transcriptionAuto
