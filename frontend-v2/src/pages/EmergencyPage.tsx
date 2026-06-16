@@ -466,15 +466,15 @@ function EngineerCommandPanel() {
   }
 
   return (
-    <div className="grid h-[calc(100vh-120px)] gap-4 lg:grid-cols-[1fr_1.2fr]">
-      <Card className="flex flex-col overflow-hidden">
+    <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+      <Card className="flex flex-col">
         <CardHeader className="shrink-0">
           <CardTitle className="flex items-center gap-2">
             <HardHat className="size-4 text-[color:var(--color-primary_dark)]" />
             Active Emergency Feed
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 space-y-2 overflow-hidden">
+        <CardContent className="space-y-2">
           {activeIncidents.length === 0 ? (
             <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-bg)] py-12 text-center text-sm text-[color:var(--color-text_secondary)]">
               No active emergencies right now.
@@ -518,21 +518,21 @@ function EngineerCommandPanel() {
         </CardContent>
       </Card>
 
-      <div className="flex flex-col space-y-4 overflow-hidden">
+      <div className="flex flex-col space-y-4">
         {toast ? (
           <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-3 text-sm font-semibold">
             {toast}
           </div>
         ) : null}
 
-        <Card className="flex flex-1 flex-col overflow-hidden">
+        <Card className="flex flex-col">
           <CardHeader className="shrink-0">
             <CardTitle className="flex items-center gap-2">
               <Shield className="size-4 text-[color:var(--color-primary_dark)]" />
               Incident Detail
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 space-y-3 overflow-hidden">
+          <CardContent className="space-y-3">
             {!selected ? (
               <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-bg)] py-12 text-center text-sm text-[color:var(--color-text_secondary)]">
                 Select an incident to begin.
