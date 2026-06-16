@@ -675,7 +675,7 @@ export function AICopilotPage() {
                             content={m.content.replace(/(\n\s*)?\*?\*?Sources?( used)?(:|-)\*?\*?[\s\S]*$/i, '').trim()} 
                             isRecent={Date.now() - m.createdAt < 5000} 
                           />
-                          <div className="mt-2 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+                          <div className="mt-2 flex items-center gap-2 transition-opacity">
                             <Button
                               type="button"
                               variant="ghost"
@@ -685,7 +685,7 @@ export function AICopilotPage() {
                                 navigator.clipboard.writeText(m.content)
                               }}
                             >
-                              <Copy className="mr-1.5 size-3" />
+                              <Copy className="mr-1 size-3" />
                               Copy
                             </Button>
                             <Button
@@ -708,11 +708,11 @@ export function AICopilotPage() {
                             >
                               {readingMessageId === m.id ? (
                                 <>
-                                  <VolumeX className="mr-1.5 size-3" /> Stop
+                                  <VolumeX className="mr-1 size-3" /> Stop
                                 </>
                               ) : (
                                 <>
-                                  <Volume2 className="mr-1.5 size-3" /> Read Aloud
+                                  <Volume2 className="mr-1 size-3" /> Read Aloud
                                 </>
                               )}
                             </Button>
