@@ -32,18 +32,11 @@ async function run() {
           `[Backfill] Done: ${doc.title} | chunks=${doc.text_chunks.length} | vectors=${vectors.length}`
         )
       } catch (err) {
-  console.error(`[Backfill] Failed: ${doc.title}`, err?.message || err)
+        console.error(`[Backfill] Failed: ${doc.title}`, err?.message || err)
 
-  try {
-    doc.embedding_status = 'failed'
-    await doc.save()
-  } catch (saveErr) {
-    console.error(
-      `[Backfill] Unable to save failed status for ${doc.title}`,
-      saveErr?.message || saveErr
-    )
-  }
-}
+        doc.embedding_status = 'failed'
+        await doc.save()
+      }
     }
 
     console.log('[Backfill] Complete')
