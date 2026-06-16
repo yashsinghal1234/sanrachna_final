@@ -51,7 +51,7 @@ type EmergencyContextValue = {
   lastEvent: EmergencyEvent | null
   loading: boolean
 
-  trigger: (input: TriggerInput) => string
+  trigger: (input: TriggerInput) => Promise<string>
   updateIncident: (id: string, patch: UpdateInput) => void
   archiveIncident: (id: string) => void
   getIncident: (id: string) => EmergencyIncident | null

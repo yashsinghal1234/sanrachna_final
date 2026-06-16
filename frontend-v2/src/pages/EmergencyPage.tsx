@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { CameraCaptureModal } from '@/components/CameraCaptureModal'
 import { useEmergency } from '@/emergency/EmergencyContext'
 import type { EmergencyIncident, EmergencyIncidentType, EmergencySeverity, EmergencyStatus } from '@/emergency/types'
 import { cn } from '@/utils/cn'
@@ -112,8 +113,8 @@ function WorkerEmergencyPanel() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [sending, setSending] = useState(false)
   const [sentId, setSentId] = useState<string | null>(null)
+  const [showCamera, setShowCamera] = useState(false)
   const fileRef = useRef<HTMLInputElement | null>(null)
-  const cameraRef = useRef<HTMLInputElement | null>(null)
 
   const { pos, err, request } = useGeo((lat, lng) => {
     setZone((prev) => prev ? prev : `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`)
@@ -169,7 +170,7 @@ function WorkerEmergencyPanel() {
   const resolvedRole: Role = role ?? 'worker'
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] min-w-0 max-w-full">
       <Card className="overflow-hidden min-w-0">
         <CardContent className="space-y-5 pt-6">
           <div className="rounded-[var(--radius-2xl)] border border-[color:var(--color-border)] bg-white p-5 shadow-[var(--shadow-soft)]">
@@ -185,13 +186,13 @@ function WorkerEmergencyPanel() {
               TRIGGER EMERGENCY ALERT
             </Button>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-[color:var(--color-text_secondary)]">
-              <span className="inline-flex items-center gap-1">
-                <HardHat className="size-3.5" />
-                Reporter: <span className="font-semibold text-[color:var(--color-text)]">{reporterName}</span>
+              <span className="inline-flex min-w-0 items-center gap-1">
+                <HardHat className="shrink-0 size-3.5" />
+                Reporter: <span className="truncate font-semibold text-[color:var(--color-text)]">{reporterName}</span>
               </span>
-              <span className="inline-flex items-center gap-1">
-                <Clock className="size-3.5" />
-                Role: <span className="font-semibold text-[color:var(--color-text)]">{resolvedRole.toUpperCase()}</span>
+              <span className="inline-flex min-w-0 items-center gap-1">
+                <Clock className="shrink-0 size-3.5" />
+                Role: <span className="truncate font-semibold text-[color:var(--color-text)]">{resolvedRole.toUpperCase()}</span>
               </span>
             </div>
           </div>
@@ -303,15 +304,15 @@ function WorkerEmergencyPanel() {
       </Card>
 
       <div className="space-y-4 min-w-0">
-        <Card>
+        <Card className="overflow-hidden min-w-0">
           <CardHeader className="flex flex-row items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <CardTitle className="text-base truncate">After sending</CardTitle>
               <CardDescription className="truncate">Immediate broadcast receipt + who was notified.</CardDescription>
             </div>
-            <div className="flex shrink-0 items-center gap-1.5 text-xs text-[color:var(--color-text_secondary)] mt-1 whitespace-nowrap">
-              <span className={`inline-block size-2 rounded-full ${loading ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
-              {loading ? 'Syncing…' : 'Live — auto-refreshes every 15s'}
+            <div className="flex shrink-0 items-center gap-1.5 text-xs text-[color:var(--color-text_secondary)] mt-1 truncate">
+              <span className={`inline-block shrink-0 size-2 rounded-full ${loading ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
+              <span className="truncate">{loading ? 'Syncing…' : 'Live — auto-refreshes every 15s'}</span>
             </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
@@ -340,9 +341,9 @@ function WorkerEmergencyPanel() {
           </CardContent>
         </Card>
 
-        <Card className="border-[color:var(--color-error)]/30">
+        <Card className="border-[color:var(--color-error)]/30 overflow-hidden min-w-0">
           <CardHeader>
-            <CardTitle className="text-base">Safety checklist</CardTitle>
+            <CardTitle className="text-base truncate">Safety checklist</CardTitle>
             <CardDescription>Quick actions while help arrives.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-[color:var(--color-text_secondary)]">
@@ -400,6 +401,16 @@ function WorkerEmergencyPanel() {
           </div>
         </div>
       </Modal>
+
+      {showCamera && (
+        <CameraCaptureModal
+          onClose={() => setShowCamera(false)}
+          onCapture={(dataUrl) => {
+            setPhotoDataUrl(dataUrl)
+            setShowCamera(false)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -843,7 +854,6 @@ function OwnerEmergencyDashboard() {
 
 export function EmergencyPage() {
   const { role } = useAuth()
-  const { loading } = useEmergency()
   const resolvedRole: Role = role ?? 'engineer'
 
   return (

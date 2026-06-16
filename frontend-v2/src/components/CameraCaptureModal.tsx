@@ -10,7 +10,6 @@ interface CameraCaptureModalProps {
 export function CameraCaptureModal({ onCapture, onClose }: CameraCaptureModalProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [stream, setStream] = useState<MediaStream | null>(null)
 
   useEffect(() => {
     let activeStream: MediaStream | null = null
@@ -22,7 +21,6 @@ export function CameraCaptureModal({ onCapture, onClose }: CameraCaptureModalPro
           audio: false,
         })
         activeStream = mediaStream
-        setStream(mediaStream)
         if (videoRef.current) {
           videoRef.current.srcObject = mediaStream
           await videoRef.current.play()
