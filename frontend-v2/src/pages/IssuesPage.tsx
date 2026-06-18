@@ -32,7 +32,7 @@ import { ISSUE_CATEGORIES, ISSUE_SEVERITIES, ISSUE_STATUSES } from '@/constants/
 import { formatDate } from '@/utils/format'
 
 const field =
-  'mt-1.5 flex min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60'
+  'mt-1.5 flex min-h-10 w-full rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60'
 
 const severityColor: Record<IssueSeverity, string> = {
   Critical: '#ef4444',
@@ -260,26 +260,13 @@ export function IssuesPage() {
   const Header = (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Issues</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-[color:var(--color-text)]">Issues</h1>
         <p className="mt-1 text-sm text-muted">
           Quality, safety, material issues, rework & snags — with verification before close.
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm">
-          <Layers className="size-4 text-slate-500" />
-          <select
-            className="bg-transparent text-sm outline-none"
-            value={currentProjectId}
-            onChange={(e) => setCurrentProjectId(e.target.value)}
-          >
-            {Object.values(projects).map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
+
         {canReport ? (
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="size-4" />
@@ -338,10 +325,10 @@ export function IssuesPage() {
   )
 
   const Filters = (
-    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
-          <Filter className="size-4 text-slate-500" />
+        <div className="flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 text-sm">
+          <Filter className="size-4 text-[color:var(--color-text_secondary)]" />
           <select
             className="bg-transparent text-sm outline-none"
             value={filterStatus}
@@ -355,8 +342,8 @@ export function IssuesPage() {
             ))}
           </select>
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
-          <Flag className="size-4 text-slate-500" />
+        <div className="flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 text-sm">
+          <Flag className="size-4 text-[color:var(--color-text_secondary)]" />
           <select
             className="bg-transparent text-sm outline-none"
             value={filterSeverity}
@@ -370,8 +357,8 @@ export function IssuesPage() {
             ))}
           </select>
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
-          <Layers className="size-4 text-slate-500" />
+        <div className="flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 text-sm">
+          <Layers className="size-4 text-[color:var(--color-text_secondary)]" />
           <select
             className="bg-transparent text-sm outline-none"
             value={filterCategory}
@@ -387,8 +374,8 @@ export function IssuesPage() {
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm">
-          <Search className="size-4 text-slate-500" />
+        <div className="flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 text-sm">
+          <Search className="size-4 text-[color:var(--color-text_secondary)]" />
           <input
             className="w-56 bg-transparent text-sm outline-none"
             placeholder="Search id/title/location/person…"
@@ -413,9 +400,9 @@ export function IssuesPage() {
         const colItems = filtered.filter((i) => i.status === col)
         return (
           <div key={col} className="flex w-52 shrink-0 flex-col">
-            <div className="mb-2 flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-              <span className="flex-1 truncate text-xs font-bold text-slate-700">{col}</span>
-              <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-slate-600">{colItems.length}</span>
+            <div className="mb-2 flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 shadow-sm">
+              <span className="flex-1 truncate text-xs font-bold text-[color:var(--color-text_secondary)]">{col}</span>
+              <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-surface_hover)] text-[11px] font-bold text-[color:var(--color-text_secondary)]">{colItems.length}</span>
             </div>
             <div className="flex flex-col gap-2">
               {colItems.length ? (
@@ -424,22 +411,22 @@ export function IssuesPage() {
                     key={i.id}
                     type="button"
                     onClick={() => onOpenDetail(i.id)}
-                    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:shadow-md hover:border-slate-300"
+                    className="w-full rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] p-3 text-left shadow-sm transition hover:shadow-md hover:border-[color:var(--color-primary)] hover:shadow-md transition-all"
                   >
                     <div className="flex items-center justify-between gap-1">
                       {severityBadge(i.severity)}
-                      <span className="max-w-[70px] overflow-hidden truncate font-mono text-[10px] text-slate-400">
+                      <span className="max-w-[70px] overflow-hidden truncate font-mono text-[10px] text-[color:var(--color-text_muted)]">
                         {i.issue_id || i.id.slice(-6)}
                       </span>
                     </div>
-                    <div className="mt-2 line-clamp-2 text-xs font-semibold leading-snug text-slate-900">{i.title}</div>
-                    <div className="mt-1 truncate text-[11px] text-slate-500">
+                    <div className="mt-2 line-clamp-2 text-xs font-semibold leading-snug text-[color:var(--color-text)]">{i.title}</div>
+                    <div className="mt-1 truncate text-[11px] text-[color:var(--color-text_secondary)]">
                       {i.location || 'No location'}
                     </div>
-                    <div className="mt-1 truncate text-[11px] text-slate-500">
+                    <div className="mt-1 truncate text-[11px] text-[color:var(--color-text_secondary)]">
                       {i.assignedTo ?? 'Unassigned'}
                     </div>
-                    <div className="mt-2 flex items-center gap-1 text-[11px] text-slate-400">
+                    <div className="mt-2 flex items-center gap-1 text-[11px] text-[color:var(--color-text_muted)]">
                       <Timer className="size-3 shrink-0" />
                       <span className="truncate">{formatDate(i.dueAt)}</span>
                     </div>
@@ -451,7 +438,7 @@ export function IssuesPage() {
                   </button>
                 ))
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-200 p-3 text-center text-[11px] text-slate-400">
+                <div className="rounded-xl border border-dashed border-[color:var(--color-border)] p-3 text-center text-[11px] text-[color:var(--color-text_muted)]">
                   Empty
                 </div>
               )}
@@ -476,40 +463,40 @@ export function IssuesPage() {
           <table className="w-full min-w-[980px] border-separate border-spacing-0">
             <thead>
               <tr className="text-left text-xs text-muted">
-                <th className="sticky top-0 bg-white/90 py-2 pr-3">Issue ID</th>
-                <th className="sticky top-0 bg-white/90 py-2 pr-3">Title</th>
-                <th className="sticky top-0 bg-white/90 py-2 pr-3">Category</th>
-                <th className="sticky top-0 bg-white/90 py-2 pr-3">Severity</th>
-                <th className="sticky top-0 bg-white/90 py-2 pr-3">Status</th>
-                <th className="sticky top-0 bg-white/90 py-2 pr-3">Reported by</th>
-                <th className="sticky top-0 bg-white/90 py-2 pr-3">Assigned to</th>
-                <th className="sticky top-0 bg-white/90 py-2 pr-3">Raised</th>
-                <th className="sticky top-0 bg-white/90 py-2 pr-3">Due</th>
-                <th className="sticky top-0 bg-white/90 py-2 pr-3">Verification</th>
+                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Issue ID</th>
+                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Title</th>
+                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Category</th>
+                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Severity</th>
+                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Status</th>
+                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Reported by</th>
+                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Assigned to</th>
+                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Raised</th>
+                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Due</th>
+                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Verification</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((i) => (
-                <tr key={i.id} className="border-t border-slate-100 text-sm">
-                  <td className="py-3 pr-3 font-mono text-xs text-slate-500">{i.id}</td>
+                <tr key={i.id} className="border-t border-[color:var(--color-border)] text-sm">
+                  <td className="py-3 pr-3 font-mono text-xs text-[color:var(--color-text_secondary)]">{i.id}</td>
                   <td className="py-3 pr-3">
                     <button
                       type="button"
-                      className="text-left font-semibold text-slate-900 hover:underline"
+                      className="text-left font-semibold text-[color:var(--color-text)] hover:underline"
                       onClick={() => onOpenDetail(i.id)}
                     >
                       {i.title}
                     </button>
                     <div className="mt-1 text-xs text-muted">{i.location}</div>
                   </td>
-                  <td className="py-3 pr-3 text-sm text-slate-700">{i.category}</td>
+                  <td className="py-3 pr-3 text-sm text-[color:var(--color-text_secondary)]">{i.category}</td>
                   <td className="py-3 pr-3">{severityBadge(i.severity)}</td>
                   <td className="py-3 pr-3">{statusBadge(i.status)}</td>
-                  <td className="py-3 pr-3 text-xs text-slate-700">{i.reportedBy}</td>
-                  <td className="py-3 pr-3 text-xs text-slate-700">{i.assignedTo ?? '—'}</td>
+                  <td className="py-3 pr-3 text-xs text-[color:var(--color-text_secondary)]">{i.reportedBy}</td>
+                  <td className="py-3 pr-3 text-xs text-[color:var(--color-text_secondary)]">{i.assignedTo ?? '—'}</td>
                   <td className="py-3 pr-3 text-xs text-muted">{formatDate(i.raisedAt)}</td>
                   <td className="py-3 pr-3 text-xs text-muted">{formatDate(i.dueAt)}</td>
-                  <td className="py-3 pr-3 text-xs text-slate-700">
+                  <td className="py-3 pr-3 text-xs text-[color:var(--color-text_secondary)]">
                     {i.status === 'Resolved' ? 'Pending' : i.verification ? 'Verified' : '—'}
                   </td>
                 </tr>
@@ -568,7 +555,7 @@ export function IssuesPage() {
           </CardHeader>
         <CardContent className="space-y-3">
           {!selected ? (
-            <div className="rounded-xl border border-dashed border-slate-200 p-3 text-sm text-muted">
+            <div className="rounded-xl border border-dashed border-[color:var(--color-border)] p-3 text-sm text-muted">
               No issue selected.
             </div>
           ) : (
@@ -583,31 +570,31 @@ export function IssuesPage() {
                 )}
               </div>
               <div>
-                <div className="text-base font-semibold text-slate-900">{selected.title}</div>
-                <div className="mt-1 text-sm text-slate-700">{selected.description}</div>
+                <div className="text-base font-semibold text-[color:var(--color-text)]">{selected.title}</div>
+                <div className="mt-1 text-sm text-[color:var(--color-text_secondary)]">{selected.description}</div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-slate-200 p-3">
+                <div className="rounded-xl border border-[color:var(--color-border)] p-3">
                   <div className="text-xs text-muted">Reported by</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-900">{selected.reportedBy}</div>
+                  <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{selected.reportedBy}</div>
                   <div className="mt-1 text-xs text-muted">{formatDate(selected.raisedAt)}</div>
                 </div>
-                <div className="rounded-xl border border-slate-200 p-3">
+                <div className="rounded-xl border border-[color:var(--color-border)] p-3">
                   <div className="text-xs text-muted">Assigned to</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-900">{selected.assignedTo ?? 'Unassigned'}</div>
+                  <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{selected.assignedTo ?? 'Unassigned'}</div>
                   <div className="mt-1 text-xs text-muted">Due {formatDate(selected.dueAt)}</div>
                 </div>
               </div>
 
               {canManage ? (
-                <div className="rounded-xl border border-slate-200 p-3">
-                  <div className="text-xs font-semibold text-slate-900">Assignment</div>
+                <div className="rounded-xl border border-[color:var(--color-border)] p-3">
+                  <div className="text-xs font-semibold text-[color:var(--color-text)]">Assignment</div>
                   <div className="mt-2 flex flex-col gap-2">
                     <div className="relative">
-                      <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                        <Search className="size-4 shrink-0 text-slate-400" />
+                      <div className="flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 shadow-sm">
+                        <Search className="size-4 shrink-0 text-[color:var(--color-text_muted)]" />
                         <input
-                          className="flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
+                          className="flex-1 bg-transparent text-sm outline-none placeholder:text-[color:var(--color-text_muted)]"
                           placeholder="Search team member…"
                           value={assignSearch}
                           onChange={(e) => { setAssignSearch(e.target.value); setAssignDropOpen(true) }}
@@ -615,17 +602,17 @@ export function IssuesPage() {
                         />
                         {assignSearch && (
                           <button type="button" onClick={() => { setAssignSearch(''); setAssignTo(''); setAssignDropOpen(false) }}>
-                            <X className="size-4 text-slate-400" />
+                            <X className="size-4 text-[color:var(--color-text_muted)]" />
                           </button>
                         )}
                       </div>
                       {assignDropOpen && filteredTeam.length > 0 && (
-                        <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-44 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+                        <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-44 overflow-y-auto rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] shadow-lg">
                           {filteredTeam.map((m) => (
                             <button
                               key={m.id}
                               type="button"
-                              className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                              className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[color:var(--color-surface_hover)]"
                               onClick={() => {
                                 setAssignTo(m.name)
                                 setAssignSearch(m.name)
@@ -636,14 +623,14 @@ export function IssuesPage() {
                                 {m.name.charAt(0).toUpperCase()}
                               </span>
                               <span className="flex-1 font-medium">{m.name}</span>
-                              <span className="text-xs capitalize text-slate-400">{m.role}</span>
+                              <span className="text-xs capitalize text-[color:var(--color-text_muted)]">{m.role}</span>
                             </button>
                           ))}
                         </div>
                       )}
                       {assignDropOpen && filteredTeam.length === 0 && assignSearch.length > 0 && (
-                        <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-lg">
-                          <p className="text-xs text-slate-400">No team members found. You can still type a name manually.</p>
+                        <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-3 shadow-lg">
+                          <p className="text-xs text-[color:var(--color-text_muted)]">No team members found. You can still type a name manually.</p>
                         </div>
                       )}
                     </div>
@@ -668,13 +655,13 @@ export function IssuesPage() {
                 </div>
               ) : null}
 
-              <div className="rounded-xl border border-slate-200 p-3">
-                <div className="text-xs font-semibold text-slate-900">Attachments</div>
+              <div className="rounded-xl border border-[color:var(--color-border)] p-3">
+                <div className="text-xs font-semibold text-[color:var(--color-text)]">Attachments</div>
                 <div className="mt-2 space-y-1">
                   {selected.attachments.length ? (
                     selected.attachments.map((a) => (
                       <div key={a.id} className="flex items-center justify-between text-xs">
-                        <span className="text-slate-700">{a.name}</span>
+                        <span className="text-[color:var(--color-text_secondary)]">{a.name}</span>
                         <span className="text-muted">{a.kind}{a.stage ? ` · ${a.stage}` : ''}</span>
                       </div>
                     ))
@@ -684,16 +671,16 @@ export function IssuesPage() {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-slate-200 p-3">
-                <div className="text-xs font-semibold text-slate-900">Progress log</div>
+              <div className="rounded-xl border border-[color:var(--color-border)] p-3">
+                <div className="text-xs font-semibold text-[color:var(--color-text)]">Progress log</div>
                 <div className="mt-2 space-y-2">
                   {selected.progressLog.slice(-6).map((l) => (
-                    <div key={l.id} className="rounded-lg bg-slate-50 p-2 text-xs">
+                    <div key={l.id} className="rounded-lg bg-[color:var(--color-surface_hover)] p-2 text-xs">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-slate-900">{l.status}</span>
+                        <span className="font-semibold text-[color:var(--color-text)]">{l.status}</span>
                         <span className="text-muted">{formatDate(l.at)}</span>
                       </div>
-                      <div className="mt-1 text-slate-700">{l.note}</div>
+                      <div className="mt-1 text-[color:var(--color-text_secondary)]">{l.note}</div>
                       <div className="mt-1 text-muted">— {l.author}</div>
                     </div>
                   ))}
@@ -701,9 +688,9 @@ export function IssuesPage() {
               </div>
 
               {selected.status === 'Resolved' || selected.status === 'Verified' || selected.status === 'Closed' ? (
-                <div className="rounded-xl border border-slate-200 p-3">
-                  <div className="text-xs font-semibold text-slate-900">Verification</div>
-                  <div className="mt-2 text-xs text-slate-700">
+                <div className="rounded-xl border border-[color:var(--color-border)] p-3">
+                  <div className="text-xs font-semibold text-[color:var(--color-text)]">Verification</div>
+                  <div className="mt-2 text-xs text-[color:var(--color-text_secondary)]">
                     {selected.verification ? (
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -814,16 +801,16 @@ export function IssuesPage() {
                       key={i.id}
                       type="button"
                       onClick={() => onOpenDetail(i.id)}
-                      className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:shadow-md"
+                      className="w-full rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] p-3 text-left shadow-sm transition hover:shadow-md"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
                             {severityBadge(i.severity)}
                             {statusBadge(i.status)}
-                            <span className="font-mono text-xs text-slate-400">{i.id}</span>
+                            <span className="font-mono text-xs text-[color:var(--color-text_muted)]">{i.id}</span>
                           </div>
-                          <div className="mt-1 text-sm font-semibold text-slate-900">{i.title}</div>
+                          <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{i.title}</div>
                           <div className="mt-1 text-xs text-muted">{i.location}</div>
                         </div>
                         <div className="text-xs text-muted">Due {formatDate(i.dueAt)}</div>
@@ -831,7 +818,7 @@ export function IssuesPage() {
                     </button>
                   ))
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-200 p-3 text-sm text-muted">
+                <div className="rounded-xl border border-dashed border-[color:var(--color-border)] p-3 text-sm text-muted">
                   No high-severity open items.
                     </div>
               )}
@@ -849,12 +836,12 @@ export function IssuesPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Report issues</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-[color:var(--color-text)]">Report issues</h1>
           <p className="mt-1 text-sm text-muted">Quick reporting + track your submitted issues.</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm">
-            <Layers className="size-4 text-slate-500" />
+          <div className="flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 text-sm shadow-sm">
+            <Layers className="size-4 text-[color:var(--color-text_secondary)]" />
             <select
               className="bg-transparent text-sm outline-none"
               value={currentProjectId}
@@ -891,19 +878,19 @@ export function IssuesPage() {
                       key={i.id}
                       type="button"
                       onClick={() => onOpenDetail(i.id)}
-                      className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:shadow-md"
+                      className="w-full rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] p-3 text-left shadow-sm transition hover:shadow-md"
                     >
                       <div className="flex flex-wrap items-center gap-2">
                         {severityBadge(i.severity)}
                         {statusBadge(i.status)}
-                        <span className="font-mono text-xs text-slate-400">{i.id}</span>
+                        <span className="font-mono text-xs text-[color:var(--color-text_muted)]">{i.id}</span>
                       </div>
-                      <div className="mt-1 text-sm font-semibold text-slate-900">{i.title}</div>
+                      <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{i.title}</div>
                       <div className="mt-1 text-xs text-muted">{i.location}</div>
                     </button>
                   ))
               ) : (
-                <div className="rounded-xl border border-dashed border-slate-200 p-3 text-sm text-muted">
+                <div className="rounded-xl border border-dashed border-[color:var(--color-border)] p-3 text-sm text-muted">
                   No reports yet.
             </div>
           )}
@@ -916,12 +903,12 @@ export function IssuesPage() {
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
               {mySubmitted.slice(0, 6).map((i) => (
-                <div key={i.id} className="rounded-xl border border-slate-200 p-3">
+                <div key={i.id} className="rounded-xl border border-[color:var(--color-border)] p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs text-slate-400">{i.id}</span>
+                    <span className="font-mono text-xs text-[color:var(--color-text_muted)]">{i.id}</span>
                     {statusBadge(i.status)}
                   </div>
-                  <div className="mt-1 text-sm font-semibold text-slate-900">{i.title}</div>
+                  <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{i.title}</div>
                   <div className="mt-1 text-xs text-muted">{formatDate(i.raisedAt)}</div>
                 </div>
               ))}
@@ -1045,14 +1032,14 @@ export function IssuesPage() {
               <p className="mt-1 text-xs text-muted">MVP stores name only (no file upload).</p>
             </div>
             {role === 'engineer' ? (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-muted">
-                <div className="flex items-center gap-2 text-slate-700">
+              <div className="rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface_hover)] p-3 text-xs text-muted">
+                <div className="flex items-center gap-2 text-[color:var(--color-text_secondary)]">
                   <UserPlus className="size-4" />
                   Assignments and bulk updates are managed from the issue details panel.
                 </div>
               </div>
             ) : (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-muted">
+              <div className="rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface_hover)] p-3 text-xs text-muted">
                 Optional voice note can be attached in next iteration.
               </div>
             )}
@@ -1107,7 +1094,7 @@ export function IssuesPage() {
                 <img src={afterPhotoPreview} alt="After photo preview" className="h-48 w-full rounded-xl object-cover ring-1 ring-slate-200" />
                 <button
                   type="button"
-                  className="absolute right-2 top-2 rounded-full bg-white p-1 shadow ring-1 ring-slate-200"
+                  className="absolute right-2 top-2 rounded-full bg-[color:var(--color-card)] p-1 shadow ring-1 ring-slate-200"
                   onClick={() => { setAfterPhotoFile(null); setAfterPhotoPreview(null) }}
                 >
                   <X className="size-3" />
@@ -1116,7 +1103,7 @@ export function IssuesPage() {
             ) : (
               <button
                 type="button"
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 py-8 text-sm text-slate-500 hover:border-blue-300 hover:text-blue-600 transition-colors"
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[color:var(--color-border)] py-8 text-sm text-[color:var(--color-text_secondary)] hover:border-blue-300 hover:text-blue-600 transition-colors"
                 onClick={() => afterPhotoRef.current?.click()}
               >
                 <ImagePlus className="size-5" />
@@ -1155,14 +1142,14 @@ export function IssuesPage() {
               {statusBadge(selected.status)}
               <Badge variant="muted">{selected.category}</Badge>
             </div>
-            <div className="text-sm text-slate-700">{selected.description}</div>
+            <div className="text-sm text-[color:var(--color-text_secondary)]">{selected.description}</div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-slate-200 p-3 text-sm">
+              <div className="rounded-xl border border-[color:var(--color-border)] p-3 text-sm">
                 <div className="text-xs text-muted">Reported by</div>
                 <div className="mt-1 font-semibold">{selected.reportedBy}</div>
                 <div className="mt-1 text-xs text-muted">{formatDate(selected.raisedAt)}</div>
               </div>
-              <div className="rounded-xl border border-slate-200 p-3 text-sm">
+              <div className="rounded-xl border border-[color:var(--color-border)] p-3 text-sm">
                 <div className="text-xs text-muted">Assigned to</div>
                 <div className="mt-1 font-semibold">{selected.assignedTo ?? 'Unassigned'}</div>
                 <div className="mt-1 text-xs text-muted">Due {formatDate(selected.dueAt)}</div>
@@ -1176,3 +1163,4 @@ export function IssuesPage() {
     </div>
   )
 }
+

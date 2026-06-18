@@ -362,24 +362,6 @@ export function AppDashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm shadow-sm">
-              <span className="text-[color:var(--color-text_secondary)]">Project</span>
-              <div className="relative">
-                <select
-                  className="appearance-none bg-transparent pr-6 font-semibold text-[color:var(--color-text)] focus:outline-none"
-                  value={currentProjectId}
-                  onChange={(e) => setCurrentProjectId(e.target.value)}
-                  aria-label="Select project"
-                >
-                  {Object.values(projectsById).map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-0 top-1/2 size-4 -translate-y-1/2 text-[color:var(--color-text_muted)]" />
-              </div>
-            </div>
             <Button onClick={() => navigate('/app/emergency')} variant="danger">
               <AlertTriangle className="size-4" />
               Emergency
@@ -746,24 +728,6 @@ export function AppDashboardPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm shadow-sm">
-              <span className="text-[color:var(--color-text_secondary)]">Project</span>
-              <div className="relative">
-                <select
-                  className="appearance-none bg-transparent pr-6 font-semibold text-[color:var(--color-text)] focus:outline-none"
-                  value={currentProjectIdOwner ?? ''}
-                  onChange={(e) => setCurrentProjectIdOwner(e.target.value || null)}
-                  aria-label="Select project"
-                >
-                  {projectOptions.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-0 top-1/2 size-4 -translate-y-1/2 text-[color:var(--color-text_muted)]" />
-              </div>
-            </div>
             <Button variant="secondary" onClick={() => navigate('/app/insights')}>
               View insights
             </Button>

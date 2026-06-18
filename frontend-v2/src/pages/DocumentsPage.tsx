@@ -17,6 +17,7 @@ import {
   X,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react'
+import ReactMarkdown from 'react-markdown'
 
 import {
   bulkUploadProjectDocuments,
@@ -1069,9 +1070,11 @@ export function DocumentsPage() {
             </Button>
           </div>
           {aiHint ? (
-            <p className="rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] p-3 text-xs text-[color:var(--color-text_secondary)]">
-              {aiHint}
-            </p>
+            <div className="rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] p-3 text-xs text-[color:var(--color-text_secondary)] space-y-2 [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4 [&_li]:mt-1">
+              <ReactMarkdown>
+                {aiHint}
+              </ReactMarkdown>
+            </div>
           ) : (
             <p className="text-xs text-[color:var(--color-text_muted)]">
               Try: “Show me latest facade drawing” or “Find all permits expiring this month”.

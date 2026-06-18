@@ -10,6 +10,7 @@ import {
   FolderOpen,
   AlertTriangle,
   Gauge,
+  Layers,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -215,6 +216,10 @@ export function AppLayout() {
   const [typeFilter, setTypeFilter] = useState<NotificationAlert['type'] | 'all'>('all')
   const [alerts, setAlerts] = useState<NotificationAlert[]>([])
   const [toast, setToast] = useState<string | null>(null)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false)
+  const currentProjectId = useProjectsStore((s) => s.currentProjectId)
+  const setCurrentProjectId = useProjectsStore((s) => s.setCurrentProjectId)
   const initials = (user?.name || 'SN')
     .split(' ')
     .map((p) => p[0])
@@ -778,6 +783,46 @@ export function AppLayout() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <div className="relative hidden sm:flex items-center gap-2 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-1.5 shadow-sm">
+                  <Layers className="size-4 text-[color:var(--color-text_secondary)]" />
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 text-sm font-semibold text-[color:var(--color-text)] focus:outline-none"
+                    onClick={() => setProjectMenuOpen(!projectMenuOpen)}
+                  >
+                    <span>{currentProjectId && projectsById[currentProjectId] ? projectsById[currentProjectId].name : 'Select project'}</span>
+                    <ChevronDown className="size-4 text-[color:var(--color-text_muted)]" />
+                  </button>
+
+                  {projectMenuOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setProjectMenuOpen(false)} />
+                      <div className="absolute left-0 top-full z-50 mt-2 w-56 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-card)] p-1 shadow-[var(--shadow-card)]">
+                        {projectNames.length === 0 ? (
+                          <div className="px-3 py-2 text-sm text-[color:var(--color-text_muted)]">No projects</div>
+                        ) : (
+                          Object.values(projectsById).filter(p => !p.archived).map(p => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              className={cn(
+                                "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition hover:bg-[color:var(--color-surface_hover)]",
+                                p.id === currentProjectId ? "bg-[color:var(--color-surface_hover)] text-[color:var(--color-primary)]" : "text-[color:var(--color-text)]"
+                              )}
+                              onClick={() => {
+                                setCurrentProjectId(p.id)
+                                setProjectMenuOpen(false)
+                              }}
+                            >
+                              {p.name}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 <ThemeToggle />
                 <button
                   type="button"
@@ -790,25 +835,41 @@ export function AppLayout() {
                     <span className="absolute right-2 top-2 size-2 rounded-full bg-[color:var(--color-error)] ring-2 ring-[color:var(--color-card)]" />
                   ) : null}
                 </button>
-                <div className="flex items-center gap-2 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-2 py-1.5 pr-3 shadow-sm">
-                  <span className="flex size-8 items-center justify-center rounded-lg bg-[color:var(--color-primary)] text-xs font-bold text-white">
-                    {initials}
-                  </span>
-                  <div className="hidden sm:block">
-                    <div className="text-sm font-semibold leading-5">{user?.name || 'User'}</div>
-                    <div className="text-[11px] text-[color:var(--color-text_secondary)]">
-                      {resolvedRole.toUpperCase()}
+                
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setProfileOpen(!profileOpen)}
+                    className="flex items-center gap-2 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-2 py-1.5 pr-3 shadow-sm transition hover:bg-[color:var(--color-surface_hover)] focus:outline-none"
+                  >
+                    <span className="flex size-8 items-center justify-center rounded-lg bg-[color:var(--color-primary)] text-xs font-bold text-white">
+                      {initials}
+                    </span>
+                    <div className="hidden sm:block text-left">
+                      <div className="text-sm font-semibold leading-5">{user?.name || 'User'}</div>
+                      <div className="text-[11px] text-[color:var(--color-text_secondary)]">
+                        {resolvedRole.toUpperCase()}
+                      </div>
                     </div>
-                  </div>
+                    <ChevronDown className="ml-1 size-4 text-[color:var(--color-text_muted)]" />
+                  </button>
+
+                  {profileOpen ? (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
+                      <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-card)] p-1 shadow-[var(--shadow-card)]">
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-[color:var(--color-error)] transition hover:bg-[color:var(--color-error)]/10"
+                          onClick={handleLogout}
+                        >
+                          <LogOut className="size-4" />
+                          Log out
+                        </button>
+                      </div>
+                    </>
+                  ) : null}
                 </div>
-                <button
-                  type="button"
-                  className="hidden h-10 items-center justify-center rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 text-sm font-semibold text-[color:var(--color-text_secondary)] shadow-sm transition hover:bg-[color:var(--color-surface_hover)] sm:inline-flex"
-                  onClick={handleLogout}
-                >
-                  <LogOut className="mr-2 size-4" />
-                  Log out
-                </button>
               </div>
             </div>
           </header>

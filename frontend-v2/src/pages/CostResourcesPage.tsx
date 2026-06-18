@@ -383,26 +383,7 @@ export function CostResourcesPage() {
       <Card className="sticky top-0 z-30 bg-white p-4 shadow-[var(--shadow-soft)]">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm shadow-sm">
-              <span className="text-[color:var(--color-text_secondary)]">Project</span>
-              <div className="relative">
-                <select
-                  className="appearance-none bg-transparent pr-6 font-semibold text-[color:var(--color-text)] focus:outline-none"
-                  value={currentProjectId ?? ''}
-                  onChange={(e) => setCurrentProjectId(e.target.value || null)}
-                  aria-label="Select project"
-                >
-                  {projectOptions.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-0 top-1/2 size-4 -translate-y-1/2 text-[color:var(--color-text_muted)]" />
-              </div>
-            </div>
-
-            <span className="rounded-full bg-slate-900/5 px-3 py-1 text-xs font-semibold text-slate-800">
+            <span className="rounded-full bg-[color:var(--color-primary)]/10 px-3 py-1 text-xs font-semibold text-[color:var(--color-primary)]">
               Plan {project?.currentVersionLabel ?? '—'}
             </span>
             <span className="text-xs text-[color:var(--color-text_secondary)]">
