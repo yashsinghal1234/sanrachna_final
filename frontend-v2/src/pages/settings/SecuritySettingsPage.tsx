@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { messageFromApiError } from '@/api/projectTeamApi'
 import { apiChangePassword } from '@/api/securityApi'
 import { Button } from '@/components/ui/Button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { cn } from '@/utils/cn'
 

@@ -1,10 +1,7 @@
-import { ExternalLink, Lock, Shield } from 'lucide-react'
+import { Lock, Shield } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 
 import { useAuth, type Role } from '@/auth/AuthContext'
-import { cn } from '@/utils/cn'
-import { buttonVariants } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { AddTeamMembersPanel } from '@/components/team/AddTeamMembersPanel'
 import { TeamMembersTable } from '@/components/team/TeamMembersTable'

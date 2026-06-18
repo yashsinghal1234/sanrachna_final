@@ -342,7 +342,7 @@ async function retrieveRelevantChunks(question, projectContext, limit = 6, proje
 
 if (projectId) {
   try {
-      documentVectorChunks = await getDocumentVectorChunks(projectId, expandedQuestion, 4)
+      documentVectorChunks = await getDocumentVectorChunks(projectId, question, 4)
     } catch (err) {
       console.error('[DOCUMENT VECTOR RAG] Failed:', err?.message || err)
     }
@@ -359,11 +359,11 @@ function cleanChunkForAnswer(text) {
 }
 
 async function buildExtractiveAnswer(question, projectContext, history = [], projectId = null) {
-  const retrievalQuery =
-  buildConversationQuery(question, history)
+  const retrievalQuery = buildConversationQuery(question, history)
 
-const chunks = await retrieveRelevantChunks(
-    retrievalQuery,
+  // Pass the raw question to the retrieval logic to avoid polluting semantic embeddings
+  const chunks = await retrieveRelevantChunks(
+    question,
     projectContext,
     6,
     projectId

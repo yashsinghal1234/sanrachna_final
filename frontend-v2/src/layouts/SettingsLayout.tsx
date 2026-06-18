@@ -1,6 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
 
-import { useAuth } from '@/auth/AuthContext'
 import { cn } from '@/utils/cn'
 
 type SettingItem = { to: string; label: string }
@@ -13,16 +12,7 @@ const items: SettingItem[] = [
   { to: 'project', label: 'Project Settings' },
 ]
 
-function roleBadge(role: string) {
-  if (role === 'owner') return 'bg-[color:var(--color-warning)]/12 text-[color:var(--color-warning)]'
-  if (role === 'engineer') return 'bg-[color:var(--color-info)]/12 text-[color:var(--color-info)]'
-  return 'bg-[color:var(--color-success)]/12 text-[color:var(--color-success)]'
-}
-
 export function SettingsLayout() {
-  const { role } = useAuth()
-  const resolvedRole = role ?? 'engineer'
-
   return (
     <div className="flex flex-col gap-6">
       <nav className="flex items-end gap-1 overflow-x-auto border-b border-[color:var(--color-border)] px-4 pt-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">

@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  Archive,
   Bot,
   ChevronDown,
   ChevronRight,
@@ -10,12 +9,10 @@ import {
   FileText,
   Filter,
   FolderOpen,
-  GitCompare,
   Link2,
   Lock,
   Search,
   Send,
-  Shield,
   Upload,
   X,
 } from 'lucide-react'
@@ -39,8 +36,6 @@ import { Input } from '@/components/ui/Input'
 import { useActiveProject } from '@/hooks/useActiveProject'
 import type { AccessLevel, DocKind, DocPhase, DocReviewStatus, ProjectDocument } from '@/types/documents.types'
 import { cn } from '@/utils/cn'
-
-type ComplianceAlert = { id: string; severity: 'critical' | 'warning' | 'info'; text: string }
 
 type VersionFilter = 'latest' | 'all'
 type DateRangeFilter = 'all' | '7d' | '30d' | '90d'
@@ -119,20 +114,7 @@ function deriveDocumentStats(docs: ProjectDocument[], anchor: Date) {
   }
 }
 
-function deriveRecentEvents(docs: ProjectDocument[], limit: number) {
-  const events: { id: string; label: string; time: string }[] = []
-  for (const d of docs) {
-    const latest = d.versions.find((v) => v.version === d.currentVersion) ?? d.versions[0]
-    if (latest) {
-      events.push({
-        id: `${d.id}_v${latest.version}`,
-        label: `${d.name} · v${latest.version}`,
-        time: latest.uploadedAt,
-      })
-    }
-  }
-  return events.sort((a, b) => parseDate(b.time).getTime() - parseDate(a.time).getTime()).slice(0, limit)
-}
+
 
 function buildRows(docs: ProjectDocument[], versionFilter: VersionFilter): TableRow[] {
   const rows: TableRow[] = []
@@ -172,8 +154,6 @@ export function DocumentsPage() {
 
   const [projectDocuments, setProjectDocuments] = useState<ProjectDocument[]>([])
   const [statsFromApi, setStatsFromApi] = useState<Record<string, number> | undefined>(undefined)
-  const [docEventsFromApi, setDocEventsFromApi] = useState<{ id: string; label: string; time: string }[] | undefined>(undefined)
-  const [complianceAlerts, setComplianceAlerts] = useState<ComplianceAlert[]>([])
   const [documentsLoading, setDocumentsLoading] = useState(false)
   const [documentsError, setDocumentsError] = useState<string | null>(null)
 
@@ -238,8 +218,6 @@ export function DocumentsPage() {
     if (!projectId) {
       setProjectDocuments([])
       setStatsFromApi(undefined)
-      setDocEventsFromApi(undefined)
-      setComplianceAlerts([])
       setDocumentsError(null)
       setDocumentsLoading(false)
       return
@@ -252,16 +230,12 @@ export function DocumentsPage() {
         if (cancelled) return
         setProjectDocuments(d.documents)
         setStatsFromApi(d.stats)
-        setDocEventsFromApi(d.events)
-        setComplianceAlerts((d.complianceAlerts as ComplianceAlert[]) ?? [])
       })
       .catch((e) => {
         if (cancelled) return
         setDocumentsError(messageFromApiError(e))
         setProjectDocuments([])
         setStatsFromApi(undefined)
-        setDocEventsFromApi(undefined)
-        setComplianceAlerts([])
       })
       .finally(() => {
         if (!cancelled) setDocumentsLoading(false)
@@ -283,10 +257,7 @@ export function DocumentsPage() {
     return deriveDocumentStats(projectDocuments, anchor)
   }, [statsFromApi, projectDocuments, anchor])
 
-  const recentDocumentEvents = useMemo(() => {
-    if (docEventsFromApi?.length) return docEventsFromApi
-    return deriveRecentEvents(projectDocuments, 8)
-  }, [docEventsFromApi, projectDocuments])
+
 
   const filteredDocs = useMemo(() => {
     const q = search.trim().toLowerCase()
