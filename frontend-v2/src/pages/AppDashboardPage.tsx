@@ -2,7 +2,7 @@ import {
   AlertTriangle,
   CalendarDays,
   CheckCircle2,
-  ChevronDown,
+  
   ClipboardCheck,
   ClipboardList,
   Cpu,
@@ -173,12 +173,9 @@ export function AppDashboardPage() {
   const navigate = useNavigate()
   const projectsFromStore = useProjectsStore((s) => s.projects)
   const currentProjectIdOwner = useProjectsStore((s) => s.currentProjectId)
-  const setCurrentProjectIdOwner = useProjectsStore((s) => s.setCurrentProjectId)
+  
 
-  const projectOptions = useMemo(
-    () => Object.values(projectsFromStore).filter((p) => !p.archived),
-    [projectsFromStore],
-  )
+
 
   const [ownerCostBreakdown, setOwnerCostBreakdown] = useState<CostBreakdown | null>(null)
   const [ownerTimelineTasks, setOwnerTimelineTasks] = useState<TimelineTask[]>([])
@@ -254,8 +251,6 @@ export function AppDashboardPage() {
 
   if (role === 'worker') {
     const currentProjectId = useProjectsStore((s) => s.currentProjectId)
-    const projectsById = useProjectsStore((s) => s.projects)
-    const setCurrentProjectId = useProjectsStore((s) => s.setCurrentProjectId)
 
     const issuesByProject = useIssueStore((s) => s.issuesByProject)
     const rfis = useRfiStore((s) => s.rfis)
@@ -1466,4 +1461,7 @@ export function AppDashboardPage() {
     </div>
   )
 }
+
+
+
 

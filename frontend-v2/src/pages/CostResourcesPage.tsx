@@ -16,7 +16,7 @@ import {
   BrainCircuit,
   Calculator,
   CheckCircle2,
-  ChevronDown,
+  
   Download,
   HardHat,
   Info,
@@ -37,7 +37,7 @@ import { apiPatchPlanningStudio } from '@/api/projectTeamApi'
 import { useActiveProject } from '@/hooks/useActiveProject'
 import type { BillOfMaterialRow } from '@/types/planning.types'
 import type { CostBreakdown, ProjectSummary, ResourceLine } from '@/types/dashboard.types'
-import { useProjectsStore } from '@/store/useProjectsStore'
+
 
 function inr(n: number) {
   try {
@@ -78,7 +78,7 @@ function inr0(n: number) {
 
 export function CostResourcesPage() {
   const { project, masterPlan } = useActiveProject()
-  const { projects, currentProjectId, setCurrentProjectId } = useProjectsStore()
+  
   const [toast, setToast] = useState<string | null>(null)
   const [isDirty, setIsDirty] = useState(false)
   const [assumptionsOpen, setAssumptionsOpen] = useState(true)
@@ -245,11 +245,6 @@ export function CostResourcesPage() {
     ].filter((p) => p.cost > 0)
   }, [apiCostBreakdown])
 
-  const projectOptions = useMemo(() => {
-    return Object.values(projects)
-      .filter((p) => !p.archived)
-      .map((p) => ({ id: p.id, name: p.name }))
-  }, [projects])
 
   const summary = useMemo(() => {
     // If there is a predicted budget, show it as totalCost
@@ -1101,4 +1096,7 @@ export function CostResourcesPage() {
     </div>
   )
 }
+
+
+
 

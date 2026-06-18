@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Bell,
   CheckCircle2,
-  ChevronDown,
+  
   Clock3,
   Download,
   MessageSquareText,
@@ -23,7 +23,7 @@ import type {
   ProcurementScheduleRow,
   SupplierQuote,
 } from '@/types/procurement.types'
-import { useProjectsStore } from '@/store/useProjectsStore'
+
 
 function formatISO(iso: string) {
   return iso
@@ -93,7 +93,7 @@ export function ProcurementPage() {
   const [materialFilter, setMaterialFilter] = useState<string>('All')
   const [toast, setToast] = useState<string | null>(null)
   const [isDirty, setIsDirty] = useState(false)
-  const { projects, currentProjectId, setCurrentProjectId } = useProjectsStore()
+  
 
   const [procurementLoading, setProcurementLoading] = useState(false)
   const [procurementError, setProcurementError] = useState<string | null>(null)
@@ -141,11 +141,6 @@ export function ProcurementPage() {
     }
   }, [project?.id])
 
-  const projectOptions = useMemo(() => {
-    return Object.values(projects)
-      .filter((p) => !p.archived)
-      .map((p) => ({ id: p.id, name: p.name }))
-  }, [projects])
 
   const materials = useMemo(() => {
     const set = new Set<string>()
@@ -571,3 +566,6 @@ export function ProcurementPage() {
     </div>
   )
 }
+
+
+

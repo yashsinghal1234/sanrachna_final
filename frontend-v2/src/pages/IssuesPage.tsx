@@ -329,14 +329,14 @@ export function IssuesPage() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 text-sm">
           <Filter className="size-4 text-[color:var(--color-text_secondary)]" />
-          <select
+          <select style={{ colorScheme: 'dark' }}
             className="bg-transparent text-sm outline-none"
             value={filterStatus}
             onChange={(e) => setFilters({ filterStatus: e.target.value as IssueStatus | 'All' })}
           >
-            <option value="All">All status</option>
+            <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" value="All">All status</option>
             {ISSUE_STATUSES.map((s) => (
-              <option key={s} value={s}>
+              <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" key={s} value={s}>
                 {s}
               </option>
             ))}
@@ -344,14 +344,14 @@ export function IssuesPage() {
         </div>
         <div className="flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 text-sm">
           <Flag className="size-4 text-[color:var(--color-text_secondary)]" />
-          <select
+          <select style={{ colorScheme: 'dark' }}
             className="bg-transparent text-sm outline-none"
             value={filterSeverity}
             onChange={(e) => setFilters({ filterSeverity: e.target.value as IssueSeverity | 'All' })}
           >
-            <option value="All">All severity</option>
+            <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" value="All">All severity</option>
             {ISSUE_SEVERITIES.map((s) => (
-              <option key={s} value={s}>
+              <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" key={s} value={s}>
                 {s}
               </option>
             ))}
@@ -359,14 +359,14 @@ export function IssuesPage() {
         </div>
         <div className="flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 text-sm">
           <Layers className="size-4 text-[color:var(--color-text_secondary)]" />
-          <select
+          <select style={{ colorScheme: 'dark' }}
             className="bg-transparent text-sm outline-none"
             value={filterCategory}
             onChange={(e) => setFilters({ filterCategory: e.target.value as IssueCategory | 'All' })}
           >
-            <option value="All">All categories</option>
+            <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" value="All">All categories</option>
             {ISSUE_CATEGORIES.map((s) => (
-              <option key={s} value={s}>
+              <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" key={s} value={s}>
                 {s}
               </option>
             ))}
@@ -509,7 +509,7 @@ export function IssuesPage() {
   )
 
   const Analytics = (
-    <div className="space-y-4">
+    <div className="grid gap-4 sm:grid-cols-2">
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm">Severity distribution</CardTitle>
@@ -760,15 +760,16 @@ export function IssuesPage() {
           )}
           </CardContent>
         </Card>
-      {role !== 'worker' ? Analytics : null}
+
     </div>
   )
 
   const EngineerLayout = (
     <div className="space-y-6">
       {Header}
-      {Summary}
       {Filters}
+      {Summary}
+      {role !== 'worker' ? Analytics : null}
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="space-y-6 lg:col-span-8">
           {view === 'kanban' ? Kanban : Table}
@@ -782,7 +783,9 @@ export function IssuesPage() {
   const OwnerLayout = (
     <div className="space-y-6">
       {Header}
+      {Filters}
       {Summary}
+      {role !== 'worker' ? Analytics : null}
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="space-y-6 lg:col-span-8">
           <Card>
@@ -824,7 +827,6 @@ export function IssuesPage() {
               )}
                   </CardContent>
                 </Card>
-          {Filters}
           {Table}
         </div>
         <div className="lg:col-span-4">{DetailPanel}</div>
@@ -842,13 +844,13 @@ export function IssuesPage() {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 text-sm shadow-sm">
             <Layers className="size-4 text-[color:var(--color-text_secondary)]" />
-            <select
+            <select style={{ colorScheme: 'dark' }}
               className="bg-transparent text-sm outline-none"
               value={currentProjectId}
               onChange={(e) => setCurrentProjectId(e.target.value)}
             >
               {Object.values(projects).map((p) => (
-                <option key={p.id} value={p.id}>
+                <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}
@@ -976,9 +978,9 @@ export function IssuesPage() {
               <label className="text-sm font-medium text-slate-800" htmlFor="category">
                 Category
               </label>
-              <select id="category" name="category" className={field} defaultValue="Quality">
+              <select style={{ colorScheme: 'dark' }} id="category" name="category" className={field} defaultValue="Quality">
                 {ISSUE_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
+                  <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" key={c} value={c}>
                     {c}
                   </option>
                 ))}
@@ -988,9 +990,9 @@ export function IssuesPage() {
               <label className="text-sm font-medium text-slate-800" htmlFor="severity">
                 Severity
               </label>
-              <select id="severity" name="severity" className={field} defaultValue="Medium">
+              <select style={{ colorScheme: 'dark' }} id="severity" name="severity" className={field} defaultValue="Medium">
                 {ISSUE_SEVERITIES.map((s) => (
-                  <option key={s} value={s}>
+                  <option className="bg-[color:var(--color-bg)] text-[color:var(--color-text)]" key={s} value={s}>
                     {s}
                   </option>
                 ))}
@@ -1163,4 +1165,6 @@ export function IssuesPage() {
     </div>
   )
 }
+
+
 

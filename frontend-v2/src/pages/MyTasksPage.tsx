@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarDays, CheckCircle2, ChevronDown, Clock, Plus, Search, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, CalendarDays, CheckCircle2,  Clock, Plus, Search, ShieldAlert } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -178,8 +178,6 @@ export function MyTasksPage() {
   const { role, user } = useAuth()
   const navigate = useNavigate()
   const currentProjectId = useProjectsStore((s) => s.currentProjectId)
-  const projectsById = useProjectsStore((s) => s.projects)
-  const setCurrentProjectId = useProjectsStore((s) => s.setCurrentProjectId)
 
   const myKey = useMemo(() => {
     const nm = user?.name?.trim()
@@ -1070,4 +1068,7 @@ export function MyTasksPage() {
     </div>
   )
 }
+
+
+
 
