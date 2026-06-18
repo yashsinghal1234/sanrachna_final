@@ -123,9 +123,9 @@ async function resetPassword(req, res, next) {
 
 async function changePassword(req, res, next) {
   try {
-    const { currentPassword, newPassword } = req.body
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ message: 'Current password and new password are required.' })
+    const { newPassword } = req.body
+    if (!newPassword) {
+      return res.status(400).json({ message: 'New password is required.' })
     }
     if (String(newPassword).length < 6) {
       return res.status(400).json({ message: 'New password must be at least 6 characters.' })
@@ -136,10 +136,7 @@ async function changePassword(req, res, next) {
       return res.status(404).json({ message: 'User not found.' })
     }
 
-    const match = await bcrypt.compare(String(currentPassword), user.password)
-    if (!match) {
-      return res.status(401).json({ message: 'Current password is incorrect.' })
-    }
+
 
     user.password = await bcrypt.hash(String(newPassword), 10)
     await user.save()

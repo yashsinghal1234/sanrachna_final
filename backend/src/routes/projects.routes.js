@@ -27,6 +27,7 @@ const {
   updateDocument,
   bulkCreateDocuments,
   getDocumentFile,
+  askDocuments,
 } = require('../controllers/documents.controller')
 const { optionalSingleDocumentUpload, bulkDocumentUpload } = require('../middleware/uploadDocument')
 const { listEmergency, createEmergency, updateEmergency } = require('../controllers/emergency.controller')
@@ -107,6 +108,7 @@ router.post('/:projectId/contacts', asyncHandler(createContact))
 router.get('/:projectId/documents', asyncHandler(listDocuments))
 router.patch('/:projectId/documents/:documentId', asyncHandler(updateDocument))
 router.post('/:projectId/documents/bulk', bulkDocumentUpload, asyncHandler(bulkCreateDocuments))
+router.post('/:projectId/documents/ask', asyncHandler(askDocuments))
 router.post('/:projectId/documents', optionalSingleDocumentUpload, asyncHandler(createDocument))
 router.get('/:projectId/documents/:documentId/file', asyncHandler(getDocumentFile))
 

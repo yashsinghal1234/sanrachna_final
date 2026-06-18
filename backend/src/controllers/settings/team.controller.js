@@ -1,5 +1,6 @@
 const mongoose = require('mongoose')
 const User = require('../../models/User')
+const Project = require('../../models/Project')
 const { upsertTeamMemberContact } = require('../../services/internalTeamContact')
 const { serializeDoc, serializeDocs } = require('../../utils/serialize')
 
@@ -60,6 +61,19 @@ async function addTeamMember(req, res) {
   if (actorRole === 'engineer' && user.role !== 'worker') {
     res.status(403).json({ message: 'Engineer can only add users with Worker role.' })
     return
+  }
+
+  // Prevent worker from joining multiple active projects
+  if (user.role === 'worker') {
+    const activeProjectWithWorker = await Project.findOne({
+      members: user._id,
+      status: { $ne: 'Completed' }
+    });
+
+    if (activeProjectWithWorker && String(activeProjectWithWorker._id) !== String(req.project._id)) {
+      res.status(409).json({ message: 'This worker is currently assigned to another active project and must be removed or finish the project before joining a new one.' });
+      return;
+    }
   }
 
   if (String(req.project.owner) === String(user._id) || req.project.members.some((m) => String(m) === String(user._id))) {

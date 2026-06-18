@@ -93,9 +93,7 @@ export function AddTeamMembersPanel({
             disabled={disabled || !hasValidProjectSelection}
           />
         </div>
-        <div className="mt-1 text-xs text-[color:var(--color-text_muted)]">
-          Allowed: {targetAddRole === 'engineer' ? 'Owner → Engineer' : 'Engineer → Worker'}
-        </div>
+
         {!hasValidProjectSelection ? (
           <div className="text-xs text-[color:var(--color-warning)]">Select a valid project first.</div>
         ) : null}
@@ -168,9 +166,7 @@ export function AddTeamMembersPanel({
               </div>
             ) : null}
           </div>
-        ) : (
-          <div className="text-xs text-[color:var(--color-text_muted)]">Tip: type at least 2 characters to search.</div>
-        )}
+        ) : null}
       </div>
 
       <div>

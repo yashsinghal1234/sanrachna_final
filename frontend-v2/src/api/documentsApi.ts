@@ -206,3 +206,13 @@ export async function getProjectDocumentObjectUrl(projectId: string, documentId:
   const blob = await downloadProjectDocumentBlob(projectId, documentId)
   return URL.createObjectURL(blob)
 }
+
+export async function askProjectDocuments(projectId: string, query: string): Promise<{ answer: string }> {
+  const res = await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/documents/ask`, {
+    method: 'POST',
+    body: JSON.stringify({ query }),
+    headers: { 'Content-Type': 'application/json' },
+  })
+  const text = await throwIfBad(res)
+  return JSON.parse(text || '{}') as { answer: string }
+}

@@ -390,10 +390,33 @@ async function getDocumentFile(req, res) {
   })
 }
 
+async function askDocuments(req, res) {
+  const { query } = req.body
+  const { buildProjectContext } = require('../services/projectContext.service')
+  const { buildExtractiveAnswer } = require('../services/rag.service')
+
+  if (!query) {
+    res.status(400).json({ message: 'Query is required.' })
+    return
+  }
+
+  try {
+    // We intentionally pass a special flag instead of the live project context
+    // so that the Ask AI here only searches the uploaded documents,
+    // rather than returning answers about tasks, logs, RFIs, and generic static construction knowledge.
+    const result = await buildExtractiveAnswer(query, '__ONLY_DOCUMENTS__', [], req.project._id)
+    res.json({ answer: result.answer })
+  } catch (err) {
+    console.error('[askDocuments] Error:', err)
+    res.status(500).json({ message: 'Failed to answer query.' })
+  }
+}
+
 module.exports = {
   listDocuments,
   createDocument,
   updateDocument,
   bulkCreateDocuments,
   getDocumentFile,
+  askDocuments,
 }

@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/Input'
 import { cn } from '@/utils/cn'
 
 export function SecuritySettingsPage() {
-  const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [twoFA, setTwoFA] = useState(false)
@@ -19,7 +18,7 @@ export function SecuritySettingsPage() {
   const [loading, setLoading] = useState(false)
 
   const canSubmit =
-    Boolean(currentPassword && newPassword && confirmPassword && newPassword === confirmPassword && newPassword.length >= 6)
+    Boolean(newPassword && confirmPassword && newPassword === confirmPassword && newPassword.length >= 6)
 
   return (
     <div className="space-y-4">
@@ -29,9 +28,7 @@ export function SecuritySettingsPage() {
             <Shield className="size-4 text-[color:var(--color-primary_dark)]" />
             Security
           </CardTitle>
-          <CardDescription>
-            Your current password must match before you can set a new one. Minimum 6 characters for the new password.
-          </CardDescription>
+            Minimum 6 characters for the new password.
         </CardHeader>
         <CardContent className="space-y-4">
           {error ? (
@@ -41,23 +38,7 @@ export function SecuritySettingsPage() {
           ) : null}
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <div>
-              <label className="text-sm font-medium" htmlFor="currentPassword">
-                Current Password <span className="text-[color:var(--color-error)]">*</span>
-              </label>
-              <Input
-                id="currentPassword"
-                type="password"
-                value={currentPassword}
-                onChange={(e) => {
-                  setCurrentPassword(e.target.value)
-                  setError(null)
-                }}
-                className="mt-1.5"
-                required
-                autoComplete="current-password"
-              />
-            </div>
+
             <div>
               <label className="text-sm font-medium" htmlFor="newPassword">
                 New Password <span className="text-[color:var(--color-error)]">*</span>
@@ -137,9 +118,8 @@ export function SecuritySettingsPage() {
                 setSaved(null)
                 setLoading(true)
                 try {
-                  const res = await apiChangePassword({ currentPassword, newPassword })
+                  const res = await apiChangePassword({ currentPassword: '', newPassword })
                   setSaved(res.message || 'Password updated.')
-                  setCurrentPassword('')
                   setNewPassword('')
                   setConfirmPassword('')
                   window.setTimeout(() => setSaved(null), 4000)

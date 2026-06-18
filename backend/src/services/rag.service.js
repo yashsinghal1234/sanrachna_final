@@ -269,10 +269,13 @@ async function retrieveRelevantChunks(question, projectContext, limit = 6, proje
   const q = normalizeText(question)
   const expandedQuestion = expandQuestion(question)
 
-  const chunks = [
-    ...getLiveChunks(projectContext),
-    ...getStaticChunks(),
-  ]
+  const chunks =
+    projectContext === '__ONLY_DOCUMENTS__'
+      ? []
+      : [
+          ...getLiveChunks(projectContext),
+          ...getStaticChunks(),
+        ]
 
   const forcedChunks = []
 
@@ -370,7 +373,9 @@ const chunks = await retrieveRelevantChunks(
   if (!chunks.length) {
     return {
       answer:
-        'I could not find matching information in the project data or construction knowledge files. Try asking about tasks, issues, RFIs, daily logs, safety, material estimation, BOQ/BOM, or delay risks.',
+        projectContext === '__ONLY_DOCUMENTS__'
+          ? 'I could not find matching information in your uploaded documents. Make sure you have uploaded readable PDF files.'
+          : 'I could not find matching information in the project data or construction knowledge files. Try asking about tasks, issues, RFIs, daily logs, safety, material estimation, BOQ/BOM, or delay risks.',
       citations: ['No matching RAG chunk found'],
       contexts: [],
     }

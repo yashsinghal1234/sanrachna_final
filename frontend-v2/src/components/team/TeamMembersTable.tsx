@@ -99,9 +99,7 @@ export function TeamMembersTable({ viewer, projectId, members, onRefresh, onToas
               </td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">
-                  <Button type="button" size="sm" variant="secondary" onClick={() => setEditFor(m)}>
-                    Edit Member
-                  </Button>
+
                   <Button
                     type="button"
                     size="sm"

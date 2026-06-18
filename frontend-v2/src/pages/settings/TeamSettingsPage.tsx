@@ -90,26 +90,6 @@ export function TeamSettingsPage() {
         </div>
       ) : null}
 
-      {mode === 'owner' ? (
-        <Card className="border-[color:var(--color-primary_light)]/40 bg-[color:var(--color-primary_light)]/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Project creation</CardTitle>
-            <CardDescription>
-              Create new sites and assign engineers from the dedicated workspace (recommended).
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap items-center gap-3">
-            <Link
-              to="/app/create-project"
-              className={cn(buttonVariants({ variant: 'secondary', size: 'md' }))}
-            >
-              Open Create Project
-              <ExternalLink className="size-4" />
-            </Link>
-          </CardContent>
-        </Card>
-      ) : null}
-
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
