@@ -82,6 +82,7 @@ type IssueDraft = {
   dueDays: number
   reportedBy: string
   attachmentName?: string
+  attachmentUrl?: string
 }
 
 export type IssueState = {
@@ -109,7 +110,7 @@ export type IssueState = {
   assignIssue: (projectId: string, id: string, assignedTo: string) => void
   moveStatus: (projectId: string, id: string, status: IssueStatus, author: string, note?: string) => void
   addProgress: (projectId: string, id: string, author: string, note: string, status?: IssueStatus) => void
-  verifyIssue: (projectId: string, id: string, verifiedBy: string, notes: string, afterPhotoName?: string) => void
+  verifyIssue: (projectId: string, id: string, verifiedBy: string, notes: string, afterPhotoName?: string, afterPhotoUrl?: string) => void
   closeIssue: (projectId: string, id: string, author: string) => void
 
   saveChanges: () => void
@@ -187,7 +188,7 @@ export const useIssueStore = create<IssueState>()((set, get) => ({
       floor: draft.floor,
       area: draft.area,
       attachments: draft.attachmentName
-        ? [{ id: attId!, kind: 'photo', name: draft.attachmentName, stage: 'evidence' }]
+        ? [{ id: attId!, kind: 'photo', name: draft.attachmentName, stage: 'evidence', url: draft.attachmentUrl }]
         : [],
       progressLog: [
         {
@@ -304,14 +305,14 @@ export const useIssueStore = create<IssueState>()((set, get) => ({
       return { ...s, issuesByProject: { ...s.issuesByProject, [projectId]: next }, isDirty: true }
     }),
 
-  verifyIssue: (projectId, id, verifiedBy, notes, afterPhotoName) => {
+  verifyIssue: (projectId, id, verifiedBy, notes, afterPhotoName, afterPhotoUrl) => {
     set((s) => {
       const arr = s.issuesByProject[projectId] ?? []
       const next = arr.map((i) => {
         if (i.id !== id) return i
         const afterId = afterPhotoName ? `att_after_${Date.now().toString(36)}` : undefined
         const afterAttachment: IssueAttachment | null =
-          afterPhotoName && afterId ? { id: afterId, kind: 'photo', name: afterPhotoName, stage: 'after' } : null
+          afterPhotoName && afterId ? { id: afterId, kind: 'photo', name: afterPhotoName, stage: 'after', url: afterPhotoUrl } : null
         const attachments = afterAttachment ? [...i.attachments, afterAttachment] : i.attachments
         const verification: IssueVerification = { verifiedBy, verifiedAt: nowIso(), notes, afterPhotoAttachmentId: afterId }
         const log: IssueProgressLog = {

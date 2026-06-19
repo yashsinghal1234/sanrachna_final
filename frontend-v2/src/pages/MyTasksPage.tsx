@@ -453,7 +453,10 @@ export function MyTasksPage() {
         </div>
       ) : null}
       {tasksLoading ? (
-        <div className="text-sm text-[color:var(--color-text_secondary)]">Loading your tasks…</div>
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-4 py-3 shadow-2xl">
+          <div className="size-4 animate-spin rounded-full border-2 border-blue-600 border-r-transparent"></div>
+          <span className="text-sm font-medium text-[color:var(--color-text)]">Loading your tasks…</span>
+        </div>
       ) : null}
 
       {/* Header / controls */}

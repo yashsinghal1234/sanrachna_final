@@ -160,6 +160,24 @@ export async function updateProjectDocument(
   return normalizeDocument(j.document)
 }
 
+export async function uploadProjectDocumentVersion(
+  projectId: string,
+  documentId: string,
+  file: File,
+): Promise<ProjectDocument> {
+  const fd = new FormData()
+  fd.set('file', file)
+
+  const res = await apiFetch(`/api/projects/${encodeURIComponent(projectId)}/documents/${encodeURIComponent(documentId)}/version`, {
+    method: 'POST',
+    body: fd,
+  })
+  const text = await throwIfBad(res)
+  const j = JSON.parse(text || '{}') as { document?: unknown }
+  if (!j.document) throw new Error('Invalid update response')
+  return normalizeDocument(j.document)
+}
+
 export async function openProjectDocumentInNewTab(projectId: string, documentId: string): Promise<void> {
   const path = `/api/projects/${encodeURIComponent(projectId)}/documents/${encodeURIComponent(documentId)}/file`
   const res = await apiFetch(path)

@@ -1,5 +1,5 @@
 import { Download, Mail, Phone, Plus, Search, Upload, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { createProjectContact, listProjectContacts } from '@/api/projectContactsApi'
 import { messageFromApiError } from '@/api/projectTeamApi'
@@ -373,6 +373,80 @@ export function ContactsPage() {
     }
   }
 
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleExport = () => {
+    const header = ['Name,Role,Phone,Email,Phase,Type\n']
+    const rows = contacts.map(c => `"${c.name}","${c.role}","${c.phone}","${c.email}","${c.phase}","${c.directoryType}"\n`)
+    const csv = header.concat(rows).join('')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `contacts_${projectId || 'export'}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+    setToast('Directory exported to CSV.')
+  }
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = async (event) => {
+      const text = event.target?.result as string
+      const lines = text.split('\n').filter(l => l.trim())
+      if (lines.length > 1) {
+        let imported = 0
+        for (let i = 1; i < lines.length; i++) {
+          // simple csv parsing
+          const parts = lines[i].split(',').map(s => s.replace(/^"|"$/g, '').trim())
+          if (parts.length >= 3) {
+            const name = parts[0]
+            const role = parts[1]
+            const phone = parts[2]
+            const email = parts[3]
+            const phase = (parts[4] as ProjectPhase) || 'Foundation'
+            const contactType = (parts[5] as ContactDirectoryType) || 'Internal Team'
+            if (name && phone) {
+               if (backendContacts && mongoProjectId) {
+                 await createProjectContact(mongoProjectId, { name, role, phone, email, phase, contactType })
+               } else {
+                 const row: Contact = {
+                  id: `local_${Date.now().toString(36)}_${i}`,
+                  name,
+                  title: role,
+                  role: 'Worker',
+                  type: contactType === 'Internal Team' ? 'Internal' : 'External',
+                  directoryType: contactType,
+                  phone,
+                  email: email || '',
+                  phase: phase,
+                  responsibility: '—',
+                  availability: 'On Site',
+                  isEmergency: contactType === 'Emergency',
+                  emergencyKind: contactType === 'Emergency' ? 'Safety Officer' : undefined,
+                  linked: { tasks: 0, openRfis: 0, activeIssues: 0 },
+                 }
+                 setContacts((prev) => [...prev, row])
+               }
+               imported++
+            }
+          }
+        }
+        if (backendContacts && mongoProjectId && imported > 0) {
+           const pc = await listProjectContacts(mongoProjectId)
+           setContacts((pc.contacts || []).map((row) => mongoRowToContact(row)))
+        }
+        setToast(`Successfully imported ${imported} contacts.`)
+      } else {
+        setToast('CSV file is empty or invalid.')
+      }
+    }
+    reader.readAsText(file)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   return (
     <div className="space-y-6">
       {!projectId ? (
@@ -398,34 +472,10 @@ export function ContactsPage() {
         </Card>
       ) : null}
       {projectId && contactsLoading ? (
-        <div className="text-sm text-[color:var(--color-text_secondary)]">Loading directory…</div>
-      ) : null}
-
-      {projectId && backendContacts && teamProjects.length ? (
-        <Card>
-          <CardContent className="py-4">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="text-sm font-semibold text-[color:var(--color-text)]">Server project for contacts</div>
-                <div className="mt-0.5 text-xs text-[color:var(--color-text_muted)]">
-                  People directory is loaded from <span className="font-mono">GET /api/projects/…/contacts</span> for the
-                  selected Mongo project. Workspace cards still use the planning workspace id for suppliers.
-                </div>
-              </div>
-              <select
-                className="h-10 w-full max-w-md rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 text-sm sm:w-auto"
-                value={mongoProjectId ?? ''}
-                onChange={(e) => setMongoProjectId(e.target.value || null)}
-              >
-                {teamProjects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-4 py-3 shadow-2xl">
+          <div className="size-4 animate-spin rounded-full border-2 border-blue-600 border-r-transparent"></div>
+          <span className="text-sm font-medium text-[color:var(--color-text)]">Loading directory…</span>
+        </div>
       ) : null}
 
       {toast ? (
@@ -437,42 +487,6 @@ export function ContactsPage() {
           {toast}
         </div>
       ) : null}
-
-      {/* Top action bar */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative max-w-xl flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--color-text_muted)]" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="pl-10"
-            placeholder="Search by name, role, supplier, phase..."
-            aria-label="Search contacts"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" onClick={() => setAddOpen(true)}>
-            <Plus className="size-4" />
-            Add Contact
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setToast('CSV import will call your backend when the endpoint is available.')}
-          >
-            <Upload className="size-4" />
-            Import CSV
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setToast('Directory export will call your backend when the endpoint is available.')}
-          >
-            <Download className="size-4" />
-            Export Directory
-          </Button>
-        </div>
-      </div>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -488,33 +502,6 @@ export function ContactsPage() {
           {headerCountPill('Emergency', contactsStats.emergencyContacts)}
         </div>
       </div>
-
-      {/* Emergency strip */}
-      <Card className="border-[color:var(--color-error)]/25 bg-[color:var(--color-error)]/5">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Emergency contacts</CardTitle>
-          <CardDescription>Pinned for safety-first response</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {emergencyContacts.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setSelectedContact(c)}
-              className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-3 text-left transition hover:shadow-[var(--shadow-soft)]"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="text-sm font-semibold">{c.emergencyKind ?? 'Emergency'}</div>
-                  <div className="mt-1 text-xs text-[color:var(--color-text_secondary)]">{c.name}</div>
-                </div>
-                {availabilityPill(c.availability)}
-              </div>
-              <div className="mt-2 text-xs text-[color:var(--color-text_secondary)]">{c.phone}</div>
-            </button>
-          ))}
-        </CardContent>
-      </Card>
 
       {/* Filters */}
       <Card>
@@ -571,6 +558,70 @@ export function ContactsPage() {
               <option value="Emergency">Emergency</option>
             </select>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Top action bar */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative max-w-xl flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[color:var(--color-text_muted)]" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="pl-10"
+            placeholder="Search by name, role, supplier, phase..."
+            aria-label="Search contacts"
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <input type="file" accept=".csv" className="hidden" ref={fileInputRef} onChange={handleImport} />
+          <Button type="button" onClick={() => setAddOpen(true)}>
+            <Plus className="size-4" />
+            Add Contact
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="size-4" />
+            Import CSV
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleExport}
+          >
+            <Download className="size-4" />
+            Export Directory
+          </Button>
+        </div>
+      </div>
+
+      {/* Emergency strip */}
+      <Card className="border-[color:var(--color-error)]/25 bg-[color:var(--color-error)]/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Emergency contacts</CardTitle>
+          <CardDescription>Pinned for safety-first response</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {emergencyContacts.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => setSelectedContact(c)}
+              className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-3 text-left transition hover:shadow-[var(--shadow-soft)]"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="text-sm font-semibold">{c.emergencyKind ?? 'Emergency'}</div>
+                  <div className="mt-1 text-xs text-[color:var(--color-text_secondary)]">{c.name}</div>
+                </div>
+                {availabilityPill(c.availability)}
+              </div>
+              <div className="mt-2 text-xs text-[color:var(--color-text_secondary)]">{c.phone}</div>
+            </button>
+          ))}
         </CardContent>
       </Card>
 
@@ -880,15 +931,23 @@ export function ContactsPage() {
               ) : null}
 
               <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant="secondary" className="w-full">
+                <Button type="button" variant="secondary" className="w-full" onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${selectedContact.phone}` }}>
                   <Phone className="size-4" />
                   Call
                 </Button>
-                <Button type="button" variant="secondary" className="w-full">
+                <Button type="button" variant="secondary" className="w-full" onClick={(e) => { e.stopPropagation(); window.location.href = `mailto:${selectedContact.email}` }}>
                   <Mail className="size-4" />
                   Email
                 </Button>
-                <Button type="button" variant="outline" className="col-span-2 w-full">
+                <Button type="button" variant="outline" className="w-full" onClick={(e) => {
+                  e.stopPropagation()
+                  setContacts(contacts.map(c => c.id === selectedContact.id ? { ...c, isEmergency: !c.isEmergency } : c))
+                  setSelectedContact({ ...selectedContact, isEmergency: !selectedContact.isEmergency })
+                  setToast(selectedContact.isEmergency ? 'Removed from emergency contacts.' : 'Added to emergency contacts.')
+                }}>
+                  {selectedContact.isEmergency ? 'Unmark Emergency' : 'Mark Emergency'}
+                </Button>
+                <Button type="button" variant="outline" className="w-full">
                   View profile
                 </Button>
               </div>
@@ -974,11 +1033,11 @@ export function ContactsPage() {
               ) : null}
 
               <div className="grid grid-cols-2 gap-2">
-                <Button type="button" variant="secondary" className="w-full">
+                <Button type="button" variant="secondary" className="w-full" onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${selectedSupplier.phone}` }}>
                   <Phone className="size-4" />
                   Call
                 </Button>
-                <Button type="button" variant="secondary" className="w-full">
+                <Button type="button" variant="secondary" className="w-full" onClick={(e) => { e.stopPropagation(); window.location.href = `mailto:${selectedSupplier.email}` }}>
                   <Mail className="size-4" />
                   Email
                 </Button>
@@ -1041,6 +1100,16 @@ export function ContactsPage() {
               </div>
               <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-3 text-xs text-[color:var(--color-text_secondary)]">
                 Use this contact for inspections and permit clarifications. Keep a call log for audit.
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                <Button type="button" variant="secondary" className="w-full" onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${selectedAuthority.phone}` }}>
+                  <Phone className="size-4" />
+                  Call
+                </Button>
+                <Button type="button" variant="secondary" className="w-full" onClick={(e) => { e.stopPropagation(); window.location.href = `mailto:${selectedAuthority.email}` }}>
+                  <Mail className="size-4" />
+                  Email
+                </Button>
               </div>
             </div>
           </div>

@@ -47,7 +47,8 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'relative z-10 w-full max-w-lg rounded-2xl border border-slate-200/80 bg-card p-6 shadow-2xl transition-all duration-200',
+          'relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200/80 bg-[color:var(--color-card)] p-6 shadow-2xl transition-all duration-200',
+          '[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]',
           className,
         )}
       >

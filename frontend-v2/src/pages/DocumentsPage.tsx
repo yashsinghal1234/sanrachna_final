@@ -10,7 +10,6 @@ import {
   Filter,
   FolderOpen,
   Link2,
-  Lock,
   Search,
   Send,
   Upload,
@@ -20,13 +19,13 @@ import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'reac
 import ReactMarkdown from 'react-markdown'
 
 import {
-  bulkUploadProjectDocuments,
   downloadProjectDocumentFile,
   fetchProjectDocuments,
   getProjectDocumentObjectUrl,
   updateProjectDocument,
   uploadProjectDocument,
   askProjectDocuments,
+  uploadProjectDocumentVersion,
 } from '@/api/documentsApi'
 import { messageFromApiError } from '@/api/projectTeamApi'
 import { useAuth } from '@/auth/AuthContext'
@@ -177,13 +176,13 @@ export function DocumentsPage() {
   const [previewTitle, setPreviewTitle] = useState('')
   const [previewLoading, setPreviewLoading] = useState(false)
 
-  const [uploadMode, setUploadMode] = useState<'single' | 'bulk'>('single')
+  const [uploadMode, setUploadMode] = useState<'single' | 'update'>('single')
   const [uploadTitle, setUploadTitle] = useState('')
   const [uploadPhase, setUploadPhase] = useState<DocPhase>('Design')
   const [uploadType, setUploadType] = useState<DocKind>('Other')
   const [uploadDescription, setUploadDescription] = useState('')
   const [uploadFile, setUploadFile] = useState<File | null>(null)
-  const [bulkFiles, setBulkFiles] = useState<File[]>([])
+  const [uploadDocId, setUploadDocId] = useState<string>('')
   const [uploadBusy, setUploadBusy] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
 
@@ -294,7 +293,7 @@ export function DocumentsPage() {
     return `${doc.name.replace(/[/\\?%*:|"<>]/g, '-').slice(0, 120)}.bin`
   }
 
-  const openUpload = (mode: 'single' | 'bulk') => {
+  const openUpload = (mode: 'single' | 'update') => {
     setUploadMode(mode)
     setUploadError(null)
     setUploadTitle('')
@@ -302,7 +301,11 @@ export function DocumentsPage() {
     setUploadType('Other')
     setUploadDescription('')
     setUploadFile(null)
-    setBulkFiles([])
+    if (mode === 'update' && selected) {
+      setUploadDocId(selected.id)
+    } else {
+      setUploadDocId('')
+    }
     setUploadOpen(true)
   }
 
@@ -328,14 +331,19 @@ export function DocumentsPage() {
           description: uploadDescription,
           file: uploadFile,
         })
-      } else if (!bulkFiles.length) {
-        setUploadError('Add at least one file.')
-        return
       } else {
-        await bulkUploadProjectDocuments(projectId, bulkFiles, {
-          phase: uploadPhase,
-          type: uploadType,
-        })
+        if (!uploadDocId) {
+          setUploadError('Select a document to update.')
+          return
+        }
+        if (!uploadFile) {
+          setUploadError('Choose a file to upload as the new version.')
+          return
+        }
+        const updated = await uploadProjectDocumentVersion(projectId, uploadDocId, uploadFile)
+        if (selected?.id === uploadDocId) {
+          setSelected(updated)
+        }
       }
       setUploadOpen(false)
       reloadDocuments()
@@ -402,7 +410,10 @@ export function DocumentsPage() {
         </Card>
       ) : null}
       {projectId && documentsLoading ? (
-        <div className="text-sm text-[color:var(--color-text_secondary)]">Loading documents…</div>
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-4 py-3 shadow-2xl">
+          <div className="size-4 animate-spin rounded-full border-2 border-blue-600 border-r-transparent"></div>
+          <span className="text-sm font-medium text-[color:var(--color-text)]">Loading documents…</span>
+        </div>
       ) : null}
 
       {/* Page heading */}
@@ -418,8 +429,8 @@ export function DocumentsPage() {
             <Upload className="size-4" />
             Upload Document
           </Button>
-          <Button type="button" variant="secondary" onClick={() => openUpload('bulk')}>
-            Bulk Upload
+          <Button type="button" variant="secondary" onClick={() => openUpload('update')}>
+            Update Document
           </Button>
         </div>
       </div>
@@ -917,11 +928,11 @@ export function DocumentsPage() {
         >
           <Card className="relative w-full max-w-lg shadow-[var(--shadow-card)]" onClick={(e) => e.stopPropagation()}>
             <CardHeader>
-              <CardTitle>{uploadMode === 'single' ? 'Upload document' : 'Bulk upload'}</CardTitle>
+              <CardTitle>{uploadMode === 'single' ? 'Upload document' : 'Update document'}</CardTitle>
               <CardDescription>
                 {uploadMode === 'single'
                   ? 'Files are stored on the server and linked to this project.'
-                  : 'Upload many files at once. Each file becomes its own document (title from filename).'}
+                  : 'Upload a new version for an existing document.'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -938,46 +949,65 @@ export function DocumentsPage() {
                     onChange={(e) => setUploadTitle(e.target.value)}
                   />
                 </div>
-              ) : null}
+              ) : (
+                <div>
+                  <label className="text-sm font-medium" htmlFor="doc-select">
+                    Document to update
+                  </label>
+                  <select
+                    id="doc-select"
+                    className="mt-1.5 w-full rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm"
+                    value={uploadDocId}
+                    onChange={(e) => setUploadDocId(e.target.value)}
+                  >
+                    <option value="" disabled>Select a document</option>
+                    {projectDocuments.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name} ({d.id})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium" htmlFor="doc-phase">
-                    Phase
-                  </label>
-                  <select
-                    id="doc-phase"
-                    className="mt-1.5 w-full rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm"
-                    value={uploadPhase}
-                    onChange={(e) => setUploadPhase(e.target.value as DocPhase)}
-                  >
-                    <option value="Design">Design</option>
-                    <option value="Foundation">Foundation</option>
-                    <option value="Structure">Structure</option>
-                    <option value="MEP">MEP</option>
-                    <option value="Finishing">Finishing</option>
-                  </select>
+              {uploadMode === 'single' ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium" htmlFor="doc-phase">
+                      Phase
+                    </label>
+                    <select
+                      id="doc-phase"
+                      className="mt-1.5 w-full rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm"
+                      value={uploadPhase}
+                      onChange={(e) => setUploadPhase(e.target.value as DocPhase)}
+                    >
+                      <option value="Design">Design</option>
+                      <option value="Foundation">Foundation</option>
+                      <option value="Structure">Structure</option>
+                      <option value="MEP">MEP</option>
+                      <option value="Finishing">Finishing</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium" htmlFor="doc-type">
+                      Document type
+                    </label>
+                    <select
+                      id="doc-type"
+                      className="mt-1.5 w-full rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm"
+                      value={uploadType}
+                      onChange={(e) => setUploadType(e.target.value as DocKind)}
+                    >
+                      <option value="Blueprint">Blueprint</option>
+                      <option value="Contract">Contract</option>
+                      <option value="Permit">Permit</option>
+                      <option value="Inspection">Inspection</option>
+                      <option value="Soil Report">Soil Report</option>
+                      <option value="Invoice">Invoice</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium" htmlFor="doc-type">
-                    Document type
-                  </label>
-                  <select
-                    id="doc-type"
-                    className="mt-1.5 w-full rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-2 text-sm"
-                    value={uploadType}
-                    onChange={(e) => setUploadType(e.target.value as DocKind)}
-                  >
-                    <option value="Blueprint">Blueprint</option>
-                    <option value="Contract">Contract</option>
-                    <option value="Permit">Permit</option>
-                    <option value="Inspection">Inspection</option>
-                    <option value="Soil Report">Soil Report</option>
-                    <option value="Invoice">Invoice</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-              </div>
+              ) : null}
 
               {uploadMode === 'single' ? (
                 <div>
@@ -995,32 +1025,18 @@ export function DocumentsPage() {
               ) : null}
 
               <div>
-                <div className="text-sm font-medium">{uploadMode === 'single' ? 'Attach file' : 'Choose files'}</div>
+                <div className="text-sm font-medium">Attach file</div>
                 <label className="relative mt-2 flex cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[var(--radius-2xl)] border-2 border-dashed border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-4 py-8 text-center transition hover:border-[color:var(--color-primary_light)]">
                   <Upload className="pointer-events-none mx-auto size-8 text-[color:var(--color-text_muted)]" />
                   <p className="pointer-events-none mt-2 text-sm text-[color:var(--color-text_secondary)]">
-                    {uploadMode === 'single'
-                      ? uploadFile
-                        ? uploadFile.name
-                        : 'Click to browse (PDF, Office, images, zip — max 40 MB)'
-                      : bulkFiles.length
-                        ? `${bulkFiles.length} file(s) selected`
-                        : 'Click to select multiple files'}
-                  </p>
-                  <p className="pointer-events-none mt-2 flex items-center justify-center gap-1 text-xs text-[color:var(--color-text_muted)]">
-                    <Lock className="size-3" /> Stored on server; view/download uses your session
+                    {uploadFile ? uploadFile.name : 'Click to browse (PDF, Office, images, zip — max 40 MB)'}
                   </p>
                   <input
                     type="file"
                     className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-                    multiple={uploadMode === 'bulk'}
                     onChange={(e) => {
                       const list = Array.from(e.target.files ?? [])
-                      if (uploadMode === 'single') {
-                        setUploadFile(list[0] ?? null)
-                      } else {
-                        setBulkFiles(list)
-                      }
+                      setUploadFile(list[0] ?? null)
                     }}
                   />
                 </label>
@@ -1030,12 +1046,12 @@ export function DocumentsPage() {
                 <p className="text-sm text-[color:var(--color-error)]">{uploadError}</p>
               ) : null}
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 border-t border-[color:var(--color-border)] pt-4">
                 <Button type="button" variant="secondary" className="flex-1" disabled={uploadBusy} onClick={() => setUploadOpen(false)}>
                   Cancel
                 </Button>
                 <Button type="button" className="flex-1" disabled={uploadBusy} onClick={() => void submitUpload()}>
-                  {uploadBusy ? 'Uploading…' : uploadMode === 'single' ? 'Upload' : 'Upload all'}
+                  {uploadBusy ? 'Uploading…' : uploadMode === 'single' ? 'Upload' : 'Update version'}
                 </Button>
               </div>
             </CardContent>

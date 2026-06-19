@@ -1,6 +1,5 @@
 import {
   CheckCircle2,
-  ClipboardList,
   Filter,
   Flag,
   ImagePlus,
@@ -11,6 +10,7 @@ import {
   Timer,
   UserPlus,
   X,
+  Upload,
 } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -20,7 +20,6 @@ import { useAuth } from '@/auth/AuthContext'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { EmptyState } from '@/components/ui/EmptyState'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { useProjectsStore } from '@/store/useProjectsStore'
@@ -45,7 +44,7 @@ function severityBadge(s: IssueSeverity) {
   if (s === 'Critical') return <Badge variant="danger">Critical</Badge>
   if (s === 'High') return <Badge variant="danger">High</Badge>
   if (s === 'Medium') return <Badge variant="warning">Medium</Badge>
-  return <Badge variant="muted">Low</Badge>
+  return <Badge variant="info">Low</Badge>
 }
 
 function statusBadge(s: IssueStatus) {
@@ -55,10 +54,6 @@ function statusBadge(s: IssueStatus) {
   if (s === 'Resolved') return <Badge variant="info">Resolved</Badge>
   if (s === 'Verified') return <Badge variant="success">Verified</Badge>
   return <Badge variant="muted">Closed</Badge>
-}
-
-function isHighSeverity(i: IssueItem) {
-  return i.severity === 'Critical' || i.severity === 'High'
 }
 
 function isBlocked(i: IssueItem) {
@@ -108,10 +103,6 @@ export function IssuesPage() {
   const filterSeverity = useIssueStore((s) => s.filterSeverity)
   const filterCategory = useIssueStore((s) => s.filterCategory)
   const search = useIssueStore((s) => s.search)
-  const view = useIssueStore((s) => s.view)
-  const setView = useIssueStore((s) => s.setView)
-  const isDirty = useIssueStore((s) => s.isDirty)
-  const saveChanges = useIssueStore((s) => s.saveChanges)
 
   const createRfi = useRfiStore((s) => s.createRfi)
 
@@ -126,6 +117,9 @@ export function IssuesPage() {
   const afterPhotoRef = useRef<HTMLInputElement | null>(null)
   const [afterPhotoFile, setAfterPhotoFile] = useState<File | null>(null)
   const [afterPhotoPreview, setAfterPhotoPreview] = useState<string | null>(null)
+  const [beforePhotoFile, setBeforePhotoFile] = useState<File | null>(null)
+  const [beforePhotoPreview, setBeforePhotoPreview] = useState<string | null>(null)
+  const beforePhotoRef = useRef<HTMLInputElement | null>(null)
 
   // Fetch issues when project changes
   useEffect(() => {
@@ -179,8 +173,8 @@ export function IssuesPage() {
   const severityPie = useMemo(() => groupCount(items, (i) => i.severity), [items])
   const categoryBar = useMemo(() => groupCount(items, (i) => i.category), [items])
 
-  const canManage = role === 'engineer'
-  const canReport = role === 'engineer' || role === 'worker'
+  const canManage = role === 'engineer' || role === 'owner'
+  const canReport = role === 'engineer' || role === 'worker' || role === 'owner'
 
   const onOpenDetail = (id: string) => {
     setSelected(id)
@@ -199,7 +193,7 @@ export function IssuesPage() {
     const floor = String(fd.get('floor') ?? '').trim()
     const area = String(fd.get('area') ?? '').trim()
     const dueDays = Number(fd.get('dueDays') ?? 3)
-    const attachment = String(fd.get('photoName') ?? '').trim()
+    const attachment = beforePhotoFile?.name ?? String(fd.get('photoName') ?? '').trim()
     const reporter = myKey ?? (role === 'worker' ? 'Worker' : role === 'engineer' ? 'Engineer' : 'Owner')
     if (!currentProjectId) return
     createIssue({
@@ -215,8 +209,11 @@ export function IssuesPage() {
       dueDays: Number.isFinite(dueDays) ? dueDays : 3,
       reportedBy: reporter,
       attachmentName: attachment || undefined,
+      attachmentUrl: beforePhotoPreview || undefined,
     })
     setCreateOpen(false)
+    setBeforePhotoFile(null)
+    setBeforePhotoPreview(null)
     e.currentTarget.reset()
   }
 
@@ -229,8 +226,8 @@ export function IssuesPage() {
     if (!afterPhotoName) {
       return // require photo name or file
     }
-    const verifier = myKey ?? 'Engineer'
-    verifyIssue(pid, selected.id, verifier, notes, afterPhotoName || undefined)
+    const verifier = myKey ?? (role === 'owner' ? 'Owner' : 'Engineer')
+    verifyIssue(pid, selected.id, verifier, notes, afterPhotoName || undefined, afterPhotoPreview || undefined)
     setVerifyOpen(false)
     setAfterPhotoFile(null)
     setAfterPhotoPreview(null)
@@ -271,12 +268,6 @@ export function IssuesPage() {
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="size-4" />
             Create new issue
-          </Button>
-        ) : null}
-        {canManage ? (
-          <Button variant={isDirty ? 'primary' : 'secondary'} onClick={() => saveChanges()}>
-            <ClipboardList className="size-4" />
-            {isDirty ? 'Save changes' : 'Saved'}
           </Button>
         ) : null}
       </div>
@@ -378,135 +369,73 @@ export function IssuesPage() {
           <Search className="size-4 text-[color:var(--color-text_secondary)]" />
           <input
             className="w-56 bg-transparent text-sm outline-none"
-            placeholder="Search id/title/location/person…"
+            placeholder="Search issues"
             value={search}
             onChange={(e) => setFilters({ search: e.target.value })}
           />
         </div>
-        <Button variant={view === 'kanban' ? 'primary' : 'secondary'} onClick={() => setView('kanban')}>
-          Kanban
-        </Button>
-        <Button variant={view === 'table' ? 'primary' : 'secondary'} onClick={() => setView('table')}>
-          Register
-        </Button>
       </div>
     </div>
   )
 
   const Kanban = (
     <div className="-mx-1 overflow-x-auto pb-3">
-      <div className="flex gap-3 px-1" style={{ minWidth: `${ISSUE_STATUSES.length * 220}px` }}>
-      {ISSUE_STATUSES.map((col) => {
-        const colItems = filtered.filter((i) => i.status === col)
-        return (
-          <div key={col} className="flex w-52 shrink-0 flex-col">
-            <div className="mb-2 flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 shadow-sm">
-              <span className="flex-1 truncate text-xs font-bold text-[color:var(--color-text_secondary)]">{col}</span>
-              <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-surface_hover)] text-[11px] font-bold text-[color:var(--color-text_secondary)]">{colItems.length}</span>
-            </div>
-            <div className="flex flex-col gap-2">
-              {colItems.length ? (
-                colItems.map((i) => (
-                  <button
-                    key={i.id}
-                    type="button"
-                    onClick={() => onOpenDetail(i.id)}
-                    className="w-full rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] p-3 text-left shadow-sm transition hover:shadow-md hover:border-[color:var(--color-primary)] hover:shadow-md transition-all"
-                  >
-                    <div className="flex items-center justify-between gap-1">
-                      {severityBadge(i.severity)}
-                      <span className="max-w-[70px] overflow-hidden truncate font-mono text-[10px] text-[color:var(--color-text_muted)]">
-                        {i.issue_id || i.id.slice(-6)}
-                      </span>
-                    </div>
-                    <div className="mt-2 line-clamp-2 text-xs font-semibold leading-snug text-[color:var(--color-text)]">{i.title}</div>
-                    <div className="mt-1 truncate text-[11px] text-[color:var(--color-text_secondary)]">
-                      {i.location || 'No location'}
-                    </div>
-                    <div className="mt-1 truncate text-[11px] text-[color:var(--color-text_secondary)]">
-                      {i.assignedTo ?? 'Unassigned'}
-                    </div>
-                    <div className="mt-2 flex items-center gap-1 text-[11px] text-[color:var(--color-text_muted)]">
-                      <Timer className="size-3 shrink-0" />
-                      <span className="truncate">{formatDate(i.dueAt)}</span>
-                    </div>
-                    {isBlocked(i) ? (
-                      <div className="mt-1 rounded-full bg-rose-50 px-2 py-0.5 text-center text-[10px] font-semibold text-rose-700">
-                        Blocked tasks
+      <div className="flex gap-3 px-1">
+        {ISSUE_STATUSES.map((col) => {
+          const colItems = filtered.filter((i) => i.status === col)
+          return (
+            <div key={col} className="flex min-w-[150px] flex-1 shrink-0 flex-col">
+              <div className="mb-2 flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 shadow-sm">
+                <span className="flex-1 truncate text-xs font-bold text-[color:var(--color-text_secondary)]">{col}</span>
+                <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-surface_hover)] text-[11px] font-bold text-[color:var(--color-text_secondary)]">{colItems.length}</span>
+              </div>
+              <div className="flex flex-col gap-2">
+                {colItems.length ? (
+                  colItems.map((i) => (
+                    <button
+                      key={i.id}
+                      type="button"
+                      onClick={() => onOpenDetail(i.id)}
+                      className="w-full rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] p-3 text-left shadow-sm transition hover:shadow-md hover:border-[color:var(--color-primary)] hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        {severityBadge(i.severity)}
+                        <span className="max-w-[70px] overflow-hidden truncate font-mono text-[10px] text-[color:var(--color-text_muted)]">
+                          {i.issue_id || i.id.slice(-6)}
+                        </span>
                       </div>
-                    ) : null}
-                  </button>
-                ))
-              ) : (
-                <div className="rounded-xl border border-dashed border-[color:var(--color-border)] p-3 text-center text-[11px] text-[color:var(--color-text_muted)]">
-                  Empty
-                </div>
-              )}
+                      <div className="mt-2 line-clamp-2 text-xs font-semibold leading-snug text-[color:var(--color-text)]">{i.title}</div>
+                      <div className="mt-1 truncate text-[11px] text-[color:var(--color-text_secondary)]">
+                        {i.location || 'No location'}
+                      </div>
+                      <div className="mt-1 truncate text-[11px] text-[color:var(--color-text_secondary)]">
+                        {i.assignedTo ?? 'Unassigned'}
+                      </div>
+                      <div className="mt-2 flex items-center gap-1 text-[11px] text-[color:var(--color-text_muted)]">
+                        <Timer className="size-3 shrink-0" />
+                        <span className="truncate">{formatDate(i.dueAt)}</span>
+                      </div>
+                      {isBlocked(i) ? (
+                        <div className="mt-1 rounded-full bg-rose-50 px-2 py-0.5 text-center text-[10px] font-semibold text-rose-700">
+                          Blocked tasks
+                        </div>
+                      ) : null}
+                    </button>
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-dashed border-[color:var(--color-border)] p-3 text-center text-[11px] text-[color:var(--color-text_muted)]">
+                    Empty
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )
-      })}
+          )
+        })}
       </div>
     </div>
   )
 
-  const Table = (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm">Issue register</CardTitle>
-        <CardDescription>Detailed log with status and verification state.</CardDescription>
-      </CardHeader>
-      <CardContent className="overflow-auto">
-        {filtered.length === 0 ? (
-          <EmptyState icon={ShieldAlert} title="No issues found" description="Try clearing filters or switching projects." />
-        ) : (
-          <table className="w-full min-w-[980px] border-separate border-spacing-0">
-            <thead>
-              <tr className="text-left text-xs text-muted">
-                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Issue ID</th>
-                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Title</th>
-                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Category</th>
-                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Severity</th>
-                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Status</th>
-                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Reported by</th>
-                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Assigned to</th>
-                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Raised</th>
-                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Due</th>
-                <th className="sticky top-0 bg-[color:var(--color-card)]/90 py-2 pr-3">Verification</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((i) => (
-                <tr key={i.id} className="border-t border-[color:var(--color-border)] text-sm">
-                  <td className="py-3 pr-3 font-mono text-xs text-[color:var(--color-text_secondary)]">{i.id}</td>
-                  <td className="py-3 pr-3">
-                    <button
-                      type="button"
-                      className="text-left font-semibold text-[color:var(--color-text)] hover:underline"
-                      onClick={() => onOpenDetail(i.id)}
-                    >
-                      {i.title}
-                    </button>
-                    <div className="mt-1 text-xs text-muted">{i.location}</div>
-                  </td>
-                  <td className="py-3 pr-3 text-sm text-[color:var(--color-text_secondary)]">{i.category}</td>
-                  <td className="py-3 pr-3">{severityBadge(i.severity)}</td>
-                  <td className="py-3 pr-3">{statusBadge(i.status)}</td>
-                  <td className="py-3 pr-3 text-xs text-[color:var(--color-text_secondary)]">{i.reportedBy}</td>
-                  <td className="py-3 pr-3 text-xs text-[color:var(--color-text_secondary)]">{i.assignedTo ?? '—'}</td>
-                  <td className="py-3 pr-3 text-xs text-muted">{formatDate(i.raisedAt)}</td>
-                  <td className="py-3 pr-3 text-xs text-muted">{formatDate(i.dueAt)}</td>
-                  <td className="py-3 pr-3 text-xs text-[color:var(--color-text_secondary)]">
-                    {i.status === 'Resolved' ? 'Pending' : i.verification ? 'Verified' : '—'}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </CardContent>
-    </Card>
-  )
+
 
   const Analytics = (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -537,7 +466,7 @@ export function IssuesPage() {
             <BarChart data={categoryBar}>
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-              <Tooltip />
+              <Tooltip cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} />
               <Bar dataKey="value" fill="#0ea5e9" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -546,293 +475,219 @@ export function IssuesPage() {
     </div>
   )
 
-  const DetailPanel = (
+  const IssueDetailsContent = selected ? (
     <div className="space-y-4">
-        <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Issue details</CardTitle>
-          <CardDescription>{selected ? `${selected.id} · ${selected.location}` : 'Select an issue from kanban or register.'}</CardDescription>
-          </CardHeader>
-        <CardContent className="space-y-3">
-          {!selected ? (
-            <div className="rounded-xl border border-dashed border-[color:var(--color-border)] p-3 text-sm text-muted">
-              No issue selected.
-            </div>
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                {severityBadge(selected.severity)}
-                {statusBadge(selected.status)}
-                {isBlocked(selected) ? (
-                  <Badge variant="danger">Linked tasks blocked</Badge>
-                ) : (
-                  <Badge variant="muted">No blocking</Badge>
+      <div className="flex flex-wrap items-center gap-2">
+        {severityBadge(selected.severity)}
+        {statusBadge(selected.status)}
+        {isBlocked(selected) ? (
+          <Badge variant="danger">Linked tasks blocked</Badge>
+        ) : (
+          <Badge variant="muted">No blocking</Badge>
+        )}
+      </div>
+      <div>
+        <div className="text-base font-semibold text-[color:var(--color-text)]">{selected.title}</div>
+        <div className="mt-1 text-sm text-[color:var(--color-text_secondary)]">{selected.description}</div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-[color:var(--color-border)] p-3">
+          <div className="text-xs text-muted">Reported by</div>
+          <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{selected.reportedBy}</div>
+          <div className="mt-1 text-xs text-muted">{formatDate(selected.raisedAt)}</div>
+        </div>
+        <div className="rounded-xl border border-[color:var(--color-border)] p-3">
+          <div className="text-xs text-muted">Assigned to</div>
+          <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{selected.assignedTo ?? 'Unassigned'}</div>
+          <div className="mt-1 text-xs text-muted">Due {formatDate(selected.dueAt)}</div>
+        </div>
+      </div>
+
+      {canManage && selected.status !== 'Verified' && selected.status !== 'Closed' ? (
+        <div className="rounded-xl border border-[color:var(--color-border)] p-3">
+          <div className="text-xs font-semibold text-[color:var(--color-text)]">Assignment</div>
+          <div className="mt-2 flex flex-col gap-2">
+            <div className="relative">
+              <div className="flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 shadow-sm">
+                <Search className="size-4 shrink-0 text-[color:var(--color-text_muted)]" />
+                <input
+                  className="flex-1 bg-transparent text-sm outline-none placeholder:text-[color:var(--color-text_muted)]"
+                  placeholder="Search team member…"
+                  value={assignSearch}
+                  onChange={(e) => { setAssignSearch(e.target.value); setAssignDropOpen(true) }}
+                  onFocus={() => setAssignDropOpen(true)}
+                />
+                {assignSearch && (
+                  <button type="button" onClick={() => { setAssignSearch(''); setAssignTo(''); setAssignDropOpen(false) }}>
+                    <X className="size-4 text-[color:var(--color-text_muted)]" />
+                  </button>
                 )}
               </div>
-              <div>
-                <div className="text-base font-semibold text-[color:var(--color-text)]">{selected.title}</div>
-                <div className="mt-1 text-sm text-[color:var(--color-text_secondary)]">{selected.description}</div>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-[color:var(--color-border)] p-3">
-                  <div className="text-xs text-muted">Reported by</div>
-                  <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{selected.reportedBy}</div>
-                  <div className="mt-1 text-xs text-muted">{formatDate(selected.raisedAt)}</div>
-                </div>
-                <div className="rounded-xl border border-[color:var(--color-border)] p-3">
-                  <div className="text-xs text-muted">Assigned to</div>
-                  <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{selected.assignedTo ?? 'Unassigned'}</div>
-                  <div className="mt-1 text-xs text-muted">Due {formatDate(selected.dueAt)}</div>
-                </div>
-              </div>
-
-              {canManage ? (
-                <div className="rounded-xl border border-[color:var(--color-border)] p-3">
-                  <div className="text-xs font-semibold text-[color:var(--color-text)]">Assignment</div>
-                  <div className="mt-2 flex flex-col gap-2">
-                    <div className="relative">
-                      <div className="flex items-center gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-2 shadow-sm">
-                        <Search className="size-4 shrink-0 text-[color:var(--color-text_muted)]" />
-                        <input
-                          className="flex-1 bg-transparent text-sm outline-none placeholder:text-[color:var(--color-text_muted)]"
-                          placeholder="Search team member…"
-                          value={assignSearch}
-                          onChange={(e) => { setAssignSearch(e.target.value); setAssignDropOpen(true) }}
-                          onFocus={() => setAssignDropOpen(true)}
-                        />
-                        {assignSearch && (
-                          <button type="button" onClick={() => { setAssignSearch(''); setAssignTo(''); setAssignDropOpen(false) }}>
-                            <X className="size-4 text-[color:var(--color-text_muted)]" />
-                          </button>
-                        )}
-                      </div>
-                      {assignDropOpen && filteredTeam.length > 0 && (
-                        <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-44 overflow-y-auto rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] shadow-lg">
-                          {filteredTeam.map((m) => (
-                            <button
-                              key={m.id}
-                              type="button"
-                              className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[color:var(--color-surface_hover)]"
-                              onClick={() => {
-                                setAssignTo(m.name)
-                                setAssignSearch(m.name)
-                                setAssignDropOpen(false)
-                              }}
-                            >
-                              <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-blue-700">
-                                {m.name.charAt(0).toUpperCase()}
-                              </span>
-                              <span className="flex-1 font-medium">{m.name}</span>
-                              <span className="text-xs capitalize text-[color:var(--color-text_muted)]">{m.role}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      {assignDropOpen && filteredTeam.length === 0 && assignSearch.length > 0 && (
-                        <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-3 shadow-lg">
-                          <p className="text-xs text-[color:var(--color-text_muted)]">No team members found. You can still type a name manually.</p>
-                        </div>
-                      )}
-                    </div>
-                    <Button
-                      variant="secondary"
-                      className="w-full"
+              {assignDropOpen && filteredTeam.length > 0 && (
+                <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-44 overflow-y-auto rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] shadow-lg">
+                  {filteredTeam.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-[color:var(--color-surface_hover)]"
                       onClick={() => {
-                        if (!selected) return
-                        const next = (assignTo || assignSearch).trim()
-                        if (!next) return
-                        updateIssue(pid, selected.id, { assignedTo: next })
-                        moveStatus(pid, selected.id, 'Assigned', myKey ?? 'Engineer', `Assigned to ${next}`)
-                        setAssignTo('')
-                        setAssignSearch('')
+                        setAssignTo(m.name)
+                        setAssignSearch(m.name)
                         setAssignDropOpen(false)
                       }}
                     >
-                      <UserPlus className="size-4" />
-                      Assign to {assignTo || assignSearch || '…'}
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="rounded-xl border border-[color:var(--color-border)] p-3">
-                <div className="text-xs font-semibold text-[color:var(--color-text)]">Attachments</div>
-                <div className="mt-2 space-y-1">
-                  {selected.attachments.length ? (
-                    selected.attachments.map((a) => (
-                      <div key={a.id} className="flex items-center justify-between text-xs">
-                        <span className="text-[color:var(--color-text_secondary)]">{a.name}</span>
-                        <span className="text-muted">{a.kind}{a.stage ? ` · ${a.stage}` : ''}</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-xs text-muted">No attachments.</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-[color:var(--color-border)] p-3">
-                <div className="text-xs font-semibold text-[color:var(--color-text)]">Progress log</div>
-                <div className="mt-2 space-y-2">
-                  {selected.progressLog.slice(-6).map((l) => (
-                    <div key={l.id} className="rounded-lg bg-[color:var(--color-surface_hover)] p-2 text-xs">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-[color:var(--color-text)]">{l.status}</span>
-                        <span className="text-muted">{formatDate(l.at)}</span>
-                      </div>
-                      <div className="mt-1 text-[color:var(--color-text_secondary)]">{l.note}</div>
-                      <div className="mt-1 text-muted">— {l.author}</div>
-                    </div>
+                      <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-blue-700">
+                        {m.name.charAt(0).toUpperCase()}
+                      </span>
+                      <span className="flex-1 font-medium">{m.name}</span>
+                      <span className="text-xs capitalize text-[color:var(--color-text_muted)]">{m.role}</span>
+                    </button>
                   ))}
                 </div>
-              </div>
-
-              {selected.status === 'Resolved' || selected.status === 'Verified' || selected.status === 'Closed' ? (
-                <div className="rounded-xl border border-[color:var(--color-border)] p-3">
-                  <div className="text-xs font-semibold text-[color:var(--color-text)]">Verification</div>
-                  <div className="mt-2 text-xs text-[color:var(--color-text_secondary)]">
-                    {selected.verification ? (
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="size-4 text-emerald-600" />
-                          <span className="font-semibold">Verified</span>
-                        </div>
-                        <div className="text-muted">
-                          {selected.verification.verifiedBy} · {formatDate(selected.verification.verifiedAt)}
-                        </div>
-                        <div>{selected.verification.notes}</div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Timer className="size-4 text-amber-600" />
-                        <span>Verification pending (requires after photo before close).</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="flex flex-wrap gap-2">
-                {canManage ? (
-                  <>
-                    <Button
-                      variant="secondary"
-                      onClick={() => moveStatus(pid, selected.id, 'In Progress', myKey ?? 'Engineer', 'Work started.')}
-                      disabled={selected.status === 'In Progress' || selected.status === 'Closed'}
-                    >
-                      <Timer className="size-4" />
-                      Mark in progress
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => moveStatus(pid, selected.id, 'Resolved', myKey ?? 'Engineer', 'Resolution completed; pending verification.')}
-                      disabled={selected.status === 'Resolved' || selected.status === 'Verified' || selected.status === 'Closed'}
-                    >
-                      <CheckCircle2 className="size-4" />
-                      Mark resolved
-                    </Button>
-                    <Button
-                      onClick={() => setVerifyOpen(true)}
-                      disabled={selected.status !== 'Resolved'}
-                    >
-                <ShieldAlert className="size-4" />
-                      Verify (after photo)
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => closeIssue(pid, selected.id, myKey ?? 'Engineer')}
-                      disabled={selected.status !== 'Verified'}
-                    >
-                      Close
-                    </Button>
-                    <Button variant="ghost" onClick={convertToRfi}>
-                      Convert to RFI
-                    </Button>
-                  </>
-                ) : null}
-                {!canManage ? (
-                  <Button variant="secondary" onClick={() => setDetailOpen(true)} disabled={!selected}>
-                    View full details
-              </Button>
-                ) : null}
-              </div>
-            </>
-          )}
-          </CardContent>
-        </Card>
-
-    </div>
-  )
-
-  const EngineerLayout = (
-    <div className="space-y-6">
-      {Header}
-      {Filters}
-      {Summary}
-      {role !== 'worker' ? Analytics : null}
-      <div className="grid gap-6 lg:grid-cols-12">
-        <div className="space-y-6 lg:col-span-8">
-          {view === 'kanban' ? Kanban : Table}
-          {view === 'kanban' ? Table : null}
-        </div>
-        <div className="lg:col-span-4">{DetailPanel}</div>
-      </div>
-    </div>
-  )
-
-  const OwnerLayout = (
-    <div className="space-y-6">
-      {Header}
-      {Filters}
-      {Summary}
-      {role !== 'worker' ? Analytics : null}
-      <div className="grid gap-6 lg:grid-cols-12">
-        <div className="space-y-6 lg:col-span-8">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">High severity open issues</CardTitle>
-              <CardDescription>Critical/High that need attention.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {items.filter((i) => i.status !== 'Closed').filter(isHighSeverity).length ? (
-                items
-                  .filter((i) => i.status !== 'Closed')
-                  .filter(isHighSeverity)
-                  .slice(0, 6)
-                  .map((i) => (
-                    <button
-                      key={i.id}
-                      type="button"
-                      onClick={() => onOpenDetail(i.id)}
-                      className="w-full rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] p-3 text-left shadow-sm transition hover:shadow-md"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            {severityBadge(i.severity)}
-                            {statusBadge(i.status)}
-                            <span className="font-mono text-xs text-[color:var(--color-text_muted)]">{i.id}</span>
-                          </div>
-                          <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{i.title}</div>
-                          <div className="mt-1 text-xs text-muted">{i.location}</div>
-                        </div>
-                        <div className="text-xs text-muted">Due {formatDate(i.dueAt)}</div>
-                      </div>
-                    </button>
-                  ))
-              ) : (
-                <div className="rounded-xl border border-dashed border-[color:var(--color-border)] p-3 text-sm text-muted">
-                  No high-severity open items.
-                    </div>
               )}
-                  </CardContent>
-                </Card>
-          {Table}
+              {assignDropOpen && filteredTeam.length === 0 && assignSearch.length > 0 && (
+                <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-3 py-3 shadow-lg">
+                  <p className="text-xs text-[color:var(--color-text_muted)]">No team members found. You can still type a name manually.</p>
+                </div>
+              )}
+            </div>
+            <Button
+              variant="secondary"
+              className="w-full"
+              onClick={() => {
+                if (!selected) return
+                const next = (assignTo || assignSearch).trim()
+                if (!next) return
+                updateIssue(pid, selected.id, { assignedTo: next })
+                moveStatus(pid, selected.id, 'Assigned', myKey ?? 'Engineer', `Assigned to ${next}`)
+                setAssignTo('')
+                setAssignSearch('')
+                setAssignDropOpen(false)
+              }}
+            >
+              <UserPlus className="size-4" />
+              Assign to {assignTo || assignSearch || '…'}
+            </Button>
+          </div>
         </div>
-        <div className="lg:col-span-4">{DetailPanel}</div>
+      ) : null}
+
+      <div className="rounded-xl border border-[color:var(--color-border)] p-3">
+        <div className="text-xs font-semibold text-[color:var(--color-text)]">Attachments</div>
+        <div className="mt-2 space-y-1">
+          {selected.attachments.length ? (
+            selected.attachments.map((a) => (
+              <div key={a.id} className="flex flex-col text-xs space-y-2 border-b border-[color:var(--color-border)] last:border-0 pb-2 last:pb-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-[color:var(--color-text_secondary)] font-medium">{a.name}</span>
+                  <span className="text-muted">{a.kind}{a.stage ? ` · ${a.stage}` : ''}</span>
+                </div>
+                {a.kind === 'photo' ? (
+                  <img src={a.url || `https://images.unsplash.com/photo-1541888087525-071c00c335e3?w=800&q=80`} alt={a.name} className="mt-1 w-full max-h-48 object-cover rounded-md bg-[color:var(--color-bg)]" />
+                ) : null}
+              </div>
+            ))
+          ) : (
+            <div className="text-xs text-muted">No attachments.</div>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-[color:var(--color-border)] p-3">
+        <div className="text-xs font-semibold text-[color:var(--color-text)]">Progress log</div>
+        <div className="mt-2 space-y-2">
+          {selected.progressLog.slice(-6).map((l) => (
+            <div key={l.id} className="rounded-lg bg-[color:var(--color-surface_hover)] p-2 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-[color:var(--color-text)]">{l.status}</span>
+                <span className="text-muted">{formatDate(l.at)}</span>
+              </div>
+              <div className="mt-1 text-[color:var(--color-text_secondary)]">{l.note}</div>
+              <div className="mt-1 text-muted">— {l.author}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {selected.status === 'Resolved' || selected.status === 'Verified' || selected.status === 'Closed' ? (
+        <div className="rounded-xl border border-[color:var(--color-border)] p-3">
+          <div className="text-xs font-semibold text-[color:var(--color-text)]">Verification</div>
+          <div className="mt-2 text-xs text-[color:var(--color-text_secondary)]">
+            {selected.verification ? (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="size-4 text-emerald-600" />
+                  <span className="font-semibold">Verified</span>
+                </div>
+                <div className="text-muted">
+                  {selected.verification.verifiedBy} · {formatDate(selected.verification.verifiedAt)}
+                </div>
+                <div>{selected.verification.notes}</div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Timer className="size-4 text-amber-600" />
+                <span>Verification pending (requires after photo before close).</span>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      {canManage ? (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => moveStatus(pid, selected.id, 'In Progress', myKey ?? (role === 'owner' ? 'Owner' : 'Engineer'), 'Work started.')}
+            disabled={selected.status === 'In Progress' || selected.status === 'Closed'}
+          >
+            <Timer className="size-4" />
+            Mark in progress
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => moveStatus(pid, selected.id, 'Resolved', myKey ?? (role === 'owner' ? 'Owner' : 'Engineer'), 'Resolution completed; pending verification.')}
+            disabled={selected.status === 'Resolved' || selected.status === 'Verified' || selected.status === 'Closed'}
+          >
+            <CheckCircle2 className="size-4" />
+            Mark resolved
+          </Button>
+          <Button
+            onClick={() => setVerifyOpen(true)}
+            disabled={selected.status !== 'Resolved'}
+          >
+            <ShieldAlert className="size-4" />
+            Verify (after photo)
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => closeIssue(pid, selected.id, myKey ?? 'Engineer')}
+            disabled={selected.status !== 'Verified'}
+          >
+            Close
+          </Button>
+          <Button variant="ghost" onClick={convertToRfi}>
+            Convert to RFI
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  ) : null
+
+  const MainLayout = (
+    <div className="space-y-6">
+      {Header}
+      {Filters}
+      {Summary}
+      {role !== 'worker' ? Analytics : null}
+      <div className="space-y-6">
+        {Kanban}
       </div>
     </div>
   )
+
+  const EngineerLayout = MainLayout
+  const OwnerLayout = MainLayout
 
   const WorkerLayout = (
     <div className="space-y-6">
@@ -863,64 +718,58 @@ export function IssuesPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-12">
-        <div className="space-y-6 lg:col-span-7">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">My open reports</CardTitle>
-              <CardDescription>Only issues you submitted.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {mySubmitted.length ? (
-                mySubmitted
-                  .filter((i) => i.status !== 'Closed')
-                  .slice(0, 10)
-                  .map((i) => (
-                    <button
-                      key={i.id}
-                      type="button"
-                      onClick={() => onOpenDetail(i.id)}
-                      className="w-full rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] p-3 text-left shadow-sm transition hover:shadow-md"
-                    >
-                      <div className="flex flex-wrap items-center gap-2">
-                        {severityBadge(i.severity)}
-                        {statusBadge(i.status)}
-                        <span className="font-mono text-xs text-[color:var(--color-text_muted)]">{i.id}</span>
-                      </div>
-                      <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{i.title}</div>
-                      <div className="mt-1 text-xs text-muted">{i.location}</div>
-                    </button>
-                  ))
-              ) : (
-                <div className="rounded-xl border border-dashed border-[color:var(--color-border)] p-3 text-sm text-muted">
-                  No reports yet.
-            </div>
-          )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">My submitted issues status</CardTitle>
-              <CardDescription>Submitted → Under review → Assigned → Resolved</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-2">
-              {mySubmitted.slice(0, 6).map((i) => (
-                <div key={i.id} className="rounded-xl border border-[color:var(--color-border)] p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs text-[color:var(--color-text_muted)]">{i.id}</span>
-                    {statusBadge(i.status)}
-                  </div>
-                  <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{i.title}</div>
-                  <div className="mt-1 text-xs text-muted">{formatDate(i.raisedAt)}</div>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">My open reports</CardTitle>
+            <CardDescription>Only issues you submitted.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {mySubmitted.length ? (
+              mySubmitted
+                .filter((i) => i.status !== 'Closed')
+                .slice(0, 10)
+                .map((i) => (
+                  <button
+                    key={i.id}
+                    type="button"
+                    onClick={() => onOpenDetail(i.id)}
+                    className="w-full rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] p-3 text-left shadow-sm transition hover:shadow-md"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      {severityBadge(i.severity)}
+                      {statusBadge(i.status)}
+                      <span className="font-mono text-xs text-[color:var(--color-text_muted)]">{i.id}</span>
+                    </div>
+                    <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{i.title}</div>
+                    <div className="mt-1 text-xs text-muted">{i.location}</div>
+                  </button>
+                ))
+            ) : (
+              <div className="rounded-xl border border-dashed border-[color:var(--color-border)] p-3 text-sm text-muted">
+                No reports yet.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">My submitted issues status</CardTitle>
+            <CardDescription>Submitted → Under review → Assigned → Resolved</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {mySubmitted.slice(0, 6).map((i) => (
+              <div key={i.id} className="rounded-xl border border-[color:var(--color-border)] p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-xs text-[color:var(--color-text_muted)]">{i.id}</span>
+                  {statusBadge(i.status)}
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-6 lg:col-span-5">
-          {DetailPanel}
-        </div>
+                <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{i.title}</div>
+                <div className="mt-1 text-xs text-muted">{formatDate(i.raisedAt)}</div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
@@ -928,9 +777,10 @@ export function IssuesPage() {
   return (
     <div className="space-y-8">
       {issuesLoadStatus === 'loading' ? (
-        <Card>
-          <CardContent className="p-4 text-sm text-[color:var(--color-text_secondary)]">Loading issues…</CardContent>
-        </Card>
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] px-4 py-3 shadow-2xl">
+          <div className="size-4 animate-spin rounded-full border-2 border-blue-600 border-r-transparent"></div>
+          <span className="text-sm font-medium text-[color:var(--color-text)]">Loading issues…</span>
+        </div>
       ) : null}
       {issuesLoadStatus === 'error' && issuesLoadError ? (
         <Card className="border border-[color:var(--color-error)]/30 bg-[color:var(--color-error)]/5 shadow-none">
@@ -1027,11 +877,54 @@ export function IssuesPage() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-slate-800" htmlFor="photoName">
-                Upload photo (name)
+              <label className="text-sm font-medium text-slate-800">
+                Upload photo
               </label>
-              <Input id="photoName" name="photoName" placeholder="e.g., issue_before.jpg" />
-              <p className="mt-1 text-xs text-muted">MVP stores name only (no file upload).</p>
+              <input
+                ref={beforePhotoRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null
+                  setBeforePhotoFile(file)
+                  if (file) {
+                    const reader = new FileReader()
+                    reader.onload = () => setBeforePhotoPreview(reader.result as string)
+                    reader.readAsDataURL(file)
+                  } else {
+                    setBeforePhotoPreview(null)
+                  }
+                }}
+              />
+              {beforePhotoPreview ? (
+                <div className="mt-2 relative inline-block">
+                  <img src={beforePhotoPreview} alt="Preview" className="h-24 w-auto rounded-lg border border-slate-200 object-cover shadow-sm" />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="absolute -right-2 -top-2 size-6 rounded-full"
+                    onClick={() => {
+                      setBeforePhotoFile(null)
+                      setBeforePhotoPreview(null)
+                      if (beforePhotoRef.current) beforePhotoRef.current.value = ''
+                    }}
+                  >
+                    <X className="size-3" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-2 w-full border-dashed"
+                  onClick={() => beforePhotoRef.current?.click()}
+                >
+                  <Upload className="mr-2 size-4" />
+                  Select photo
+                </Button>
+              )}
             </div>
             {role === 'engineer' ? (
               <div className="rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-surface_hover)] p-3 text-xs text-muted">
@@ -1050,10 +943,31 @@ export function IssuesPage() {
       </Modal>
 
       <Modal
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        title={selected ? `${selected.id} — ${selected.title}` : 'Issue details'}
+        description={selected ? `${selected.category} · ${selected.location}` : undefined}
+        className="max-w-3xl"
+        footer={
+          selected && role !== 'engineer' && role !== 'owner' ? (
+            <Button variant="secondary" onClick={() => setDetailOpen(false)}>
+              Close
+            </Button>
+          ) : null
+        }
+      >
+        {selected ? (
+          IssueDetailsContent
+        ) : (
+          <div className="text-sm text-muted">No issue selected.</div>
+        )}
+      </Modal>
+
+      <Modal
         open={verifyOpen}
         onOpenChange={(o) => { setVerifyOpen(o); if (!o) { setAfterPhotoFile(null); setAfterPhotoPreview(null) } }}
         title="Verify resolution"
-        description={`Only engineers can verify. Upload an after-photo to confirm the fix is complete.`}
+        description={`Only engineers and owners can verify. Upload an after-photo to confirm the fix is complete.`}
         footer={
           <Button type="submit" form="issue-verify-form" disabled={!afterPhotoFile && !afterPhotoPreview}>
             <CheckCircle2 className="size-4" />
@@ -1066,8 +980,8 @@ export function IssuesPage() {
           <div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm">
             <ShieldAlert className="mt-0.5 size-4 shrink-0 text-blue-600" />
             <div>
-              <p className="font-semibold text-blue-800">Engineer verification required</p>
-              <p className="mt-0.5 text-xs text-blue-600">The assigned engineer must physically inspect the fix and upload an after-photo before this issue can be closed.</p>
+              <p className="font-semibold text-blue-800">Verification required</p>
+              <p className="mt-0.5 text-xs text-blue-600">The assigned engineer or owner must physically inspect the fix and upload an after-photo before this issue can be closed.</p>
             </div>
           </div>
 
@@ -1121,46 +1035,6 @@ export function IssuesPage() {
             <textarea id="notes" name="notes" className={`${field} min-h-[90px]`} placeholder="Describe what was inspected and confirmed fixed…" />
           </div>
         </form>
-      </Modal>
-
-      <Modal
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-        title={selected ? `${selected.id} — ${selected.title}` : 'Issue details'}
-        description={selected ? `${selected.category} · ${selected.location}` : undefined}
-        className="max-w-3xl"
-        footer={
-          selected && role !== 'engineer' ? (
-            <Button variant="secondary" onClick={() => setDetailOpen(false)}>
-              Close
-            </Button>
-          ) : null
-        }
-      >
-        {selected ? (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {severityBadge(selected.severity)}
-              {statusBadge(selected.status)}
-              <Badge variant="muted">{selected.category}</Badge>
-            </div>
-            <div className="text-sm text-[color:var(--color-text_secondary)]">{selected.description}</div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-[color:var(--color-border)] p-3 text-sm">
-                <div className="text-xs text-muted">Reported by</div>
-                <div className="mt-1 font-semibold">{selected.reportedBy}</div>
-                <div className="mt-1 text-xs text-muted">{formatDate(selected.raisedAt)}</div>
-              </div>
-              <div className="rounded-xl border border-[color:var(--color-border)] p-3 text-sm">
-                <div className="text-xs text-muted">Assigned to</div>
-                <div className="mt-1 font-semibold">{selected.assignedTo ?? 'Unassigned'}</div>
-                <div className="mt-1 text-xs text-muted">Due {formatDate(selected.dueAt)}</div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="text-sm text-muted">No issue selected.</div>
-        )}
       </Modal>
     </div>
   )

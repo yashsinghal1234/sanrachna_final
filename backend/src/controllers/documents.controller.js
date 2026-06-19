@@ -412,6 +412,77 @@ async function askDocuments(req, res) {
   }
 }
 
+async function uploadDocumentVersion(req, res) {
+  const { documentId } = req.params
+  const userName = req.user?.name || req.user?.email || 'User'
+
+  if (!req.file) {
+    res.status(400).json({ message: 'File is required to upload a new version.' })
+    return
+  }
+
+  const doc = await DocumentMeta.findOne({
+    _id: documentId,
+    project: req.project._id,
+  })
+
+  if (!doc) {
+    res.status(404).json({ message: 'Document not found.' })
+    return
+  }
+
+  const uploadedIso = new Date().toISOString()
+  const uploadedDay = toDateOnly(uploadedIso)
+
+  const storage_rel = `documents/${req.project._id}/${req.file.filename}`
+  const original_filename = req.file.originalname || req.file.filename
+  const mime_type = req.file.mimetype || ''
+
+  let extracted_text = ''
+  let text_chunks = []
+  let chunk_embeddings = []
+  let embedding_status = 'pending'
+
+  if (mime_type === 'application/pdf') {
+    try {
+      const absPath = path.join(uploadsRoot, storage_rel)
+      const extracted = await extractPdfText(absPath)
+      extracted_text = extracted.text
+      text_chunks = extracted.chunks
+      if (text_chunks.length) {
+        chunk_embeddings = await embedChunks(text_chunks)
+      }
+      embedding_status = text_chunks.length && chunk_embeddings.length ? 'processed' : 'failed'
+    } catch (err) {
+      console.error('[Document Text] PDF extraction failed for version:', err?.message || err)
+      embedding_status = 'failed'
+    }
+  }
+
+  const newVersionNumber = (doc.current_version || 1) + 1
+  doc.versions.push({
+    version: newVersionNumber,
+    uploadedAt: uploadedDay,
+    uploadedBy: userName,
+    archived: false
+  })
+  
+  doc.current_version = newVersionNumber
+  doc.storage_rel = storage_rel
+  doc.original_filename = original_filename
+  doc.mime_type = mime_type
+  doc.extracted_text = extracted_text
+  doc.text_chunks = text_chunks
+  doc.chunk_embeddings = chunk_embeddings
+  doc.embedding_status = embedding_status
+  doc.uploaded_at = uploadedIso
+  doc.uploaded_by_name = userName
+
+  await doc.save()
+
+  res.status(200).json({ document: toProjectDocumentDtoForList(doc, String(req.project._id)) })
+}
+
 module.exports = {
   listDocuments,
   createDocument,
@@ -419,4 +490,5 @@ module.exports = {
   bulkCreateDocuments,
   getDocumentFile,
   askDocuments,
+  uploadDocumentVersion,
 }
