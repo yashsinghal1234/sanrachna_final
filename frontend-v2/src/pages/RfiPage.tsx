@@ -214,14 +214,14 @@ export function RfiPage() {
         </Card>
       ) : null}
       {/* 1. Header / Controls */}
-      <Card className="sticky top-0 z-30 bg-white p-4 shadow-[var(--shadow-soft)]">
+      <Card className="sticky top-0 z-30 bg-[color:var(--color-card)] p-4 shadow-[var(--shadow-soft)]">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <div className="text-xl font-bold">RFIs</div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-slate-900/5 px-3 py-1 text-xs font-semibold text-slate-800">
+            <span className="rounded-full bg-[color:var(--color-bg)] border border-[color:var(--color-border)] px-3 py-1 text-xs font-semibold text-[color:var(--color-text_secondary)]">
               Open: {metrics.open} · Escalated: {metrics.escalated} · Overdue: {metrics.overdue}
             </span>
             <Button variant="outline" onClick={exportRegister}>
