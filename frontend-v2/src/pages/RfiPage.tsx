@@ -1,19 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Bell,
-  Clock3,
   Download,
-  FileText,
   Plus,
   Search,
-  ShieldAlert,
-  Sparkles,
   Timer,
-  Users,
 } from 'lucide-react'
 
 import { useAuth } from '@/auth/AuthContext'
-import { ProjectContextBanner } from '@/components/ProjectContextBanner'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
@@ -103,6 +97,10 @@ export function RfiPage() {
     moveStatus,
     addComment,
     escalate,
+    filterAssignee,
+    setFilterAssignee,
+    approveRfi,
+    addAttachment,
   } = useRfiStore()
   const fetchRfis = useRfiStore((s) => s.fetchRfis)
   const rfiLoadStatus = useRfiStore((s) => s.loadStatus)
@@ -124,6 +122,15 @@ export function RfiPage() {
 
   const [toast, setToast] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [commentText, setCommentText] = useState('')
+  const [resolutionText, setResolutionText] = useState('')
+
+  useEffect(() => {
+    if (!selectedId) {
+      setCommentText('')
+      setResolutionText('')
+    }
+  }, [selectedId])
   const [newRfi, setNewRfi] = useState<{
     title: string
     description: string
@@ -135,6 +142,7 @@ export function RfiPage() {
     linkedTask: string
     linkedPhase: string
     location: string
+    attachments: Array<{ id: string; name: string; kind: 'photo' | 'drawing' | 'document'; url?: string }>
   }>({
     title: '',
     description: '',
@@ -146,6 +154,7 @@ export function RfiPage() {
     linkedTask: '',
     linkedPhase: '',
     location: '',
+    attachments: [],
   })
 
   const selected = useMemo(() => (selectedId ? rfis.find((r) => r.id === selectedId) ?? null : null), [rfis, selectedId])
@@ -157,8 +166,9 @@ export function RfiPage() {
     return rfis
       .filter((r) => (filterStatus === 'All' ? true : r.status === filterStatus))
       .filter((r) => (filterPriority === 'All' ? true : r.priority === filterPriority))
+      .filter((r) => (filterAssignee === 'All' ? true : r.assignedTo === filterAssignee))
       .filter((r) => (q ? `${r.id} ${r.title} ${r.description} ${r.raisedBy} ${r.assignedTo}`.toLowerCase().includes(q) : true))
-  }, [rfis, filterStatus, filterPriority, search])
+  }, [rfis, filterStatus, filterPriority, filterAssignee, search])
 
   const can = useMemo(() => {
     const r = role ?? 'engineer'
@@ -198,9 +208,10 @@ export function RfiPage() {
       linkedTask: newRfi.linkedTask.trim() || undefined,
       linkedPhase: newRfi.linkedPhase.trim() || undefined,
       location: newRfi.location.trim() || undefined,
+      attachments: newRfi.attachments,
     })
     setCreateOpen(false)
-    setNewRfi({ ...newRfi, title: '', description: '' })
+    setNewRfi({ ...newRfi, title: '', description: '', attachments: [] })
     onToast('Created new RFI.')
   }
 
@@ -292,6 +303,14 @@ export function RfiPage() {
                 </option>
               ))}
             </select>
+            <select
+              value={filterAssignee}
+              onChange={(e) => setFilterAssignee(e.target.value)}
+              className="h-10 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 text-sm"
+            >
+              <option value="All">All assignees</option>
+              {user?.name && <option value={user.name}>Assigned to me</option>}
+            </select>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -317,7 +336,25 @@ export function RfiPage() {
                   </div>
 
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent
+                  className="space-y-2 h-full min-h-[150px] transition-colors rounded-b-xl"
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    e.currentTarget.classList.add('bg-[color:var(--color-surface_hover)]')
+                  }}
+                  onDragLeave={(e) => {
+                    e.currentTarget.classList.remove('bg-[color:var(--color-surface_hover)]')
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    e.currentTarget.classList.remove('bg-[color:var(--color-surface_hover)]')
+                    const id = e.dataTransfer.getData('text/plain')
+                    if (id && can.canRespond) {
+                      moveStatus(projectId ?? '', id, status)
+                      onToast(`Moved to ${status}`)
+                    }
+                  }}
+                >
                   {col.length === 0 ? (
                     <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-3 text-xs text-[color:var(--color-text_secondary)]">
                       No RFIs
@@ -330,7 +367,15 @@ export function RfiPage() {
                         <button
                           key={r.id}
                           type="button"
-                          className="w-full rounded-[var(--radius-2xl)] border border-[color:var(--color-border)] bg-white p-3 text-left shadow-sm transition hover:bg-[color:var(--color-surface_hover)]/40"
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData('text/plain', r.id)
+                            e.currentTarget.style.opacity = '0.5'
+                          }}
+                          onDragEnd={(e) => {
+                            e.currentTarget.style.opacity = '1'
+                          }}
+                          className="w-full rounded-[var(--radius-2xl)] border border-[color:var(--color-border)] bg-white p-3 text-left shadow-sm transition hover:bg-[color:var(--color-surface_hover)]/40 cursor-grab active:cursor-grabbing"
                           onClick={() => setSelected(r.id)}
                         >
                           <div className="flex items-start justify-between gap-2">
@@ -535,25 +580,38 @@ export function RfiPage() {
                   ))}
                 </div>
                 {can.canRespond ? (
-                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                    <Button
-                      variant="secondary"
-                      onClick={() => {
-                        addComment(projectId ?? '', selected.id, { kind: 'comment', author: user?.name ?? 'Engineer', text: 'Adding note: awaiting drawing markups from consultant.' })
-                        onToast('Added comment.')
-                      }}
-                    >
-                      Add comment
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        moveStatus(projectId ?? '', selected.id, selected.status === 'Open' ? 'In Review' : 'Awaiting Response')
-                        onToast('Updated status.')
-                      }}
-                    >
-                      Move status
-                    </Button>
+                  <div className="mt-3 flex flex-col gap-2">
+                    <textarea
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      placeholder="Type your response or comment here..."
+                      className="min-h-20 w-full rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--color-primary_light)]"
+                    />
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Button
+                        variant="secondary"
+                        disabled={!commentText.trim()}
+                        onClick={() => {
+                          addComment(projectId ?? '', selected.id, { kind: 'comment', author: user?.name ?? 'Engineer', text: commentText.trim() })
+                          setCommentText('')
+                          onToast('Added comment.')
+                        }}
+                      >
+                        Add comment
+                      </Button>
+                      <Button
+                        variant="outline"
+                        disabled={!commentText.trim()}
+                        onClick={() => {
+                          addComment(projectId ?? '', selected.id, { kind: 'response', author: user?.name ?? 'Engineer', text: commentText.trim() })
+                          setCommentText('')
+                          moveStatus(projectId ?? '', selected.id, selected.status === 'Open' ? 'In Review' : 'Awaiting Response')
+                          onToast('Responded and updated status.')
+                        }}
+                      >
+                        Respond & Move
+                      </Button>
+                    </div>
                   </div>
                 ) : null}
               </div>
@@ -561,13 +619,30 @@ export function RfiPage() {
 
             <div className="space-y-3">
               <div className="rounded-[var(--radius-2xl)] border border-[color:var(--color-border)] bg-white p-4">
-                <div className="text-sm font-semibold">Evidence & attachments</div>
+                <div className="text-sm font-semibold flex items-center justify-between">
+                  Evidence & attachments
+                  <label className="cursor-pointer text-xs font-semibold text-[color:var(--color-primary)] hover:underline">
+                    Upload
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file && selected) {
+                          const url = URL.createObjectURL(file)
+                          addAttachment(projectId ?? '', selected.id, { id: Math.random().toString(), name: file.name, kind: 'document', url })
+                          onToast(`Attached ${file.name}`)
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
                 <div className="mt-2 text-sm text-[color:var(--color-text_secondary)]">
                   {selected.attachments.length ? (
                     <ul className="space-y-2">
                       {selected.attachments.map((a) => (
                         <li key={a.id} className="rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] px-3 py-2 text-sm">
-                          <span className="font-semibold">{a.kind}</span> · {a.name}
+                          <span className="font-semibold">{a.kind}</span> · {a.url ? <a href={a.url} target="_blank" rel="noreferrer" className="text-[color:var(--color-primary)] hover:underline">{a.name}</a> : a.name}
                         </li>
                       ))}
                     </ul>
@@ -586,7 +661,28 @@ export function RfiPage() {
                         Approved by <span className="font-semibold">{selected.approval.approvedBy}</span>
                       </div>
                       <div>At {formatDateTime(selected.approval.approvedAt)}</div>
-                      <div className="rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] px-3 py-2">{selected.approval.resolution}</div>
+                      <div className="rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] px-3 py-2 text-[color:var(--color-text)]">{selected.approval.resolution}</div>
+                    </div>
+                  ) : can.canApprove && (selected.status === 'Answered' || selected.status === 'Awaiting Response') ? (
+                    <div className="flex flex-col gap-2">
+                      <textarea
+                        value={resolutionText}
+                        onChange={(e) => setResolutionText(e.target.value)}
+                        placeholder="Enter resolution notes before approving..."
+                        className="min-h-16 w-full rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[color:var(--color-success)]"
+                      />
+                      <Button
+                        variant="primary"
+                        className="w-full bg-[color:var(--color-success)] text-white hover:bg-[color:var(--color-success)]/90"
+                        disabled={!resolutionText.trim()}
+                        onClick={() => {
+                          approveRfi(projectId ?? '', selected.id, resolutionText.trim(), user?.name ?? 'Engineer')
+                          setResolutionText('')
+                          onToast('RFI Approved and Closed.')
+                        }}
+                      >
+                        Approve & Close
+                      </Button>
                     </div>
                   ) : (
                     'Not approved/closed yet.'
@@ -721,6 +817,40 @@ export function RfiPage() {
               value={newRfi.location}
               onChange={(e) => setNewRfi((s) => ({ ...s, location: e.target.value }))}
             />
+          </label>
+          <label className="text-sm md:col-span-2">
+            <div className="mb-1 font-semibold flex items-center justify-between">
+              Attachments
+              <label className="cursor-pointer text-xs font-semibold text-[color:var(--color-primary)] hover:underline">
+                Add File
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      const url = URL.createObjectURL(file)
+                      setNewRfi(s => ({
+                        ...s,
+                        attachments: [...s.attachments, { id: Math.random().toString(), name: file.name, kind: 'document', url }]
+                      }))
+                    }
+                  }}
+                />
+              </label>
+            </div>
+            {newRfi.attachments.length > 0 ? (
+              <ul className="mt-2 space-y-1">
+                {newRfi.attachments.map(a => (
+                  <li key={a.id} className="rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 text-xs flex justify-between items-center">
+                    <span className="truncate">{a.name}</span>
+                    <button type="button" onClick={() => setNewRfi(s => ({ ...s, attachments: s.attachments.filter(x => x.id !== a.id)}))} className="text-[color:var(--color-error)] hover:underline ml-2">Remove</button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-xs text-[color:var(--color-text_muted)] mt-1">No files attached.</div>
+            )}
           </label>
         </div>
       </Modal>

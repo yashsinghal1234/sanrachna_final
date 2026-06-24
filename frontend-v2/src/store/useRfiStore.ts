@@ -48,6 +48,7 @@ export type RfiState = {
   registerView: 'kanban' | 'table'
   filterStatus: RfiStatus | 'All'
   filterPriority: RfiPriority | 'All'
+  filterAssignee: string | 'All'
   search: string
   isDirty: boolean
   loadStatus: 'idle' | 'loading' | 'ready' | 'error'
@@ -60,6 +61,7 @@ export type RfiState = {
   setRegisterView: (v: 'kanban' | 'table') => void
   setFilterStatus: (s: RfiStatus | 'All') => void
   setFilterPriority: (p: RfiPriority | 'All') => void
+  setFilterAssignee: (a: string | 'All') => void
   setSearch: (q: string) => void
 
   createRfi: (
@@ -72,6 +74,8 @@ export type RfiState = {
   addComment: (projectId: string, id: string, comment: { kind: RfiItem['thread'][number]['kind']; author: string; text: string }) => void
   moveStatus: (projectId: string, id: string, status: RfiStatus) => void
   escalate: (projectId: string, id: string, reason: string, nextTarget?: string) => void
+  approveRfi: (projectId: string, id: string, resolution: string, approvedBy: string) => void
+  addAttachment: (projectId: string, id: string, attachment: { id: string; name: string; kind: 'photo' | 'drawing' | 'document'; url?: string }) => void
   saveChanges: () => void
 }
 
@@ -114,6 +118,7 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
   registerView: 'kanban',
   filterStatus: 'All',
   filterPriority: 'All',
+  filterAssignee: 'All',
   search: '',
   isDirty: false,
   loadStatus: 'idle',
@@ -145,6 +150,7 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
   setRegisterView: (registerView) => set({ registerView }),
   setFilterStatus: (filterStatus) => set({ filterStatus }),
   setFilterPriority: (filterPriority) => set({ filterPriority }),
+  setFilterAssignee: (filterAssignee) => set({ filterAssignee }),
   setSearch: (search) => set({ search }),
 
   createRfi: (projectId, draft) => {
@@ -281,4 +287,51 @@ export const useRfiStore = create<RfiState>()((set, get) => ({
   },
 
   saveChanges: () => set({ isDirty: false }),
+
+  approveRfi: (projectId, id, resolution, approvedBy) => {
+    const approval = { approvedBy, approvedAt: nowIso(), resolution }
+    const escComment = {
+      id: `${id}_appr_${Date.now().toString(36)}`,
+      kind: 'decision' as const,
+      author: approvedBy,
+      at: nowIso(),
+      text: `Approved & Closed: ${resolution}`,
+    }
+    set((s) => ({
+      rfis: s.rfis.map((r) =>
+        r.id === id
+          ? {
+              ...r,
+              status: 'Closed' as RfiStatus,
+              approval,
+              thread: [...r.thread, escComment],
+            }
+          : r,
+      ),
+      isDirty: true,
+    }))
+    const updated = get().rfis.find((r) => r.id === id)
+    if (projectId && updated) {
+      updateWorkspaceRfi(projectId, id, {
+        status: 'Closed',
+        approval,
+        thread: updated.thread,
+      }).catch(() => {})
+    }
+  },
+
+  addAttachment: (projectId, id, attachment) => {
+    set((s) => ({
+      rfis: s.rfis.map((r) =>
+        r.id === id
+          ? { ...r, attachments: [...r.attachments, attachment] }
+          : r,
+      ),
+      isDirty: true,
+    }))
+    const updated = get().rfis.find((r) => r.id === id)
+    if (projectId && updated) {
+      updateWorkspaceRfi(projectId, id, { attachments: updated.attachments }).catch(() => {})
+    }
+  },
 }))
