@@ -19,6 +19,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Modal } from '@/components/ui/Modal'
 import { useActiveProject } from '@/hooks/useActiveProject'
 import { computeAutoEscalations, computeMetrics, useRfiStore } from '@/store/useRfiStore'
+import { useTeamProjectStore } from '@/store/useTeamProjectStore'
+import { fetchProjectDocuments } from '@/api/documentsApi'
+import type { ProjectDocument } from '@/types/documents.types'
 import type { RfiCategory, RfiItem, RfiPriority, RfiStatus } from '@/types/rfi.types'
 import { cn } from '@/utils/cn'
 
@@ -110,6 +113,16 @@ export function RfiPage() {
   useEffect(() => {
     void fetchRfis(projectId)
   }, [projectId, fetchRfis])
+
+  const [docs, setDocs] = useState<ProjectDocument[]>([])
+  const teamMembers = useTeamProjectStore((s) => s.membersByProjectId[projectId ?? '']) || []
+
+  useEffect(() => {
+    if (projectId) {
+      fetchProjectDocuments(projectId).then((res) => setDocs(res.documents)).catch(() => {})
+      useTeamProjectStore.getState().loadTeam(projectId).catch(() => {})
+    }
+  }, [projectId])
 
   const [toast, setToast] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
@@ -669,7 +682,10 @@ export function RfiPage() {
               onChange={(e) => setNewRfi((s) => ({ ...s, assignedTo: e.target.value }))}
             />
             <datalist id="assigned-to-list">
-              {Array.from(new Set(rfis.map(r => r.assignedTo).filter(Boolean))).map(val => (
+              {Array.from(new Set([
+                ...teamMembers.map(m => m.name),
+                ...rfis.map(r => r.assignedTo)
+              ].filter(Boolean))).map(val => (
                 <option key={val} value={val} />
               ))}
             </datalist>
@@ -694,7 +710,10 @@ export function RfiPage() {
               onChange={(e) => setNewRfi((s) => ({ ...s, linkedDoc: e.target.value }))}
             />
             <datalist id="linked-doc-list">
-              {Array.from(new Set(rfis.map(r => r.linkedDoc).filter(Boolean))).map(val => (
+              {Array.from(new Set([
+                ...docs.map(d => d.name),
+                ...rfis.map(r => r.linkedDoc)
+              ].filter(Boolean))).map(val => (
                 <option key={val} value={val} />
               ))}
             </datalist>
