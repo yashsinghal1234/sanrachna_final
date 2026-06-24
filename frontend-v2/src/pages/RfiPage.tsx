@@ -89,8 +89,7 @@ export function RfiPage() {
     rfis,
     selectedId,
     setSelected,
-    registerView,
-    setRegisterView,
+
     filterStatus,
     setFilterStatus,
     filterPriority,
@@ -302,8 +301,7 @@ export function RfiPage() {
       </Card>
 
       {/* 3. Kanban / Status board (Hero) */}
-      {registerView === 'kanban' ? (
-        <div className="grid gap-3 xl:grid-cols-6">
+      <div className="grid gap-3 xl:grid-cols-6">
           {STATUSES.map((status) => {
             const col = filtered.filter((r) => r.status === status)
             return (
@@ -361,91 +359,7 @@ export function RfiPage() {
             )
           })}
         </div>
-      ) : (
-        /* 4. Detailed RFI register table */
-        <Card>
-          <CardHeader>
-            <CardTitle>RFI register</CardTitle>
-            <CardDescription>Structured view for formal reporting and exports.</CardDescription>
-          </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full min-w-[1200px] border-collapse text-left text-sm">
-              <thead>
-                <tr className="bg-[color:var(--color-bg)] text-xs font-semibold text-[color:var(--color-text_secondary)]">
-                  <th className="px-3 py-2">RFI ID</th>
-                  <th className="px-3 py-2">Title</th>
-                  <th className="px-3 py-2">Category</th>
-                  <th className="px-3 py-2">Raised By</th>
-                  <th className="px-3 py-2">Assigned To</th>
-                  <th className="px-3 py-2">Linked Drawing/Doc</th>
-                  <th className="px-3 py-2">Raised Date</th>
-                  <th className="px-3 py-2">Due Date</th>
-                  <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2">Priority</th>
-                  <th className="px-3 py-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[color:var(--color-border)]">
-                {filtered.map((r) => (
-                  <tr key={r.id} className="hover:bg-[color:var(--color-surface_hover)]/40">
-                    <td className="px-3 py-3 font-semibold">{r.id}</td>
-                    <td className="px-3 py-3">{r.title}</td>
-                    <td className="px-3 py-3 text-[color:var(--color-text_secondary)]">{r.category}</td>
-                    <td className="px-3 py-3 text-[color:var(--color-text_secondary)]">{r.raisedBy}</td>
-                    <td className="px-3 py-3 text-[color:var(--color-text_secondary)]">{r.assignedTo}</td>
-                    <td className="px-3 py-3 text-[color:var(--color-text_secondary)]">{r.linkedDoc ?? '—'}</td>
-                    <td className="px-3 py-3 text-[color:var(--color-text_secondary)]">{formatDateTime(r.raisedAt)}</td>
-                    <td className="px-3 py-3 text-[color:var(--color-text_secondary)]">{formatDateTime(r.dueAt)}</td>
-                    <td className="px-3 py-3">
-                      <span className={cn('rounded-full px-2 py-1 text-xs font-semibold', statusTone(r.status))}>{r.status}</span>
-                    </td>
-                    <td className="px-3 py-3">{priorityPill(r.priority)}</td>
-                    <td className="px-3 py-3">
-                      <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => setSelected(r.id)}>
-                          Open
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => {
-                            if (!can.canRespond) return
-                            addComment(projectId ?? '', r.id, { kind: 'response', author: user?.name ?? 'Engineer', text: 'Acknowledged. Will revert shortly.' })
-                            moveStatus(projectId ?? '', r.id, 'In Review')
-                            onToast('Responded.')
-                          }}
-                          disabled={!can.canRespond}
-                        >
-                          Respond
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            if (!can.canEscalate) return
-                            escalate(projectId ?? '', r.id, 'Manual escalation by user', can.isOwner ? 'Owner' : 'Owner — K. Iyer')
-                            onToast('Escalated.')
-                          }}
-                          disabled={!can.canEscalate}
-                        >
-                          Escalate
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={11} className="px-3 py-8 text-sm text-[color:var(--color-text_secondary)]">
-                      No RFIs match this filter.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* 6. Auto escalation panel */}
       <div className="grid gap-4 xl:grid-cols-[1.7fr_1fr]">
@@ -526,27 +440,6 @@ export function RfiPage() {
               <div className="rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] p-3">
                 RFIs by phase: <span className="font-semibold text-[color:var(--color-text)]">Finishing + MEP highest</span>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="overflow-hidden border-[#d6ece7] bg-[#f2fcf9]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="size-4 text-[color:var(--color-primary_dark)]" />
-                AI assistant
-              </CardTitle>
-              <CardDescription>Premium feel suggestions.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              {[
-                'Suggest likely approver based on category (Structure → Consultant).',
-                'Detect duplicate RFIs by title similarity.',
-                'Draft response template for common MEP clashes.',
-              ].map((s) => (
-                <div key={s} className="rounded-[var(--radius-xl)] bg-white px-3 py-2 ring-1 ring-[#dcece9]">
-                  {s}
-                </div>
-              ))}
             </CardContent>
           </Card>
         </div>
