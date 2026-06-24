@@ -218,11 +218,7 @@ export function RfiPage() {
       <Card className="sticky top-0 z-30 bg-white p-4 shadow-[var(--shadow-soft)]">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
-            <div className="text-xs font-semibold tracking-widest text-[color:var(--color-text_muted)]">RFI</div>
-            <div className="mt-1 text-xl font-bold">Clarifications & approvals workflow</div>
-            <div className="mt-1 text-sm text-[color:var(--color-text_secondary)]">
-              RFI = information/clarification. Issue = physical site problem.
-            </div>
+            <div className="text-xl font-bold">RFIs</div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -246,29 +242,7 @@ export function RfiPage() {
         </div>
       </Card>
 
-      <ProjectContextBanner />
 
-      {/* 2. Summary cards */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
-        {[
-          { label: 'Open RFIs', value: metrics.open, icon: FileText, tone: 'bg-[#EEF3FB] ring-[#DBE9F8]' },
-          { label: 'Overdue RFIs', value: metrics.overdue, icon: Timer, tone: 'bg-[#FFEef0] ring-[#F8D8DD]' },
-          { label: 'Answered This Week', value: metrics.answeredThisWeek, icon: Users, tone: 'bg-[#E9F7F2] ring-[#CFE8DE]' },
-          { label: 'Avg Response Time', value: `${metrics.avgResponseHours}h`, icon: Clock3, tone: 'bg-[#F8FAFC] ring-[#E2E8F0]' },
-          { label: 'Escalated RFIs', value: metrics.escalated, icon: Bell, tone: 'bg-[#FFF7E8] ring-[#F6E4BB]' },
-          { label: 'Critical RFIs', value: metrics.critical, icon: ShieldAlert, tone: 'bg-[#F2F5FC] ring-[#E1E8F7]' },
-        ].map((c) => (
-          <Card key={c.label} className={`${c.tone} shadow-none ring-1`}>
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between gap-3">
-                <div className="text-xs text-[color:var(--color-text_secondary)]">{c.label}</div>
-                <c.icon className="size-4 text-[color:var(--color-text_muted)]" />
-              </div>
-              <div className="mt-1 text-xl font-bold">{c.value}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
 
       {/* View controls */}
       <Card>
