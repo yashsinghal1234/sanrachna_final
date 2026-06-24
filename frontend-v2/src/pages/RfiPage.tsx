@@ -284,28 +284,7 @@ export function RfiPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-filter_segment_bg)] p-1 shadow-sm">
-              <button
-                type="button"
-                className={cn(
-                  'rounded-[var(--radius-xl)] px-3 py-2 text-sm font-semibold transition',
-                  registerView === 'kanban' ? 'bg-[color:var(--color-primary)] text-white' : 'text-[color:var(--color-text_secondary)] hover:bg-[color:var(--color-surface_hover)]',
-                )}
-                onClick={() => setRegisterView('kanban')}
-              >
-                Kanban
-              </button>
-              <button
-                type="button"
-                className={cn(
-                  'rounded-[var(--radius-xl)] px-3 py-2 text-sm font-semibold transition',
-                  registerView === 'table' ? 'bg-[color:var(--color-primary)] text-white' : 'text-[color:var(--color-text_secondary)] hover:bg-[color:var(--color-surface_hover)]',
-                )}
-                onClick={() => setRegisterView('table')}
-              >
-                Register
-              </button>
-            </div>
+
 
             {isDirty ? (
               <Button
