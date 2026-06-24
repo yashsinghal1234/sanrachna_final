@@ -214,10 +214,11 @@ export function RfiPage() {
         </Card>
       ) : null}
       {/* 1. Header / Controls */}
-      <Card className="sticky top-0 z-30 bg-[color:var(--color-card)] p-4 shadow-[var(--shadow-soft)]">
+      <Card className="bg-[color:var(--color-card)] p-4 shadow-[var(--shadow-soft)]">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
+          <div className="min-w-0 flex items-baseline gap-2">
             <div className="text-xl font-bold">RFIs</div>
+            <div className="text-sm font-medium text-[color:var(--color-text_secondary)]">Request for Information</div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
