@@ -103,8 +103,6 @@ export function RfiPage() {
     moveStatus,
     addComment,
     escalate,
-    isDirty,
-    saveChanges,
   } = useRfiStore()
   const fetchRfis = useRfiStore((s) => s.fetchRfis)
   const rfiLoadStatus = useRfiStore((s) => s.loadStatus)
@@ -299,17 +297,7 @@ export function RfiPage() {
           <div className="flex flex-wrap items-center gap-2">
 
 
-            {isDirty ? (
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  saveChanges()
-                  onToast('Saved changes.')
-                }}
-              >
-                Save Changes
-              </Button>
-            ) : null}
+
           </div>
         </CardContent>
       </Card>
