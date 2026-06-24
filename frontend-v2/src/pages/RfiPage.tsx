@@ -327,7 +327,7 @@ export function RfiPage() {
                       {col.length}
                     </span>
                   </div>
-                  <CardDescription>Drag/drop comes next — click cards for details.</CardDescription>
+
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {col.length === 0 ? (
@@ -346,11 +346,11 @@ export function RfiPage() {
                           onClick={() => setSelected(r.id)}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="text-xs font-semibold text-[color:var(--color-text_muted)]">{r.id}</div>
-                              <div className="mt-1 truncate text-sm font-semibold">{r.title}</div>
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-xs font-semibold text-[color:var(--color-text_muted)]" title={r.id}>{r.id}</div>
+                              <div className="mt-1 truncate text-sm font-semibold" title={r.title}>{r.title}</div>
                             </div>
-                            {priorityPill(r.priority)}
+                            <div className="shrink-0">{priorityPill(r.priority)}</div>
                           </div>
                           <div className="mt-2 text-xs text-[color:var(--color-text_secondary)]">
                             Raised: {r.raisedBy}
