@@ -18,6 +18,7 @@ export type ProjectLogDto = {
 
 export function logPhotoAbsoluteUrl(photoUrl: string | null | undefined): string | null {
   if (!photoUrl) return null
+  if (photoUrl.startsWith('data:')) return photoUrl
   if (photoUrl.startsWith('http://') || photoUrl.startsWith('https://')) return photoUrl
   const base = getBackendBaseUrl()?.replace(/\/+$/, '') ?? ''
   const path = photoUrl.startsWith('/') ? photoUrl : `/${photoUrl}`
