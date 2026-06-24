@@ -663,10 +663,16 @@ export function RfiPage() {
           <label className="text-sm">
             <div className="mb-1 font-semibold">Assign to</div>
             <input
+              list="assigned-to-list"
               className="h-10 w-full rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 text-sm"
               value={newRfi.assignedTo}
               onChange={(e) => setNewRfi((s) => ({ ...s, assignedTo: e.target.value }))}
             />
+            <datalist id="assigned-to-list">
+              {Array.from(new Set(rfis.map(r => r.assignedTo).filter(Boolean))).map(val => (
+                <option key={val} value={val} />
+              ))}
+            </datalist>
           </label>
           <label className="text-sm">
             <div className="mb-1 font-semibold">Due (days)</div>
@@ -682,10 +688,16 @@ export function RfiPage() {
           <label className="text-sm">
             <div className="mb-1 font-semibold">Linked drawing/doc</div>
             <input
+              list="linked-doc-list"
               className="h-10 w-full rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 text-sm"
               value={newRfi.linkedDoc}
               onChange={(e) => setNewRfi((s) => ({ ...s, linkedDoc: e.target.value }))}
             />
+            <datalist id="linked-doc-list">
+              {Array.from(new Set(rfis.map(r => r.linkedDoc).filter(Boolean))).map(val => (
+                <option key={val} value={val} />
+              ))}
+            </datalist>
           </label>
           <label className="text-sm">
             <div className="mb-1 font-semibold">Linked task / phase</div>
