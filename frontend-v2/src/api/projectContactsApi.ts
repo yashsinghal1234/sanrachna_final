@@ -36,3 +36,36 @@ export async function createProjectContact(
     },
   )
 }
+
+export async function updateProjectContact(
+  projectId: string,
+  contactId: string,
+  body: Partial<{
+    name: string
+    phone: string
+    email?: string
+    role?: string
+    phase?: string
+    contactType: string
+  }>,
+): Promise<{ contact: MongoContactRow }> {
+  return apiJson<{ contact: MongoContactRow }>(
+    `/api/projects/${encodeURIComponent(projectId)}/contacts/${encodeURIComponent(contactId)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    },
+  )
+}
+
+export async function deleteProjectContact(
+  projectId: string,
+  contactId: string,
+): Promise<{ success: boolean }> {
+  return apiJson<{ success: boolean }>(
+    `/api/projects/${encodeURIComponent(projectId)}/contacts/${encodeURIComponent(contactId)}`,
+    {
+      method: 'DELETE',
+    },
+  )
+}

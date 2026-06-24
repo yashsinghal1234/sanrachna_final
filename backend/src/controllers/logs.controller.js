@@ -76,7 +76,7 @@ async function createLog(req, res) {
     tasks_completed: tasks,
     workers_present: 0,
     issues,
-    photo_url: `/uploads/logs/${req.file.filename}`,
+    photo_url: req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null,
     author: String(req.user.name || 'Worker').trim() || 'Worker',
     submittedBy: req.user._id,
     status: 'pending',

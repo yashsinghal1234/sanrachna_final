@@ -40,4 +40,31 @@ async function createContact(req, res) {
   res.status(201).json({ contact: serializeDoc(row) })
 }
 
-module.exports = { listContacts, createContact }
+async function updateContact(req, res) {
+  const { contactId } = req.params
+  const { name, role, phone, email, phase, contactType } = req.body
+
+  const row = await Contact.findOne({ _id: contactId, project: req.project._id })
+  if (!row) return res.status(404).json({ message: 'Contact not found' })
+
+  if (name !== undefined) row.name = String(name).trim()
+  if (role !== undefined) row.role = String(role).trim()
+  if (phone !== undefined) row.phone = String(phone).trim()
+  if (email !== undefined) row.email = String(email).trim().toLowerCase()
+  if (phase !== undefined) row.phase = String(phase).trim()
+  if (contactType !== undefined && CONTACT_TYPES.includes(String(contactType).trim())) {
+    row.contactType = String(contactType).trim()
+  }
+
+  await row.save()
+  res.json({ contact: serializeDoc(row) })
+}
+
+async function deleteContact(req, res) {
+  const { contactId } = req.params
+  const row = await Contact.findOneAndDelete({ _id: contactId, project: req.project._id })
+  if (!row) return res.status(404).json({ message: 'Contact not found' })
+  res.json({ success: true })
+}
+
+module.exports = { listContacts, createContact, updateContact, deleteContact }

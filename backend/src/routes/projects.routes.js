@@ -20,7 +20,7 @@ const { listLogs, createLog, updateLogStatus } = require('../controllers/logs.co
 const { uploadLogPhotoMiddleware } = require('../middleware/uploadLogPhoto')
 const { listRfis, createRfi, updateRfiStatus } = require('../controllers/rfis.controller')
 const { listIssues, createIssue, updateIssue } = require('../controllers/issues.controller')
-const { listContacts, createContact } = require('../controllers/contacts.controller')
+const { listContacts, createContact, updateContact, deleteContact } = require('../controllers/contacts.controller')
 const {
   listDocuments,
   createDocument,
@@ -105,6 +105,8 @@ router.patch('/:projectId/issues/:issueId', asyncHandler(updateIssue))
 
 router.get('/:projectId/contacts', asyncHandler(listContacts))
 router.post('/:projectId/contacts', asyncHandler(createContact))
+router.patch('/:projectId/contacts/:contactId', asyncHandler(updateContact))
+router.delete('/:projectId/contacts/:contactId', asyncHandler(deleteContact))
 
 router.get('/:projectId/documents', asyncHandler(listDocuments))
 router.patch('/:projectId/documents/:documentId', asyncHandler(updateDocument))

@@ -24,6 +24,9 @@ import { useEmergency } from '@/emergency/EmergencyContext'
 import type { EmergencyIncident, EmergencyIncidentType, EmergencySeverity, EmergencyStatus } from '@/emergency/types'
 import { getBackendBaseUrl } from '@/api/http'
 import { cn } from '@/utils/cn'
+import { useProjectsStore } from '@/store/useProjectsStore'
+import { listProjectContacts } from '@/api/projectContactsApi'
+import { uploadProjectDocument } from '@/api/documentsApi'
 
 type IncidentTypeOption = {
   type: EmergencyIncidentType
@@ -116,6 +119,18 @@ function WorkerEmergencyPanel() {
   const [sentId, setSentId] = useState<string | null>(null)
   const [showCamera, setShowCamera] = useState(false)
   const fileRef = useRef<HTMLInputElement | null>(null)
+  
+  const currentProjectId = useProjectsStore((s) => s.currentProjectId)
+  const [emergencyContacts, setEmergencyContacts] = useState<{name: string, phone: string}[]>([])
+
+  useEffect(() => {
+    if (currentProjectId) {
+      listProjectContacts(currentProjectId).then(res => {
+        const emergency = (res.contacts ?? []).filter(c => c.contactType === 'Emergency' || (c as any).isEmergency).map(c => ({ name: c.name ?? 'Unknown', phone: c.phone ?? '' }))
+        setEmergencyContacts(emergency)
+      }).catch(() => {})
+    }
+  }, [currentProjectId])
 
   const { pos, err, request } = useGeo((lat, lng) => {
     setZone((prev) => prev ? prev : `Lat: ${lat.toFixed(4)}, Lng: ${lng.toFixed(4)}`)
@@ -333,7 +348,9 @@ function WorkerEmergencyPanel() {
                   <li>Owner</li>
                   <li>Senior Engineers</li>
                   <li>Safety Officer</li>
-                  <li>Site Supervisor</li>
+                  {emergencyContacts.map((c, idx) => (
+                    <li key={idx}><strong>{c.name}</strong> {c.phone ? `(${c.phone})` : ''}</li>
+                  ))}
                 </ul>
               </div>
             ) : (
@@ -421,6 +438,7 @@ function WorkerEmergencyPanel() {
 function EngineerCommandPanel() {
   const { user, role } = useAuth()
   const { incidents, activeIncidents, updateIncident } = useEmergency()
+  const currentProjectId = useProjectsStore((s) => s.currentProjectId)
 
   const resolvedRole: Role = role ?? 'engineer'
   const list = resolvedRole === 'engineer' ? activeIncidents : incidents
@@ -444,6 +462,11 @@ function EngineerCommandPanel() {
     updateIncident(selected.id, { status })
     setToast(`Marked ${statusLabel(status)}.`)
     if (status === 'resolved') {
+      if (currentProjectId) {
+        const content = `INCIDENT REPORT\n\nIncident ID: ${selected.id}\nType: ${typeLabel(selected.type)}\nSeverity: ${selected.severity.toUpperCase()}\nLocation: ${selected.location.zone}\nReported By: ${selected.reportedBy.name}\nDescription: ${selected.description || 'N/A'}\n\nResolved By: ${actorName}\nDate: ${new Date().toLocaleString()}\n`
+        const file = new File([content], `Incident_Report_${selected.id}.txt`, { type: 'text/plain' })
+        uploadProjectDocument(currentProjectId, { file, type: 'Other', phase: 'Design', title: 'Auto-generated emergency incident report' }).catch(console.error)
+      }
       setSelectedId(null)
     }
   }
@@ -618,7 +641,9 @@ function EngineerCommandPanel() {
 }
 
 function OwnerEmergencyDashboard() {
+  const { user } = useAuth()
   const { incidents, activeIncidents, updateIncident } = useEmergency()
+  const currentProjectId = useProjectsStore((s) => s.currentProjectId)
 
   const activeCount = activeIncidents.filter((x) => x.status !== 'resolved').length
   const resolvedCount = incidents.filter((x) => x.status === 'resolved').length
@@ -668,6 +693,11 @@ function OwnerEmergencyDashboard() {
 
   const resolveQuick = (inc: EmergencyIncident) => {
     updateIncident(inc.id, { status: 'resolved', note: 'Resolved by owner.' })
+    if (currentProjectId) {
+      const content = `INCIDENT REPORT\n\nIncident ID: ${inc.id}\nType: ${typeLabel(inc.type)}\nSeverity: ${inc.severity.toUpperCase()}\nLocation: ${inc.location.zone}\nReported By: ${inc.reportedBy.name}\nDescription: ${inc.description || 'N/A'}\n\nResolved By: ${user?.name ?? 'Owner'}\nDate: ${new Date().toLocaleString()}\n`
+      const file = new File([content], `Incident_Report_${inc.id}.txt`, { type: 'text/plain' })
+      uploadProjectDocument(currentProjectId, { file, type: 'Other', phase: 'Design', title: 'Auto-generated emergency incident report' }).catch(console.error)
+    }
   }
 
   return (

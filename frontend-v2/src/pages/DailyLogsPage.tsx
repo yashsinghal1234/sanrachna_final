@@ -1,5 +1,5 @@
-import { Camera, FolderOpen, ImagePlus, Loader2 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Camera, FolderOpen, ImagePlus, Loader2, Clock, Users, User, ImageOff, Download } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 
 import { fetchWorkspaceDailyLogs } from '@/api/resources'
 import { isBackendConfigured } from '@/api/http'
@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Input } from '@/components/ui/Input'
-import { PageLoader } from '@/components/ui/Loader'
 import { useProjectsStore } from '@/store/useProjectsStore'
 import type { DailyLogEntry } from '@/types/dashboard.types'
 import { cn } from '@/utils/cn'
@@ -66,6 +65,51 @@ export function DailyLogsPage() {
   const [error, setError] = useState<string | null>(null)
 
   const backendOk = Boolean(isBackendConfigured() && token && currentProjectId && MONGO_ID_RE.test(currentProjectId))
+
+  const [filterDate, setFilterDate] = useState('')
+  const [filterAuthor, setFilterAuthor] = useState('')
+
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      if (filterDate && item.date !== filterDate) return false
+      if (filterAuthor) {
+        const authorMatch = [item.author, item.submittedByName].some(
+          (name) => name?.toLowerCase().includes(filterAuthor.toLowerCase())
+        )
+        if (!authorMatch) return false
+      }
+      return true
+    })
+  }, [items, filterDate, filterAuthor])
+
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayItems = items.filter((i) => i.date === todayStr)
+  const todayHeadcount = todayItems
+    .filter((i) => i.status === 'approved')
+    .reduce((sum, item) => sum + (Number(item.workers_present) || 0), 0)
+  const todayPending = todayItems.filter((i) => i.status === 'pending').length
+
+  const exportCSV = useCallback(() => {
+    if (!filteredItems.length) return
+    const headers = ['Date', 'Status', 'Tasks Completed', 'Author', 'Workers Present', 'Issues']
+    const rows = filteredItems.map((log) => [
+      log.date,
+      log.status || 'approved',
+      `"${(log.tasks_completed || '').replace(/"/g, '""')}"`,
+      `"${(log.submittedByName || log.author || '').replace(/"/g, '""')}"`,
+      log.workers_present || 0,
+      `"${(log.issues || '').replace(/"/g, '""')}"`
+    ])
+    const csvStr = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
+    const blob = new Blob([csvStr], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', `DailyLogs_Export_${todayStr}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }, [filteredItems, todayStr])
 
   const load = useCallback(async () => {
     if (!currentProjectId) {
@@ -219,7 +263,6 @@ export function DailyLogsPage() {
     )
   }
 
-  const ownerReadOnly = resolvedRole === 'owner'
   const engineerActions = resolvedRole === 'engineer'
   const workerSubmit = resolvedRole === 'worker'
 
@@ -228,8 +271,38 @@ export function DailyLogsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-[color:var(--color-text)]">Daily Logs</h1>
         <p className="mt-1 text-sm text-[color:var(--color-text_secondary)]">
-          Submit/view site photos. Engineers approve logs; approved headcount rolls up into project attendance automatically.
+          Submit and view daily site photos. Approved logs automatically roll up into the project attendance records.
         </p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="bg-[color:var(--color-card)] border-[color:var(--color-border)]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-[color:var(--color-text_secondary)]">Today's Headcount</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-[color:var(--color-text)]">{todayHeadcount}</div>
+            <p className="text-xs text-[color:var(--color-text_muted)]">From approved logs</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-[color:var(--color-card)] border-[color:var(--color-border)]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-[color:var(--color-text_secondary)]">Logs Submitted</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-[color:var(--color-text)]">{todayItems.length}</div>
+            <p className="text-xs text-[color:var(--color-text_muted)]">Total for {todayStr}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-[color:var(--color-card)] border-[color:var(--color-border)]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-[color:var(--color-text_secondary)]">Pending Approvals</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-500">{todayPending}</div>
+            <p className="text-xs text-[color:var(--color-text_muted)]">Awaiting engineer review</p>
+          </CardContent>
+        </Card>
       </div>
 
       {error ? (
@@ -345,28 +418,52 @@ export function DailyLogsPage() {
         </Card>
       ) : null}
 
-      {(ownerReadOnly || engineerActions) && backendOk ? (
+      {engineerActions && backendOk ? (
         <Card className="border-[color:var(--color-border)] bg-[color:var(--color-bg)]">
           <CardContent className="py-3 text-sm text-[color:var(--color-text_secondary)]">
-            {ownerReadOnly
-              ? 'Owner: read-only access to submitted photo logs.'
-              : 'Engineer: approve each pending log and set headcount for that photo (defaults to 1). Totals by date are stored under project planning for attendance.'}
+            Engineer: Approve each pending log and set the headcount for that photo. Totals by date are stored under project attendance.
           </CardContent>
         </Card>
       ) : null}
 
-      {loading ? <PageLoader /> : null}
+
 
       <Card>
-        <CardHeader>
-          <CardTitle>Recent logs</CardTitle>
-          <CardDescription>{backendOk ? 'From your project database' : 'workspace feed'}</CardDescription>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <CardTitle>Recent logs</CardTitle>
+            <CardDescription>{backendOk ? 'From your project database' : 'workspace feed'}</CardDescription>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="date"
+              className="w-auto h-9 text-sm"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              title="Filter by date"
+            />
+            <Input
+              type="text"
+              placeholder="Filter author..."
+              className="w-36 sm:w-40 h-9 text-sm"
+              value={filterAuthor}
+              onChange={(e) => setFilterAuthor(e.target.value)}
+            />
+            <Button variant="outline" size="sm" onClick={exportCSV} disabled={filteredItems.length === 0}>
+              <Download className="mr-2 size-4" />
+              Export
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {items.length === 0 && !loading ? (
-            <p className="text-sm text-[color:var(--color-text_muted)]">No logs yet for this project.</p>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="size-8 animate-spin text-[color:var(--color-primary)]" />
+            </div>
+          ) : filteredItems.length === 0 ? (
+            <p className="text-sm text-[color:var(--color-text_muted)]">No logs found matching criteria.</p>
           ) : null}
-          {items.map((log) => {
+          {!loading && filteredItems.map((log) => {
             const src = logPhotoAbsoluteUrl(log.photo_url)
             const st = log.status || 'approved'
             return (
@@ -374,10 +471,11 @@ export function DailyLogsPage() {
                 key={log.id}
                 className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-card)] p-4"
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
+                <div className="flex flex-col sm:flex-row items-start justify-between gap-6">
+                  <div className="flex-1 min-w-0 space-y-4">
+                    {/* Header Row */}
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--color-text_muted)]">{log.date}</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-[color:var(--color-text_muted)]">{log.date}</span>
                       <span
                         className={cn(
                           'rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1',
@@ -387,51 +485,83 @@ export function DailyLogsPage() {
                         {st}
                       </span>
                     </div>
-                    <p className="mt-2 text-sm font-medium text-[color:var(--color-text)]">{log.tasks_completed}</p>
-                    <p className="mt-1 text-xs text-[color:var(--color-text_secondary)]">
-                      {log.submittedByName || log.author}
-                      {st === 'approved' ? ` · People in frame (engineer): ${log.workers_present}` : null}
+
+                    {/* Main Title/Tasks */}
+                    <p className="text-base font-semibold text-[color:var(--color-text)] leading-snug break-words">
+                      {log.tasks_completed}
                     </p>
-                    {fmtIso(log.photoCapturedAt) ? (
-                      <p className="mt-1 text-xs text-[color:var(--color-text_muted)]">Photo time: {fmtIso(log.photoCapturedAt)}</p>
-                    ) : null}
-                    {fmtIso(log.photoUploadedAt) ? (
-                      <p className="text-xs text-[color:var(--color-text_muted)]">Uploaded: {fmtIso(log.photoUploadedAt)}</p>
-                    ) : null}
-                    {st === 'approved' && (log.submittedByName || log.author) ? (
-                      <p className="mt-1 text-xs font-medium text-emerald-800">
-                        Attendance: +1 for {log.submittedByName || log.author} on {log.date} (rolled into project totals).
-                      </p>
-                    ) : null}
-                    {st === 'pending' ? (
-                      <p className="mt-1 text-xs text-amber-900/90">Pending approval — attendance for the worker is applied after engineer approval.</p>
-                    ) : null}
-                    {log.issues ? <p className="mt-2 text-xs text-[color:var(--color-text)]">{log.issues}</p> : null}
+
+                    {/* Metadata Grid */}
+                    <div className="grid gap-2 text-xs text-[color:var(--color-text_secondary)]">
+                      <div className="flex items-center gap-2">
+                        <User className="size-3.5 opacity-70" />
+                        <span>{log.submittedByName || log.author}</span>
+                      </div>
+                      
+                      {st === 'approved' ? (
+                        <div className="flex items-center gap-2">
+                          <Users className="size-3.5 opacity-70" />
+                          <span>People in frame: <strong className="text-[color:var(--color-text)]">{log.workers_present}</strong></span>
+                        </div>
+                      ) : null}
+
+                      {fmtIso(log.photoCapturedAt) || fmtIso(log.photoUploadedAt) ? (
+                        <div className="flex items-center gap-2">
+                          <Clock className="size-3.5 opacity-70" />
+                          <span className="flex flex-wrap gap-x-3">
+                            {fmtIso(log.photoCapturedAt) ? <span>Photo: {fmtIso(log.photoCapturedAt)}</span> : null}
+                            {fmtIso(log.photoUploadedAt) ? <span>Uploaded: {fmtIso(log.photoUploadedAt)}</span> : null}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
+
+                    {/* Status specific messages */}
+                    <div className="space-y-1 pt-1">
+                      {st === 'approved' && (log.submittedByName || log.author) ? (
+                        <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                          ✓ Attendance: +1 for {log.submittedByName || log.author} (rolled into project totals)
+                        </p>
+                      ) : null}
+                      {st === 'pending' ? (
+                        <p className="text-xs font-medium text-amber-600 dark:text-amber-500">
+                          Pending approval — attendance will be applied after engineer approval
+                        </p>
+                      ) : null}
+                      {log.issues ? (
+                        <div className="mt-2 rounded bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400 border border-red-500/20">
+                          <span className="font-semibold">Reported Issue:</span> {log.issues}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
+
+                  {/* Right side: Image thumbnail */}
                   {src ? (
                     <button
                       type="button"
-                      className="shrink-0 overflow-hidden rounded-[var(--radius-lg)] ring-1 ring-[color:var(--color-border)] transition hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary)]"
+                      className="shrink-0 group overflow-hidden rounded-xl ring-1 ring-[color:var(--color-border)] transition-all hover:ring-2 hover:ring-[color:var(--color-primary)] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-primary)]"
                       onClick={() => setLightboxUrl(src)}
                       title="View full size"
                     >
                       <img
                         src={src}
-                        alt=""
-                        className="h-28 w-40 object-cover"
+                        alt="Log photo"
+                        className="h-32 w-48 object-cover transition-transform duration-300 group-hover:scale-105"
                         onError={(e) => {
                           const img = e.currentTarget as HTMLImageElement
                           img.style.display = 'none'
                           const parent = img.closest('button')
                           if (parent) {
-                            parent.insertAdjacentHTML('afterend', '<div class="flex h-28 w-40 items-center justify-center rounded-lg bg-slate-100 text-xs text-slate-400">No image</div>')
+                            parent.insertAdjacentHTML('afterend', '<div class="flex h-32 w-48 flex-col items-center justify-center gap-2 rounded-xl bg-[color:var(--color-bg)] ring-1 ring-[color:var(--color-border)] text-xs text-[color:var(--color-text_muted)]"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-50"><line x1="2" x2="22" y1="2" y2="22"/><path d="M10.41 10.41a2 2 0 1 1-2.83-2.83"/><line x1="13.5" x2="6" y1="13.5" y2="21"/><line x1="18" x2="21" y1="12" y2="15"/><path d="M3.59 3.59A1.99 1.99 0 0 0 3 5v14a2 2 0 0 0 2 2h14c.55 0 1.05-.22 1.41-.59"/><path d="M21 15V5a2 2 0 0 0-2-2H9"/></svg>No image</div>')
                             parent.remove()
                           }
                         }}
                       />
                     </button>
                   ) : (
-                    <div className="flex h-28 w-40 items-center justify-center rounded-[var(--radius-lg)] bg-[color:var(--color-bg)] text-xs text-[color:var(--color-text_muted)]">
+                    <div className="flex shrink-0 flex-col gap-2 h-32 w-48 items-center justify-center rounded-xl bg-[color:var(--color-bg)] ring-1 ring-[color:var(--color-border)] text-xs text-[color:var(--color-text_muted)]">
+                      <ImageOff className="size-5 opacity-50" />
                       No image
                     </div>
                   )}

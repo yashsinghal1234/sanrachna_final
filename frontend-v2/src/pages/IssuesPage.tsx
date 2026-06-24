@@ -12,6 +12,7 @@ import {
   X,
   Upload,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import type { FormEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -26,6 +27,7 @@ import { useProjectsStore } from '@/store/useProjectsStore'
 import { useRfiStore } from '@/store/useRfiStore'
 import { useIssueStore, computeIssueMetrics } from '@/store/useIssueStore'
 import { apiGetTeam } from '@/api/projectTeamApi'
+import { listProjectContacts } from '@/api/projectContactsApi'
 import type { IssueCategory, IssueItem, IssueSeverity, IssueStatus } from '@/types/issue.types'
 import { ISSUE_CATEGORIES, ISSUE_SEVERITIES, ISSUE_STATUSES } from '@/constants/issues'
 import { formatDate } from '@/utils/format'
@@ -126,15 +128,34 @@ export function IssuesPage() {
     void fetchIssues(currentProjectId)
   }, [currentProjectId, fetchIssues])
 
-  // Fetch team members when project changes
+  // Fetch team members and external contacts when project changes
   useEffect(() => {
     if (!currentProjectId) return
-    apiGetTeam(currentProjectId)
-      .then((res) => {
-        const members = (res.members ?? []) as { id: string; name: string; role?: string }[]
-        setTeamMembers(members.map((m) => ({ id: m.id, name: m.name, role: m.role ?? 'member' })))
-      })
-      .catch(() => setTeamMembers([]))
+    Promise.all([
+      apiGetTeam(currentProjectId).catch(() => ({ members: [] })),
+      listProjectContacts(currentProjectId).catch(() => ({ contacts: [] }))
+    ]).then(([teamRes, contactsRes]) => {
+      const team = (teamRes.members ?? []) as { id: string; name: string; role?: string }[]
+      const contacts = contactsRes.contacts ?? []
+      
+      const combined: { id: string; name: string; role: string }[] = team.map((m) => ({ 
+        id: m.id, 
+        name: m.name, 
+        role: m.role ?? 'member' 
+      }))
+
+      for (const c of contacts) {
+        if (!combined.some(m => m.name === c.name)) {
+          combined.push({
+            id: c.id ?? c._id ?? `contact-${Math.random()}`,
+            name: c.name ?? 'Unknown',
+            role: c.contactType || c.role || 'Contact'
+          })
+        }
+      }
+
+      setTeamMembers(combined)
+    })
   }, [currentProjectId])
 
   const filteredTeam = useMemo(() => {
@@ -493,12 +514,24 @@ export function IssuesPage() {
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-[color:var(--color-border)] p-3">
           <div className="text-xs text-muted">Reported by</div>
-          <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{selected.reportedBy}</div>
+          <div className="mt-1 text-sm font-semibold text-blue-600 dark:text-blue-400">
+            <Link to={`/contacts?search=${encodeURIComponent(selected.reportedBy)}`} className="hover:underline">
+              {selected.reportedBy}
+            </Link>
+          </div>
           <div className="mt-1 text-xs text-muted">{formatDate(selected.raisedAt)}</div>
         </div>
         <div className="rounded-xl border border-[color:var(--color-border)] p-3">
           <div className="text-xs text-muted">Assigned to</div>
-          <div className="mt-1 text-sm font-semibold text-[color:var(--color-text)]">{selected.assignedTo ?? 'Unassigned'}</div>
+          <div className="mt-1 text-sm font-semibold text-blue-600 dark:text-blue-400">
+            {selected.assignedTo ? (
+              <Link to={`/contacts?search=${encodeURIComponent(selected.assignedTo)}`} className="hover:underline">
+                {selected.assignedTo}
+              </Link>
+            ) : (
+              <span className="text-[color:var(--color-text)]">Unassigned</span>
+            )}
+          </div>
           <div className="mt-1 text-xs text-muted">Due {formatDate(selected.dueAt)}</div>
         </div>
       </div>

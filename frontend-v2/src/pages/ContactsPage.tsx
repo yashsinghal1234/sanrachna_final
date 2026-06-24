@@ -1,7 +1,8 @@
-import { Download, Mail, Phone, Plus, Search, Upload, X } from 'lucide-react'
+import { Download, Edit2, Mail, Phone, Plus, Search, Trash2, Upload, X } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-import { createProjectContact, listProjectContacts } from '@/api/projectContactsApi'
+import { createProjectContact, listProjectContacts, updateProjectContact, deleteProjectContact } from '@/api/projectContactsApi'
 import { messageFromApiError } from '@/api/projectTeamApi'
 import { fetchWorkspaceContacts } from '@/api/resources'
 import { isBackendConfigured } from '@/api/http'
@@ -19,7 +20,6 @@ import type {
   ContactDirectoryType,
   ContactRole,
   ContactsStats,
-  DirectoryTab,
   ProjectPhase,
   Supplier,
 } from '@/types/contacts.types'
@@ -65,11 +65,6 @@ function availabilityPill(a: Availability) {
   )
 }
 
-function directoryTabsForRole(role: 'owner' | 'engineer' | 'worker'): DirectoryTab[] {
-  if (role === 'worker') return ['internal']
-  if (role === 'engineer') return ['internal', 'suppliers']
-  return ['internal', 'suppliers', 'authorities']
-}
 
 function visibleContactForRole(c: Contact, role: 'owner' | 'engineer' | 'worker') {
   if (role === 'worker') {
@@ -101,12 +96,6 @@ function headerCountPill(label: string, value: number) {
   )
 }
 
-function segmentedTabButton(active: boolean) {
-  return cn(
-    'rounded-[var(--radius-xl)] px-3 py-2 text-sm font-semibold transition',
-    active ? 'bg-[color:var(--color-primary)] text-white' : 'text-[color:var(--color-text_secondary)] hover:bg-slate-50',
-  )
-}
 
 export function ContactsPage() {
   const { role, token } = useAuth()
@@ -212,10 +201,10 @@ export function ContactsPage() {
     [statsFromApi, contacts, suppliers],
   )
 
-  const tabs = directoryTabsForRole(resolvedRole)
-  const [tab, setTab] = useState<DirectoryTab>(tabs[0])
 
-  const [q, setQ] = useState('')
+  const [searchParams] = useSearchParams()
+  const initialQ = searchParams.get('search') || ''
+  const [q, setQ] = useState(initialQ)
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all')
   const [phaseFilter, setPhaseFilter] = useState<PhaseFilter>('all')
   const [availability, setAvailability] = useState<AvailabilityFilter>('all')
@@ -225,8 +214,10 @@ export function ContactsPage() {
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
   const [selectedAuthority, setSelectedAuthority] = useState<Authority | null>(null)
   const [addOpen, setAddOpen] = useState(false)
+  const [editingContactId, setEditingContactId] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [addName, setAddName] = useState('')
+  const [addCountryCode, setAddCountryCode] = useState('+91')
   const [addPhone, setAddPhone] = useState('')
   const [addEmail, setAddEmail] = useState('')
   const [addRole, setAddRole] = useState('Contact')
@@ -235,21 +226,11 @@ export function ContactsPage() {
   const [addSaving, setAddSaving] = useState(false)
 
   useEffect(() => {
-    if (!addOpen) return
-    setAddName('')
-    setAddPhone('')
-    setAddEmail('')
-    setAddRole('Contact')
-    setAddPhase('Foundation')
-    setAddContactType('Internal Team')
-    setAddSaving(false)
-  }, [addOpen])
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 3000)
+    return () => clearTimeout(t)
+  }, [toast])
 
-  const emergencyContacts = useMemo(() => {
-    return contacts
-      .filter((c) => c.isEmergency || c.directoryType === 'Emergency')
-      .slice(0, 6)
-  }, [contacts])
 
   const filteredContacts = useMemo(() => {
     const query = q.trim().toLowerCase()
@@ -310,15 +291,10 @@ export function ContactsPage() {
       })
   }, [q, availability, resolvedRole])
 
-  const closeDrawers = () => {
-    setSelectedContact(null)
-    setSelectedSupplier(null)
-    setSelectedAuthority(null)
-  }
 
   const handleSaveNewContact = async () => {
     const name = addName.trim()
-    const phone = addPhone.trim()
+    const phone = `${addCountryCode} ${addPhone.trim()}`
     if (!name) {
       setToast('Name is required.')
       return
@@ -333,7 +309,44 @@ export function ContactsPage() {
     }
     setAddSaving(true)
     try {
-      if (backendContacts && mongoProjectId) {
+      if (editingContactId) {
+        if (backendContacts && mongoProjectId && !editingContactId.startsWith('local_')) {
+          const { contact } = await updateProjectContact(mongoProjectId, editingContactId, {
+            name,
+            phone,
+            email: addEmail.trim() || undefined,
+            role: addRole.trim() || 'Contact',
+            phase: addPhase,
+            contactType: addContactType,
+          })
+          setContacts((prev) =>
+            prev.map((c) =>
+              c.id === editingContactId ? mongoRowToContact(contact) : c,
+            ),
+          )
+        } else {
+          setContacts((prev) =>
+            prev.map((c) =>
+              c.id === editingContactId
+                ? {
+                    ...c,
+                    name,
+                    phone,
+                    email: addEmail.trim() || '',
+                    title: addRole.trim() || 'Contact',
+                    phase: addPhase,
+                    directoryType: addContactType,
+                    type: addContactType === 'Internal Team' ? 'Internal' : 'External',
+                    isEmergency: addContactType === 'Emergency',
+                  }
+                : c,
+            ),
+          )
+        }
+        setToast('Contact updated.')
+        setAddOpen(false)
+        setEditingContactId(null)
+      } else if (backendContacts && mongoProjectId) {
         const { contact } = await createProjectContact(mongoProjectId, {
           name,
           phone,
@@ -575,7 +588,18 @@ export function ContactsPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <input type="file" accept=".csv" className="hidden" ref={fileInputRef} onChange={handleImport} />
-          <Button type="button" onClick={() => setAddOpen(true)}>
+          <Button type="button" onClick={() => {
+            setAddName('')
+            setAddCountryCode('+91')
+            setAddPhone('')
+            setAddEmail('')
+            setAddRole('Contact')
+            setAddPhase('Foundation')
+            setAddContactType('Internal Team')
+            setAddSaving(false)
+            setEditingContactId(null)
+            setAddOpen(true)
+          }}>
             <Plus className="size-4" />
             Add Contact
           </Button>
@@ -598,73 +622,15 @@ export function ContactsPage() {
         </div>
       </div>
 
-      {/* Emergency strip */}
-      <Card className="border-[color:var(--color-error)]/25 bg-[color:var(--color-error)]/5">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Emergency contacts</CardTitle>
-          <CardDescription>Pinned for safety-first response</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {emergencyContacts.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setSelectedContact(c)}
-              className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 py-3 text-left transition hover:shadow-[var(--shadow-soft)]"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="text-sm font-semibold">{c.emergencyKind ?? 'Emergency'}</div>
-                  <div className="mt-1 text-xs text-[color:var(--color-text_secondary)]">{c.name}</div>
-                </div>
-                {availabilityPill(c.availability)}
-              </div>
-              <div className="mt-2 text-xs text-[color:var(--color-text_secondary)]">{c.phone}</div>
-            </button>
-          ))}
-        </CardContent>
-      </Card>
-
-      {/* Directory tabs */}
-      <Card>
-        <CardContent className="pt-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="inline-flex rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white p-1 shadow-sm">
-              {tabs.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => {
-                    closeDrawers()
-                    setTab(t)
-                  }}
-                  className={segmentedTabButton(tab === t)}
-                >
-                  {t === 'internal' ? 'Internal Team' : t === 'suppliers' ? 'Suppliers' : 'External Authorities'}
-                </button>
-              ))}
-            </div>
-            <div className="text-xs text-[color:var(--color-text_muted)]">
-              View: <span className="font-semibold text-[color:var(--color-text_secondary)]">{resolvedRole.toUpperCase()}</span>
-              {resolvedRole === 'worker'
-                ? ' · limited to supervisors and emergency contacts'
-                : resolvedRole === 'engineer'
-                  ? ' · hides owner-only vendor notes'
-                  : ' · full directory including authority contacts'}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Main directory area */}
-      {tab === 'internal' ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filteredContacts.length === 0 ? (
-            <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-bg)] py-14 text-center text-sm text-[color:var(--color-text_secondary)] md:col-span-2 xl:col-span-3">
-              No contacts match filters.
-            </div>
-          ) : (
-            filteredContacts.map((c) => (
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {filteredContacts.length === 0 && filteredSuppliers.length === 0 && filteredAuthorities.length === 0 ? (
+          <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-bg)] py-14 text-center text-sm text-[color:var(--color-text_secondary)] md:col-span-2 xl:col-span-3">
+            No contacts match filters.
+          </div>
+        ) : (
+          <>
+            {filteredContacts.map((c) => (
               <Card
                 key={c.id}
                 className="cursor-pointer transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]"
@@ -707,31 +673,23 @@ export function ContactsPage() {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="secondary" size="sm" onClick={(e) => e.stopPropagation()}>
+                    <Button type="button" variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${c.phone}`; }}>
                       <Phone className="size-4" />
                       Call
                     </Button>
-                    <Button type="button" variant="secondary" size="sm" onClick={(e) => e.stopPropagation()}>
+                    <Button type="button" variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); window.location.href = `mailto:${c.email}`; }}>
                       <Mail className="size-4" />
                       Email
                     </Button>
-                    <Button type="button" variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
+                    <Button type="button" variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedContact(c); }}>
                       View Profile
                     </Button>
                   </div>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </div>
-      ) : tab === 'suppliers' ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filteredSuppliers.length === 0 ? (
-            <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-bg)] py-14 text-center text-sm text-[color:var(--color-text_secondary)] md:col-span-2 xl:col-span-3">
-              No suppliers match filters.
-            </div>
-          ) : (
-            filteredSuppliers.map((s) => (
+            ))}
+            
+            {filteredSuppliers.map((s) => (
               <Card
                 key={s.id}
                 className="cursor-pointer transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]"
@@ -774,30 +732,23 @@ export function ContactsPage() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="secondary" size="sm" onClick={(e) => e.stopPropagation()}>
+                    <Button type="button" variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${s.phone}`; }}>
                       <Phone className="size-4" />
                       Call Supplier
                     </Button>
-                    <Button type="button" variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
-                      View Past Orders
+                    <Button type="button" variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); window.location.href = `mailto:${s.email}`; }}>
+                      <Mail className="size-4" />
+                      Email
                     </Button>
-                    <Button type="button" variant="outline" size="sm" onClick={(e) => e.stopPropagation()}>
-                      Compare Pricing
+                    <Button type="button" variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedSupplier(s); }}>
+                      View Details
                     </Button>
                   </div>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filteredAuthorities.length === 0 ? (
-            <div className="rounded-[var(--radius-xl)] border border-dashed border-[color:var(--color-border)] bg-[color:var(--color-bg)] py-14 text-center text-sm text-[color:var(--color-text_secondary)] md:col-span-2 xl:col-span-3">
-              No authority contacts match filters (owner-only).
-            </div>
-          ) : (
-            filteredAuthorities.map((a) => (
+            ))}
+
+            {filteredAuthorities.map((a) => (
               <Card
                 key={a.id}
                 className="cursor-pointer transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]"
@@ -832,22 +783,22 @@ export function ContactsPage() {
                   </div>
                 </CardContent>
               </Card>
-            ))
-          )}
-        </div>
-      )}
+            ))}
+          </>
+        )}
+      </div>
 
       {/* Contact drawer */}
       {selectedContact ? (
         <div
-          className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-[2px]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-label="Contact details"
           onClick={() => setSelectedContact(null)}
         >
           <div
-            className="h-full w-full max-w-md overflow-y-auto border-l border-[color:var(--color-border)] bg-[color:var(--color-card)] shadow-[var(--shadow-card)]"
+            className="relative w-full max-w-md overflow-hidden rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-card)] shadow-[var(--shadow-card)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="border-b border-[color:var(--color-border)] p-5">
@@ -858,9 +809,47 @@ export function ContactsPage() {
                     {selectedContact.title} · {selectedContact.role}
                   </p>
                 </div>
-                <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedContact(null)}>
-                  Close
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => {
+                    if (backendContacts && mongoProjectId && !selectedContact.id.startsWith('local_')) {
+                      void deleteProjectContact(mongoProjectId, selectedContact.id).catch(console.error)
+                    }
+                    setContacts((prev) => prev.filter((c) => c.id !== selectedContact.id))
+                    setSelectedContact(null)
+                    setToast('Contact deleted.')
+                  }}>
+                    <Trash2 className="size-4 text-[color:var(--color-error)]" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" onClick={() => {
+                    let ccode = '+91'
+                    let num = selectedContact.phone
+                    if (num.startsWith('+')) {
+                       const parts = num.split(' ')
+                       if (parts.length > 1) {
+                           ccode = parts[0]
+                           num = parts.slice(1).join(' ')
+                       } else {
+                           ccode = num.slice(0, 3)
+                           num = num.slice(3)
+                       }
+                    }
+                    setAddName(selectedContact.name)
+                    setAddCountryCode(ccode)
+                    setAddPhone(num)
+                    setAddEmail(selectedContact.email)
+                    setAddRole(selectedContact.title)
+                    setAddPhase(selectedContact.phase)
+                    setAddContactType(selectedContact.directoryType)
+                    setEditingContactId(selectedContact.id)
+                    setSelectedContact(null)
+                    setAddOpen(true)
+                  }}>
+                    <Edit2 className="size-4 text-[color:var(--color-text_secondary)]" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedContact(null)}>
+                    Close
+                  </Button>
+                </div>
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {directoryTypeBadge(selectedContact.directoryType)}
@@ -905,23 +894,6 @@ export function ContactsPage() {
                 </div>
               ) : null}
 
-              <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white p-3">
-                <div className="text-xs font-semibold text-[color:var(--color-text_muted)]">Linked project work</div>
-                <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
-                  <div className="rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] px-3 py-2 ring-1 ring-[color:var(--color-border)]">
-                    <div className="text-[color:var(--color-text_muted)]">Tasks</div>
-                    <div className="mt-1 text-sm font-bold">{selectedContact.linked.tasks}</div>
-                  </div>
-                  <div className="rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] px-3 py-2 ring-1 ring-[color:var(--color-border)]">
-                    <div className="text-[color:var(--color-text_muted)]">Open RFIs</div>
-                    <div className="mt-1 text-sm font-bold">{selectedContact.linked.openRfis}</div>
-                  </div>
-                  <div className="rounded-[var(--radius-xl)] bg-[color:var(--color-bg)] px-3 py-2 ring-1 ring-[color:var(--color-border)]">
-                    <div className="text-[color:var(--color-text_muted)]">Issues</div>
-                    <div className="mt-1 text-sm font-bold">{selectedContact.linked.activeIssues}</div>
-                  </div>
-                </div>
-              </div>
 
               {isOwner && selectedContact.notes ? (
                 <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-warning)]/5 p-3 text-sm">
@@ -938,17 +910,6 @@ export function ContactsPage() {
                 <Button type="button" variant="secondary" className="w-full" onClick={(e) => { e.stopPropagation(); window.location.href = `mailto:${selectedContact.email}` }}>
                   <Mail className="size-4" />
                   Email
-                </Button>
-                <Button type="button" variant="outline" className="w-full" onClick={(e) => {
-                  e.stopPropagation()
-                  setContacts(contacts.map(c => c.id === selectedContact.id ? { ...c, isEmergency: !c.isEmergency } : c))
-                  setSelectedContact({ ...selectedContact, isEmergency: !selectedContact.isEmergency })
-                  setToast(selectedContact.isEmergency ? 'Removed from emergency contacts.' : 'Added to emergency contacts.')
-                }}>
-                  {selectedContact.isEmergency ? 'Unmark Emergency' : 'Mark Emergency'}
-                </Button>
-                <Button type="button" variant="outline" className="w-full">
-                  View profile
                 </Button>
               </div>
 
@@ -1135,7 +1096,7 @@ export function ContactsPage() {
               <X className="size-5" />
             </button>
             <CardHeader>
-              <CardTitle>Add contact</CardTitle>
+              <CardTitle>{editingContactId ? 'Edit contact' : 'Add contact'}</CardTitle>
               <CardDescription>
                 {backendContacts
                   ? 'Saves to the selected Mongo project. Phone and contact type are required.'
@@ -1176,14 +1137,31 @@ export function ContactsPage() {
                   <label className="text-sm font-medium" htmlFor="c_phone">
                     Phone <span className="text-[color:var(--color-error)]">*</span>
                   </label>
-                  <Input
-                    id="c_phone"
-                    className="mt-1.5"
-                    placeholder="+91 …"
-                    value={addPhone}
-                    onChange={(e) => setAddPhone(e.target.value)}
-                    inputMode="tel"
-                  />
+                  <div className="mt-1.5 flex gap-2">
+                    <select
+                      className="h-10 rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white px-3 text-sm w-[110px]"
+                      value={addCountryCode}
+                      onChange={(e) => setAddCountryCode(e.target.value)}
+                    >
+                      <option value="+91">🇮🇳 +91</option>
+                      <option value="+1">🇺🇸 +1</option>
+                      <option value="+44">🇬🇧 +44</option>
+                      <option value="+971">🇦🇪 +971</option>
+                      <option value="+61">🇦🇺 +61</option>
+                      <option value="+65">🇸🇬 +65</option>
+                      <option value="+49">🇩🇪 +49</option>
+                      <option value="+33">🇫🇷 +33</option>
+                    </select>
+                    <Input
+                      id="c_phone"
+                      className="flex-1"
+                      placeholder="99999 99999"
+                      value={addPhone}
+                      onChange={(e) => setAddPhone(e.target.value)}
+                      inputMode="tel"
+                      required
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium" htmlFor="c_email">
@@ -1226,7 +1204,7 @@ export function ContactsPage() {
                   </select>
                 </div>
               </div>
-              <Button type="button" className="w-full" disabled={addSaving} onClick={() => void handleSaveNewContact()}>
+              <Button type="button" className="w-full" disabled={addSaving || !addName.trim() || !addPhone.trim()} onClick={() => void handleSaveNewContact()}>
                 {addSaving ? 'Saving…' : 'Save contact'}
               </Button>
             </CardContent>
