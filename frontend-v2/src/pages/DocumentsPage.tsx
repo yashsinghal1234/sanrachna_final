@@ -375,10 +375,10 @@ export function DocumentsPage() {
   const [filePreviewOpen, setFilePreviewOpen] = useState(false)
   const closePreview = () => {
     setFilePreviewOpen(false)
-    if (previewUrl) {
+    if (previewUrl && previewUrl.startsWith('blob:')) {
       URL.revokeObjectURL(previewUrl)
-      setPreviewUrl(null)
     }
+    setPreviewUrl(null)
   }
 
   const handleDownloadDoc = async (e: MouseEvent<HTMLButtonElement>, doc: ProjectDocument) => {

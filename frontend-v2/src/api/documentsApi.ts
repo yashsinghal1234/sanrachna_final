@@ -1,4 +1,4 @@
-import { ApiRequestError, apiFetch, apiJson } from '@/api/http'
+import { ApiRequestError, apiFetch, apiJson, getBackendBaseUrl } from '@/api/http'
 import type { DocKind, DocPhase, ProjectDocument } from '@/types/documents.types'
 
 const DOC_PHASES: DocPhase[] = ['Design', 'Foundation', 'Structure', 'MEP', 'Finishing']
@@ -179,16 +179,8 @@ export async function uploadProjectDocumentVersion(
 }
 
 export async function openProjectDocumentInNewTab(projectId: string, documentId: string): Promise<void> {
-  const path = `/api/projects/${encodeURIComponent(projectId)}/documents/${encodeURIComponent(documentId)}/file`
-  const res = await apiFetch(path)
-  if (!res.ok) {
-    const t = await res.text()
-    throw new ApiRequestError(t || res.statusText || 'Could not open file', res.status, t)
-  }
-  const blob = await res.blob()
-  const url = URL.createObjectURL(blob)
+  const url = await getProjectDocumentObjectUrl(projectId, documentId)
   window.open(url, '_blank', 'noopener,noreferrer')
-  window.setTimeout(() => URL.revokeObjectURL(url), 120_000)
 }
 
 export async function downloadProjectDocumentBlob(projectId: string, documentId: string): Promise<Blob> {
@@ -201,14 +193,27 @@ export async function downloadProjectDocumentBlob(projectId: string, documentId:
   return res.blob()
 }
 
+/** Helper to get authenticated URL with a specific disposition */
+export async function getProjectDocumentUrl(projectId: string, documentId: string, disposition: 'inline' | 'attachment'): Promise<string> {
+  const base = getBackendBaseUrl() || ''
+  let token = ''
+  try {
+    const raw = window.localStorage.getItem('sanrachna_v2_auth')
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (parsed.token) token = parsed.token
+    }
+  } catch {}
+  return `${base}/api/projects/${encodeURIComponent(projectId)}/documents/${encodeURIComponent(documentId)}/file?disposition=${disposition}&token=${encodeURIComponent(token)}`
+}
+
 /** Trigger browser download for a document file. */
 export async function downloadProjectDocumentFile(
   projectId: string,
   documentId: string,
   suggestedName: string,
 ): Promise<void> {
-  const blob = await downloadProjectDocumentBlob(projectId, documentId)
-  const url = URL.createObjectURL(blob)
+  const url = await getProjectDocumentUrl(projectId, documentId, 'attachment')
   const a = document.createElement('a')
   a.href = url
   a.download = suggestedName || 'document'
@@ -216,13 +221,11 @@ export async function downloadProjectDocumentFile(
   document.body.appendChild(a)
   a.click()
   a.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 30_000)
 }
 
-/** Get a short-lived object URL for inline viewing */
+/** Get an inline viewing URL */
 export async function getProjectDocumentObjectUrl(projectId: string, documentId: string): Promise<string> {
-  const blob = await downloadProjectDocumentBlob(projectId, documentId)
-  return URL.createObjectURL(blob)
+  return getProjectDocumentUrl(projectId, documentId, 'inline')
 }
 
 export async function askProjectDocuments(projectId: string, query: string): Promise<{ answer: string }> {

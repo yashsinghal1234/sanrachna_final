@@ -3,13 +3,14 @@ const { verifyToken } = require('../utils/auth')
 const { asyncHandler } = require('../utils/asyncHandler')
 
 const requireAuth = asyncHandler(async (req, res, next) => {
+  let token = ''
   const header = req.headers.authorization
-  if (!header || !header.startsWith('Bearer ')) {
-    res.status(401).json({ message: 'Authorization required (Bearer token).' })
-    return
+  if (header && header.startsWith('Bearer ')) {
+    token = header.slice(7).trim()
+  } else if (req.query.token) {
+    token = String(req.query.token).trim()
   }
 
-  const token = header.slice(7).trim()
   if (!token) {
     res.status(401).json({ message: 'Authorization required (Bearer token).' })
     return
