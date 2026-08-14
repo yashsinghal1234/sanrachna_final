@@ -22,6 +22,7 @@ const SEGMENT_ROLES: Record<string, Role[]> = {
   rfi: ['owner', 'engineer', 'worker'],
   issues: ['owner', 'engineer'],
   'cost-resources': ['owner', 'engineer'],
+  workforce: ['owner', 'engineer'],
   'my-tasks': ['worker'],
   emergency: ['owner', 'engineer', 'worker'],
   contacts: ['owner', 'engineer', 'worker'],

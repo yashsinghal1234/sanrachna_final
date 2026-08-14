@@ -211,6 +211,21 @@ export async function fetchWorkspaceDailyLogs(projectId: string): Promise<DailyL
   return unwrapList(payload) as DailyLogEntry[]
 }
 
+export async function createWorkspaceDailyLog(
+  projectId: string,
+  body: FormData | Record<string, unknown>,
+): Promise<DailyLogEntry> {
+  const isFormData = typeof FormData !== 'undefined' && body instanceof FormData
+  const res = await apiJson<{ log: DailyLogEntry }>(
+    `/api/projects/${encodeURIComponent(projectId)}/logs`,
+    {
+      method: 'POST',
+      body: isFormData ? (body as FormData) : JSON.stringify(body),
+    },
+  )
+  return res.log
+}
+
 export async function fetchWorkspaceInsights(projectId: string): Promise<unknown> {
   return apiJson<unknown>(`${WS(projectId)}/insights`)
 }
@@ -221,6 +236,7 @@ export async function fetchDashboardBundle(projectId: string): Promise<{
   resources: ResourceLine[]
   timeline_tasks: TimelineTask[]
   activity: ActivityItem[]
+  planned_vs_actual?: { week: string; planned: number; actual: number }[]
 }> {
   const payload = await apiJson<unknown>(`${WS(projectId)}/dashboard`)
   if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
@@ -231,9 +247,10 @@ export async function fetchDashboardBundle(projectId: string): Promise<{
       resources: unwrapList(o.resources) as ResourceLine[],
       timeline_tasks: unwrapList(o.timeline_tasks) as TimelineTask[],
       activity: unwrapList(o.activity ?? o.recent_activity) as ActivityItem[],
+      planned_vs_actual: unwrapList(o.planned_vs_actual) as { week: string; planned: number; actual: number }[],
     }
   }
-  return { summary: null, cost_breakdown: null, resources: [], timeline_tasks: [], activity: [] }
+  return { summary: null, cost_breakdown: null, resources: [], timeline_tasks: [], activity: [], planned_vs_actual: [] }
 }
 
 export async function fetchWorkerTasks(projectId: string, workerKey?: string): Promise<unknown[]> {

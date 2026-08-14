@@ -6,7 +6,6 @@ type SettingItem = { to: string; label: string }
 
 const items: SettingItem[] = [
   { to: 'profile', label: 'Profile' },
-  { to: 'team', label: 'Team Management' },
   { to: 'password', label: 'Security' },
   { to: 'notifications', label: 'Notifications' },
   { to: 'project', label: 'Project Settings' },

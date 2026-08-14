@@ -11,6 +11,8 @@ import {
   Copy,
   Volume2,
   VolumeX,
+  ImagePlus,
+  Square,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -47,6 +49,7 @@ type LocalMessage = {
   usedModules?: string[]
   sources?: CopilotSource[]
   followUps?: string[]
+  imageBase64?: string | null
 }
 
 type LocalThread = {
@@ -87,10 +90,11 @@ function backendThreadToLocal(t: BackendThread): LocalThread {
       id: m.id || uid('m'),
       role: m.role,
       content: m.content,
-      createdAt: m.createdAt ? new Date(m.createdAt).getTime() : Date.now(),
-      usedModules: m.usedModules,
+      createdAt: new Date(m.createdAt || Date.now()).getTime(),
+      usedModules: m.usedModules ?? [],
       sources: (m.usedModules ?? []).map(moduleToSource),
-      followUps: m.followUps,
+      followUps: m.followUps ?? [],
+      imageBase64: m.imageBase64 ?? null,
     })),
   }
 }
@@ -119,31 +123,7 @@ const threadsCache: Record<string, LocalThread[]> = {}
 
 // ─── component ────────────────────────────────────────────────────────────────
 
-const StreamingText = ({ content, isRecent }: { content: string, isRecent: boolean }) => {
-  const [displayed, setDisplayed] = useState(isRecent ? '' : content)
-  
-  useEffect(() => {
-    if (!isRecent) return
-    let i = 0
-    const interval = setInterval(() => {
-      setDisplayed(content.slice(0, i))
-      i += 3
-      if (i > content.length) {
-        setDisplayed(content)
-        clearInterval(interval)
-      }
-    }, 15)
-    return () => clearInterval(interval)
-  }, [content, isRecent])
 
-  const textWithCursor = displayed + (displayed.length < content.length ? ' ▋' : '')
-
-  return (
-    <div className="space-y-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h3]:font-bold [&_h3]:mt-4 [&_strong]:font-semibold [&_p]:min-h-[1em] [&_table]:w-full [&_table]:my-3 [&_th]:border [&_th]:border-[color:var(--color-border)] [&_th]:px-3 [&_th]:py-2 [&_th]:bg-black/10 [&_th]:dark:bg-white/10 [&_td]:border [&_td]:border-[color:var(--color-border)] [&_td]:px-3 [&_td]:py-2">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{textWithCursor}</ReactMarkdown>
-    </div>
-  )
-}
 
 export function AICopilotPage() {
   const navigate = useNavigate()
@@ -162,20 +142,20 @@ export function AICopilotPage() {
   const [searchQ, setSearchQ] = useState('')
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)          // waiting for Gemini
-  const [streamText, setStreamText] = useState('')
-  // sources sidebar removed
   const [renameOpen, setRenameOpen] = useState(false)
   const [renameValue, setRenameValue] = useState('')
   const [loadingThreads, setLoadingThreads] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [chatLanguage, setChatLanguage] = useState('English')
   const [readingMessageId, setReadingMessageId] = useState<string | null>(null)
+  const [imageBase64, setImageBase64] = useState<string | null>(null)
 
   const endRef = useRef<HTMLDivElement | null>(null)
   const lastUrlPromptRef = useRef<string>('')
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
   const [recordingTime, setRecordingTime] = useState(0)
 
   const activeThread = threads[activeIdx] ?? null
@@ -318,34 +298,22 @@ export function AICopilotPage() {
     }
   }
 
-  // ── suggested prompts ─────────────────────────────────────────────────────
-  const suggestedPrompts = useMemo(() => {
-    if (resolvedRole === 'worker') {
-      return [
-        'What are my tasks for today?',
-        'Which of my tasks are overdue or blocked?',
-        'Show my open issues',
-        'Summarize my latest daily log',
-      ]
-    }
-    return [
-      'Summarize project cost and schedule risk',
-      'Which tasks are delayed?',
-      'What finishes are driving the critical path?',
-      'Who is assigned to slab casting?',
-      'What issues are unresolved?',
-      'What RFIs are still open?',
-    ]
-  }, [resolvedRole])
-
   // ── send message ──────────────────────────────────────────────────────────
   async function send(textArg?: string) {
     const text = (textArg ?? draft).trim()
-    if (!text || sending) return
+    if (!text && !imageBase64 || sending) return
     setDraft('')
+    const currentImage = imageBase64
+    setImageBase64(null)
 
     // Add user message locally immediately
-    const userMsg: LocalMessage = { id: uid('m'), role: 'user', content: text, createdAt: Date.now() }
+    const userMsg: LocalMessage = { 
+      id: uid('m'), 
+      role: 'user', 
+      content: text, 
+      createdAt: Date.now(),
+      imageBase64: currentImage 
+    }
     setThreads((prev) => {
       const next = [...prev]
       const t = { ...next[activeIdx]!, messages: [...next[activeIdx]!.messages, userMsg] }
@@ -354,7 +322,6 @@ export function AICopilotPage() {
     })
 
     setSending(true)
-    setStreamText('…')
 
     try {
       let thread = activeThread
@@ -370,63 +337,114 @@ export function AICopilotPage() {
         thread = { ...thread!, backendId: created.id }
       }
 
-      if (thread?.backendId && currentProjectId && isBackendConfigured()) {
-        // Call backend → Gemini
-        const { message: reply } = await apiSendMessage(currentProjectId, thread.backendId, text, chatLanguage)
-        const assistantMsg: LocalMessage = {
-          id: reply.id || uid('m'),
-          role: 'assistant',
-          content: reply.content,
-          createdAt: Date.now(),
-          usedModules: reply.usedModules ?? [],
-          sources: (reply.usedModules ?? []).map(moduleToSource),
-          followUps: reply.followUps ?? [],
-        }
+      const tempId = uid('m')
+      const assistantMsg: LocalMessage = {
+        id: tempId,
+        role: 'assistant',
+        content: '',
+        createdAt: Date.now(),
+        usedModules: [],
+        sources: [],
+        followUps: [],
+      }
 
+      setThreads((prev) => {
+        const next = [...prev]
+        const t = { ...next[activeIdx]!, messages: [...next[activeIdx]!.messages, assistantMsg], updatedAt: Date.now() }
+        next[activeIdx] = t
+        return next
+      })
+
+      if (thread?.backendId && currentProjectId && isBackendConfigured()) {
+        abortControllerRef.current = new AbortController()
+
+        // Call backend → Gemini
+        const { message: reply } = await apiSendMessage(
+          currentProjectId, 
+          thread.backendId, 
+          text, 
+          chatLanguage,
+          currentImage,
+          abortControllerRef.current.signal,
+          (chunk) => {
+            setThreads((prev) => {
+              const next = [...prev]
+              const t = { ...next[activeIdx]! }
+              const msgs = [...t.messages]
+              const msgIdx = msgs.findIndex(m => m.id === tempId)
+              if (msgIdx !== -1) {
+                msgs[msgIdx] = { ...msgs[msgIdx], content: msgs[msgIdx].content + chunk }
+              }
+              t.messages = msgs
+              next[activeIdx] = t
+              return next
+            })
+          }
+        )
+        
         setThreads((prev) => {
           const next = [...prev]
-          const t = { ...next[activeIdx]!, messages: [...next[activeIdx]!.messages, assistantMsg], updatedAt: Date.now() }
+          const t = { ...next[activeIdx]! }
+          const msgs = [...t.messages]
+          const msgIdx = msgs.findIndex(m => m.id === tempId)
+          if (msgIdx !== -1) {
+            msgs[msgIdx] = { 
+              ...msgs[msgIdx], 
+              id: reply.id,
+              usedModules: reply.usedModules ?? [],
+              sources: (reply.usedModules ?? []).map(moduleToSource),
+              followUps: reply.followUps ?? []
+            }
+          }
+          t.messages = msgs
           if (t.title === 'New chat') t.title = text.slice(0, 48)
           next[activeIdx] = t
           return next
         })
       } else {
         // Offline fallback
-        const fallback: LocalMessage = {
-          id: uid('m'),
-          role: 'assistant',
-          content: 'Backend is not connected. Please configure the server and refresh.',
-          createdAt: Date.now(),
-          usedModules: ['Project'],
-          sources: [],
-          followUps: [],
-        }
         setThreads((prev) => {
           const next = [...prev]
-          next[activeIdx] = { ...next[activeIdx]!, messages: [...next[activeIdx]!.messages, fallback] }
+          const t = { ...next[activeIdx]! }
+          const msgs = [...t.messages]
+          const msgIdx = msgs.findIndex(m => m.id === tempId)
+          if (msgIdx !== -1) {
+            msgs[msgIdx] = { 
+              ...msgs[msgIdx], 
+              content: 'Backend is not connected. Please configure the server and refresh.'
+            }
+          }
+          t.messages = msgs
+          next[activeIdx] = t
           return next
         })
       }
     } catch (err: unknown) {
-      const errMsg: LocalMessage = {
-        id: uid('m'),
-        role: 'assistant',
-        content: `⚠️ Error: ${err instanceof Error ? err.message : 'Request failed. Please try again.'}`,
-        createdAt: Date.now(),
-        usedModules: [],
-        sources: [],
-        followUps: suggestedPrompts.slice(0, 2),
+      if ((err as Error).name === 'AbortError') {
+        console.log('Aborted generation')
+      } else {
+        setThreads((prev) => {
+          const next = [...prev]
+          const t = { ...next[activeIdx]! }
+          const msgs = [...t.messages]
+          const msgIdx = msgs.findIndex(m => m.role === 'assistant' && !m.content)
+          if (msgIdx !== -1) {
+            msgs[msgIdx] = { 
+              ...msgs[msgIdx], 
+              content: `⚠️ Error: ${err instanceof Error ? err.message : 'Request failed. Please try again.'}`
+            }
+          }
+          t.messages = msgs
+          next[activeIdx] = t
+          return next
+        })
+        console.error(err)
+        setDraft(text)
+        setImageBase64(currentImage)
       }
-      setThreads((prev) => {
-        const next = [...prev]
-        next[activeIdx] = { ...next[activeIdx]!, messages: [...next[activeIdx]!.messages, errMsg] }
-        return next
-      })
-      console.error(err)
-      setDraft(text)
     } finally {
       setSending(false)
-      setStreamText('')
+      abortControllerRef.current = null
     }
   }
 
@@ -437,7 +455,7 @@ export function AICopilotPage() {
   // ── auto-scroll ───────────────────────────────────────────────────────────
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [activeThread?.messages, streamText])
+  }, [activeThread?.messages])
 
   // ── URL ?prompt= deep‑link ────────────────────────────────────────────────
   useEffect(() => {
@@ -648,71 +666,94 @@ export function AICopilotPage() {
                       className={cn(
                         'max-w-[min(90%,720px)] text-[15px] leading-relaxed',
                         isUser
-                          ? 'rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 px-5 py-3.5 text-white shadow-md'
+                          ? 'rounded-3xl bg-white/10 border border-white/10 backdrop-blur-md px-5 py-3.5 text-white shadow-md'
                           : 'text-[color:var(--color-text)] pt-1'
                       )}
                     >
                       {isUser ? (
                         <div className="space-y-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h3]:font-bold [&_h3]:mt-4 [&_strong]:font-semibold [&_p]:min-h-[1em] [&_table]:w-full [&_table]:my-3 [&_th]:border [&_th]:border-white/20 [&_th]:px-3 [&_th]:py-2 [&_th]:bg-black/20 [&_td]:border [&_td]:border-white/20 [&_td]:px-3 [&_td]:py-2">
+                          {m.imageBase64 && (
+                            <div className="mb-2 overflow-hidden rounded-2xl border border-white/20 shadow-sm bg-black/10 max-w-[280px]">
+                              <img src={m.imageBase64} alt="Uploaded" className="w-full h-auto max-h-[300px] object-contain" />
+                            </div>
+                          )}
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
                         </div>
                       ) : (
                         <div className="group relative flex flex-col">
-                          <StreamingText 
-                            content={m.content.replace(/(\n\s*)?\*?\*?Sources?( used)?(:|-)\*?\*?[\s\S]*$/i, '').trim()} 
-                            isRecent={Date.now() - m.createdAt < 5000} 
-                          />
-                          <div className="mt-2 flex items-center gap-2 transition-opacity">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => {
-                                navigator.clipboard.writeText(m.content)
-                              }}
-                            >
-                              <Copy className="mr-0.5 size-3" />
-                              Copy
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs"
-                              onClick={() => {
-                                if (readingMessageId === m.id) {
-                                  window.speechSynthesis.cancel()
-                                  setReadingMessageId(null)
-                                } else {
-                                  window.speechSynthesis.cancel()
-                                  const utterance = new SpeechSynthesisUtterance(m.content.replace(/[*#]/g, ''))
-                                  switch(chatLanguage) {
-                                    case 'Hindi': utterance.lang = 'hi-IN'; break;
-                                    case 'Marathi': utterance.lang = 'mr-IN'; break;
-                                    case 'Gujarati': utterance.lang = 'gu-IN'; break;
-                                    case 'Bengali': utterance.lang = 'bn-IN'; break;
-                                    case 'Tamil': utterance.lang = 'ta-IN'; break;
-                                    case 'Telugu': utterance.lang = 'te-IN'; break;
-                                    default: utterance.lang = 'en-US'; break;
-                                  }
-                                  utterance.onend = () => setReadingMessageId(null)
-                                  setReadingMessageId(m.id)
-                                  window.speechSynthesis.speak(utterance)
-                                }
-                              }}
-                            >
-                              {readingMessageId === m.id ? (
-                                <>
-                                  <VolumeX className="mr-0.5 size-3" /> Stop
-                                </>
-                              ) : (
-                                <>
-                                  <Volume2 className="mr-0.5 size-3" /> Read Aloud
-                                </>
+                          {!m.content && sending && activeThread?.messages[activeThread.messages.length - 1].id === m.id ? (
+                            <div className="flex items-center gap-3 pt-2 h-7 text-[color:var(--color-text_secondary)]">
+                              <div className="flex gap-1">
+                                <div className="size-1.5 animate-bounce rounded-full bg-[color:var(--color-primary)] [animation-delay:-0.3s]" />
+                                <div className="size-1.5 animate-bounce rounded-full bg-[color:var(--color-primary)] [animation-delay:-0.15s]" />
+                                <div className="size-1.5 animate-bounce rounded-full bg-[color:var(--color-primary)]" />
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="space-y-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_h3]:font-bold [&_h3]:mt-4 [&_strong]:font-semibold [&_p]:min-h-[1em] [&_table]:w-full [&_table]:my-3 [&_th]:border [&_th]:border-[color:var(--color-border)] [&_th]:px-3 [&_th]:py-2 [&_th]:bg-black/10 [&_th]:dark:bg-white/10 [&_td]:border [&_td]:border-[color:var(--color-border)] [&_td]:px-3 [&_td]:py-2">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                  {m.content.replace(/(\n\s*)?\*?\*?Sources?( used)?(:|-)\*?\*?[\s\S]*$/i, '').trim()}
+                                </ReactMarkdown>
+                                {sending && m.content.length > 0 && activeThread?.messages[activeThread.messages.length - 1].id === m.id && (
+                                  <span className="inline-block w-1.5 h-4 ml-1 bg-[color:var(--color-primary)] animate-pulse" />
+                                )}
+                              </div>
+                              {m.content.length > 0 && (
+                                <div className="mt-2 flex items-center gap-2 transition-opacity">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(m.content)
+                                    }}
+                                  >
+                                    <Copy className="mr-0.5 size-3" />
+                                    Copy
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    onClick={() => {
+                                      if (readingMessageId === m.id) {
+                                        window.speechSynthesis.cancel()
+                                        setReadingMessageId(null)
+                                      } else {
+                                        window.speechSynthesis.cancel()
+                                        const utterance = new SpeechSynthesisUtterance(m.content.replace(/[*#]/g, ''))
+                                        switch(chatLanguage) {
+                                          case 'Hindi': utterance.lang = 'hi-IN'; break;
+                                          case 'Marathi': utterance.lang = 'mr-IN'; break;
+                                          case 'Gujarati': utterance.lang = 'gu-IN'; break;
+                                          case 'Bengali': utterance.lang = 'bn-IN'; break;
+                                          case 'Tamil': utterance.lang = 'ta-IN'; break;
+                                          case 'Telugu': utterance.lang = 'te-IN'; break;
+                                          default: utterance.lang = 'en-US'; break;
+                                        }
+                                        utterance.onend = () => setReadingMessageId(null)
+                                        setReadingMessageId(m.id)
+                                        window.speechSynthesis.speak(utterance)
+                                      }
+                                    }}
+                                  >
+                                    {readingMessageId === m.id ? (
+                                      <>
+                                        <VolumeX className="mr-0.5 size-3" /> Stop
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Volume2 className="mr-0.5 size-3" /> Read Aloud
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
                               )}
-                            </Button>
-                          </div>
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
@@ -720,20 +761,7 @@ export function AICopilotPage() {
                 )
               })}
 
-              {sending ? (
-                <div className="flex justify-start">
-                  <div className="mr-4 mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 shadow-[0_0_12px_rgba(99,102,241,0.4)] animate-pulse">
-                    <Sparkles className="size-4 text-white" />
-                  </div>
-                  <div className="flex items-center gap-3 pt-2 text-sm text-[color:var(--color-text_secondary)]">
-                    <div className="flex gap-1">
-                      <div className="size-1.5 animate-bounce rounded-full bg-[color:var(--color-primary)] [animation-delay:-0.3s]" />
-                      <div className="size-1.5 animate-bounce rounded-full bg-[color:var(--color-primary)] [animation-delay:-0.15s]" />
-                      <div className="size-1.5 animate-bounce rounded-full bg-[color:var(--color-primary)]" />
-                    </div>
-                  </div>
-                </div>
-              ) : null}
+
 
               <div ref={endRef} />
             </div>
@@ -741,8 +769,21 @@ export function AICopilotPage() {
 
           {/* Input area */}
           <div className="p-4 pt-0">
-            <form
-              className="relative mx-auto flex w-full max-w-3xl items-center"
+            <div className="mx-auto flex w-full max-w-3xl flex-col">
+              {imageBase64 && (
+                <div className="mb-2 relative inline-block self-start ml-4">
+                  <img src={imageBase64} alt="Upload preview" className="h-20 w-20 object-cover rounded-xl border border-[color:var(--color-border)] shadow-sm" />
+                  <button
+                    type="button"
+                    onClick={() => setImageBase64(null)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 shadow-md"
+                  >
+                    <Trash2 className="size-3" />
+                  </button>
+                </div>
+              )}
+              <form
+                className="relative flex w-full items-center gap-2"
               onSubmit={(e) => {
                 e.preventDefault()
                 void send()
@@ -759,39 +800,70 @@ export function AICopilotPage() {
                   </div>
                 </div>
               ) : (
-                <Input
-                  className="min-h-[56px] w-full rounded-[28px] border border-white/20 dark:border-white/10 bg-white/60 dark:bg-black/40 backdrop-blur-xl pl-6 pr-28 py-4 text-[15px] shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] focus-visible:ring-2 focus-visible:ring-indigo-400 transition-all"
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Message Copilot..."
-                  disabled={sending}
-                />
+                <div className="relative w-full">
+                  <Input
+                    className="min-h-[56px] w-full rounded-[28px] border border-white/20 dark:border-white/10 bg-white/60 dark:bg-black/40 backdrop-blur-xl pl-12 pr-[104px] py-4 text-[15px] shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] focus-visible:ring-2 focus-visible:ring-indigo-400 transition-all"
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder="Message Copilot..."
+                    disabled={sending}
+                  />
+                  <label className={cn("absolute left-2 top-1/2 -translate-y-1/2 h-[42px] w-[42px] rounded-full flex items-center justify-center cursor-pointer text-[color:var(--color-text_secondary)] hover:bg-slate-100 dark:hover:bg-white/10 transition-all", sending && "opacity-50 cursor-not-allowed")}>
+                    <ImagePlus className="size-5" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={sending}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) {
+                          const reader = new FileReader()
+                          reader.onload = () => setImageBase64(reader.result as string)
+                          reader.readAsDataURL(file)
+                        }
+                      }}
+                    />
+                  </label>
+                  <Button 
+                    type="button" 
+                    size="icon"
+                    onClick={handleRecord}
+                    disabled={sending} 
+                    className={cn(
+                      "absolute right-[52px] top-1/2 -translate-y-1/2 h-[42px] w-[42px] rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-[color:var(--color-text_secondary)] transition-all",
+                      isRecording && "animate-pulse text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20"
+                    )}
+                    variant="ghost"
+                  >
+                    <Mic className="size-4" />
+                  </Button>
+                  {sending ? (
+                    <Button 
+                      type="button" 
+                      size="icon"
+                      onClick={() => abortControllerRef.current?.abort()}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-[42px] w-[42px] rounded-full bg-slate-800 hover:bg-slate-900 text-white hover:scale-105 active:scale-95 transition-all shadow-md border-none"
+                    >
+                      <Square className="size-4 fill-current" />
+                    </Button>
+                  ) : (
+                    <Button 
+                      type="submit" 
+                      size="icon"
+                      disabled={!draft.trim() && !isRecording && !imageBase64} 
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-[42px] w-[42px] rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white hover:scale-105 active:scale-95 transition-all shadow-md disabled:opacity-40 disabled:hover:scale-100 border-none"
+                    >
+                      <Send className="size-4 ml-0.5 text-white" />
+                    </Button>
+                  )}
+                </div>
               )}
-              <Button 
-                type="button" 
-                size="icon"
-                onClick={handleRecord}
-                disabled={sending} 
-                className={cn(
-                  "absolute right-[52px] top-1/2 -translate-y-1/2 h-[42px] w-[42px] rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-[color:var(--color-text_secondary)] transition-all",
-                  isRecording && "animate-pulse text-red-500 hover:text-red-600 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20"
-                )}
-                variant="ghost"
-              >
-                <Mic className="size-4" />
-              </Button>
-              <Button 
-                type="submit" 
-                size="icon"
-                disabled={sending || (!draft.trim() && !isRecording)} 
-                className="absolute right-2 top-1/2 -translate-y-1/2 h-[42px] w-[42px] rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white hover:scale-105 active:scale-95 transition-all shadow-md disabled:opacity-40 disabled:hover:scale-100 border-none"
-              >
-                {sending ? <Loader2 className="size-4 animate-spin text-white" /> : <Send className="size-4 ml-0.5 text-white" />}
-              </Button>
             </form>
             <p className="mt-3 text-center text-xs text-[color:var(--color-text_secondary)]">
               Copilot can make mistakes. Check important info.
             </p>
+            </div>
           </div>
         </Card>
 

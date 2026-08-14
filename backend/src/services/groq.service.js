@@ -4,9 +4,25 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 })
 
-async function askGroq(question, context) {
-  const completion = await groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
+async function* askGroq(question, context, imageBase64) {
+  const model = imageBase64 ? 'llama-3.2-90b-vision-preview' : 'llama-3.3-70b-versatile'
+  
+  const userContent = [
+    {
+      type: 'text',
+      text: `CONTEXT:\n\n${context}\n\nQUESTION:\n\n${question}`,
+    }
+  ]
+
+  if (imageBase64) {
+    userContent.push({
+      type: 'image_url',
+      image_url: { url: imageBase64 },
+    })
+  }
+
+  const stream = await groq.chat.completions.create({
+    model,
     messages: [
       {
         role: 'system',
@@ -23,28 +39,20 @@ Always end your reply with a polite sign-off like "Thank you" or "Hope this help
       },
       {
         role: 'user',
-        content: `
-CONTEXT:
-
-${context}
-
-QUESTION:
-
-${question}
-        `,
+        content: userContent,
       },
     ],
     temperature: 0.2,
     max_tokens: 4000,
+    stream: true,
   })
 
-  const content = completion?.choices?.[0]?.message?.content
-
-  if (!content || typeof content !== 'string') {
-    throw new Error('Groq returned an empty response.')
+  for await (const chunk of stream) {
+    const text = chunk.choices[0]?.delta?.content || ''
+    if (text) {
+      yield text
+    }
   }
-
-  return content.trim()
 }
 
 async function transcribeAudio(fileBuffer, filename = 'audio.webm') {

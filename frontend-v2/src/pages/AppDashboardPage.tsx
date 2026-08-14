@@ -30,8 +30,17 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 
-import { fetchDashboardBundle, fetchWorkerTasks } from '@/api/resources'
+import {
+  fetchDashboardBundle,
+  fetchWorkerTasks,
+  updateWorkerTask,
+  fetchWorkspaceDailyLogs,
+  createWorkspaceDailyLog,
+  fetchNotifications,
+  fetchWorkspaceInsights,
+} from '@/api/resources'
 import { useAuth } from '@/auth/AuthContext'
+import type { NotificationAlert } from '@/types/notifications.types'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
@@ -41,7 +50,7 @@ import { useIssueStore } from '@/store/useIssueStore'
 import { useProjectsStore } from '@/store/useProjectsStore'
 import { useRfiStore } from '@/store/useRfiStore'
 import { useApprovedReport } from '@/hooks/useApprovedReport'
-import type { CostBreakdown, TimelineTask } from '@/types/dashboard.types'
+import type { CostBreakdown, TimelineTask, DailyLogEntry } from '@/types/dashboard.types'
 import { formatDate, formatINR } from '@/utils/format'
 
 type WorkerTaskStatus = 'Not started' | 'In progress' | 'Completed'
@@ -58,36 +67,7 @@ type WorkerTask = {
   progressPct: number
 }
 
-type WorkerLog = {
-  id: string
-  at: string // ISO
-  tasksCompleted: string
-  workersPresent: number
-  issuesFaced: string
-  photoName: string | null
-}
-
-const WORKER_LOGS_KEY = 'sanrachna_worker_logs_v1'
-
-function safeReadWorkerLogs(): WorkerLog[] {
-  try {
-    const raw = window.localStorage.getItem(WORKER_LOGS_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw) as unknown
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter(Boolean) as WorkerLog[]
-  } catch {
-    return []
-  }
-}
-
-function safeWriteWorkerLogs(logs: WorkerLog[]) {
-  try {
-    window.localStorage.setItem(WORKER_LOGS_KEY, JSON.stringify(logs))
-  } catch {
-    // ignore
-  }
-}
+// WorkerLog removed in favor of DailyLogEntry
 
 function todayKey(d = new Date()) {
   return d.toISOString().slice(0, 10)
@@ -180,26 +160,41 @@ export function AppDashboardPage() {
   const [ownerCostBreakdown, setOwnerCostBreakdown] = useState<CostBreakdown | null>(null)
   const [ownerTimelineTasks, setOwnerTimelineTasks] = useState<TimelineTask[]>([])
   const [ownerDashboardLoading, setOwnerDashboardLoading] = useState(false)
+  const [plannedVsActual, setPlannedVsActual] = useState<{ week: string, planned: number, actual: number }[]>([])
+  const [aiInsights, setAiInsights] = useState<any>(null)
 
   useEffect(() => {
     if (role !== 'owner' || !currentProjectIdOwner) {
       setOwnerCostBreakdown(null)
       setOwnerTimelineTasks([])
+      setPlannedVsActual([])
+      setAiInsights(null)
       setOwnerDashboardLoading(false)
       return
     }
     let cancelled = false
     setOwnerDashboardLoading(true)
-    fetchDashboardBundle(currentProjectIdOwner)
-      .then((b) => {
+    Promise.all([
+      fetchDashboardBundle(currentProjectIdOwner),
+      fetchWorkspaceInsights(currentProjectIdOwner).catch(() => null)
+    ])
+      .then(([b, insights]) => {
         if (cancelled) return
         setOwnerCostBreakdown(b.cost_breakdown)
         setOwnerTimelineTasks(b.timeline_tasks)
+        if (b.planned_vs_actual && b.planned_vs_actual.length) {
+           setPlannedVsActual(b.planned_vs_actual)
+        } else {
+           setPlannedVsActual([])
+        }
+        setAiInsights(insights)
       })
       .catch(() => {
         if (!cancelled) {
           setOwnerCostBreakdown(null)
           setOwnerTimelineTasks([])
+          setPlannedVsActual([])
+          setAiInsights(null)
         }
       })
       .finally(() => {
@@ -210,16 +205,20 @@ export function AppDashboardPage() {
     }
   }, [role, currentProjectIdOwner])
 
-
-
   const ownerLineData = useMemo(() => {
+    if (plannedVsActual.length) return plannedVsActual
     if (!ownerTimelineTasks.length) return []
-    return ownerTimelineTasks.slice(0, 12).map((t, i) => ({
-      week: `T${i + 1}`,
-      planned: t.pct_complete,
-      actual: t.pct_complete,
-    }))
-  }, [ownerTimelineTasks])
+    let accumulated = 0
+    return ownerTimelineTasks.slice(0, 12).map((t, i) => {
+      accumulated += t.pct_complete
+      const avg = Math.round(accumulated / (i + 1))
+      return {
+        week: `T${i + 1}`,
+        planned: avg,
+        actual: avg, // Fallback when planned_vs_actual isn't provided
+      }
+    })
+  }, [ownerTimelineTasks, plannedVsActual])
 
   const activeOwnerProject = currentProjectIdOwner ? projectsFromStore[currentProjectIdOwner] : undefined
 
@@ -269,14 +268,24 @@ export function AppDashboardPage() {
         return
       }
       let cancelled = false
-      fetchWorkerTasks(currentProjectId, myKey)
-        .then((raw) => {
+      Promise.all([
+        fetchWorkerTasks(currentProjectId, myKey),
+        fetchWorkspaceDailyLogs(currentProjectId),
+        fetchNotifications()
+      ])
+        .then(([rawTasks, logs, notifs]) => {
           if (cancelled) return
-          const list = Array.isArray(raw) ? raw : []
+          const list = Array.isArray(rawTasks) ? rawTasks : []
           setTasks(list.map(mapToWorkerDashTask).filter((x): x is WorkerTask => Boolean(x)))
+          setWorkerLogs(logs)
+          setNotifications(notifs)
         })
         .catch(() => {
-          if (!cancelled) setTasks([])
+          if (!cancelled) {
+            setTasks([])
+            setWorkerLogs([])
+            setNotifications([])
+          }
         })
       return () => {
         cancelled = true
@@ -287,9 +296,10 @@ export function AppDashboardPage() {
     const [logOpen, setLogOpen] = useState(false)
     const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
 
-    const [workerLogs, setWorkerLogs] = useState<WorkerLog[]>(() => safeReadWorkerLogs())
+    const [workerLogs, setWorkerLogs] = useState<DailyLogEntry[]>([])
+    const [notifications, setNotifications] = useState<NotificationAlert[]>([])
 
-    const todayLogs = useMemo(() => workerLogs.filter((l) => l.at.slice(0, 10) === todayKey()), [workerLogs])
+    const todayLogs = useMemo(() => workerLogs.filter((l) => (l.date || l.createdAt || '').slice(0, 10) === todayKey()), [workerLogs])
     const pendingLogs = Math.max(0, 1 - todayLogs.length)
 
     const myIssuesOpen = useMemo(() => {
@@ -312,39 +322,55 @@ export function AppDashboardPage() {
     const dailyTarget = tasks.length
     const remaining = Math.max(0, dailyTarget - completedToday)
 
-    const notifications = useMemo(() => [] as { id: string; kind: string; title: string; detail: string; at: string }[], [])
-
     const openTask = (id: string) => {
       setActiveTaskId(id)
       setProgressOpen(true)
     }
 
-    const startTask = (id: string) => {
+    const startTask = async (id: string) => {
       setTasks((prev) =>
         prev.map((t) => (t.id === id ? { ...t, status: 'In progress', progressPct: Math.max(1, t.progressPct) } : t)),
       )
-    }
-
-    const markComplete = (id: string) => {
-      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'Completed', progressPct: 100 } : t)))
-    }
-
-    const submitQuickLog = (e: FormEvent<HTMLFormElement>) => {
-      e.preventDefault()
-      const fd = new FormData(e.currentTarget)
-      const next: WorkerLog = {
-        id: `wlog_${Date.now().toString(36)}`,
-        at: new Date().toISOString(),
-        tasksCompleted: String(fd.get('tasksCompleted') ?? ''),
-        workersPresent: Number(fd.get('workersPresent') ?? 0),
-        issuesFaced: String(fd.get('issuesFaced') ?? ''),
-        photoName: String(fd.get('photoName') ?? '').trim() || null,
+      if (currentProjectId) {
+        try {
+          await updateWorkerTask(currentProjectId, id, { status: 'In progress', progressPct: 1 })
+        } catch (e) {
+          console.error('Failed to start task:', e)
+        }
       }
-      const updated = [next, ...workerLogs].slice(0, 30)
-      setWorkerLogs(updated)
-      safeWriteWorkerLogs(updated)
-      e.currentTarget.reset()
-      setLogOpen(false)
+    }
+
+    const markComplete = async (id: string) => {
+      setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'Completed', progressPct: 100 } : t)))
+      if (currentProjectId) {
+        try {
+          await updateWorkerTask(currentProjectId, id, { status: 'Completed', progressPct: 100 })
+        } catch (e) {
+          console.error('Failed to mark complete:', e)
+        }
+      }
+    }
+
+    const submitQuickLog = async (e: FormEvent<HTMLFormElement>) => {
+      e.preventDefault()
+      if (!currentProjectId) return
+      const fd = new FormData(e.currentTarget)
+      
+      const payload = {
+        date: new Date().toISOString().slice(0, 10),
+        tasks_completed: String(fd.get('tasksCompleted') ?? ''),
+        workers_present: Number(fd.get('workersPresent') ?? 0),
+        issues: String(fd.get('issuesFaced') ?? ''),
+      }
+      
+      try {
+        const newLog = await createWorkspaceDailyLog(currentProjectId, payload)
+        setWorkerLogs((prev) => [newLog, ...prev])
+        e.currentTarget.reset()
+        setLogOpen(false)
+      } catch (err) {
+        console.error('Failed to submit log:', err)
+      }
     }
 
     return (
@@ -567,9 +593,9 @@ export function AppDashboardPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <div className="text-sm font-semibold">{n.title}</div>
-                          <div className="mt-0.5 text-xs text-[color:var(--color-text_secondary)]">{n.detail}</div>
+                          <div className="mt-0.5 text-xs text-[color:var(--color-text_secondary)]">{n.body}</div>
                         </div>
-                        <div className="text-[11px] text-[color:var(--color-text_muted)]">{n.at}</div>
+                        <div className="text-[11px] text-[color:var(--color-text_muted)]">{n.createdAtLabel}</div>
                       </div>
                     </div>
                   ))
@@ -592,7 +618,7 @@ export function AppDashboardPage() {
               <div className="text-xs text-[color:var(--color-text_secondary)]">Daily logs submitted</div>
               <div className="mt-1 text-2xl font-semibold">{workerLogs.length}</div>
               <div className="mt-2 text-xs text-[color:var(--color-text_secondary)]">
-                Latest: {workerLogs[0] ? formatDate(workerLogs[0].at) : '—'}
+                Latest: {workerLogs[0] ? formatDate(workerLogs[0].date || workerLogs[0].createdAt || '') : '—'}
               </div>
             </div>
             <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-white p-4">
@@ -623,24 +649,33 @@ export function AppDashboardPage() {
           <form
             id="worker-progress-form"
             className="space-y-4"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault()
               if (!activeTaskId) return
               const fd = new FormData(e.currentTarget)
               const pct = clampPct(Number(fd.get('progressPct') ?? 0))
+              const nextStatus = pct >= 100 ? 'Completed' : pct > 0 ? 'In progress' : 'Not started'
               setTasks((prev) =>
                 prev.map((t) =>
                   t.id === activeTaskId
                     ? {
                         ...t,
                         progressPct: pct,
-                        status: pct >= 100 ? 'Completed' : pct > 0 ? 'In progress' : 'Not started',
+                        status: nextStatus,
                       }
                     : t,
                 ),
               )
               setProgressOpen(false)
               e.currentTarget.reset()
+
+              if (currentProjectId) {
+                try {
+                  await updateWorkerTask(currentProjectId, activeTaskId, { progressPct: pct, status: nextStatus })
+                } catch (err) {
+                  console.error(err)
+                }
+              }
             }}
           >
             <div>
@@ -743,7 +778,7 @@ export function AppDashboardPage() {
 
         {/* Top KPI cards (actionable) */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Card className="border-[#dbe9f8] bg-[#eef3fb] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]">
+          <Card className="border-[#dbe9f8] bg-[#eef3fb] dark:border-blue-900/50 dark:bg-blue-900/20 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
@@ -770,7 +805,7 @@ export function AppDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-[#cfe8de] bg-[#e9f7f2] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]">
+          <Card className="border-[#cfe8de] bg-[#e9f7f2] dark:border-emerald-900/50 dark:bg-emerald-900/20 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
@@ -797,7 +832,7 @@ export function AppDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-[#d5ece8] bg-[#edf8f6] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]">
+          <Card className="border-[#d5ece8] bg-[#edf8f6] dark:border-teal-900/50 dark:bg-teal-900/20 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
@@ -820,7 +855,7 @@ export function AppDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-[#e1e8f7] bg-[#f2f5fc] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]">
+          <Card className="border-[#e1e8f7] bg-[#f2f5fc] dark:border-indigo-900/50 dark:bg-indigo-900/20 transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-soft)]">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div>
@@ -869,13 +904,22 @@ export function AppDashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-[color:var(--color-text_secondary)]">
-                Connect an insights or recommendations endpoint to populate this panel. Until then, use{' '}
-                <button type="button" className="font-semibold text-[color:var(--color-primary)] underline" onClick={() => navigate('/app/insights')}>
-                  Project insights
-                </button>{' '}
-                and the timeline.
-              </p>
+              {aiInsights?.recommendations?.length ? (
+                aiInsights.recommendations.map((rec: any, idx: number) => (
+                  <div key={idx} className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-3 text-sm text-[color:var(--color-text_secondary)]">
+                    <span className="mr-2 inline-block size-1.5 rounded-full bg-[color:var(--color-primary)] align-middle"></span>
+                    {typeof rec === 'string' ? rec : rec.text || JSON.stringify(rec)}
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-[color:var(--color-text_secondary)]">
+                  Connect an insights or recommendations endpoint to populate this panel. Until then, use{' '}
+                  <button type="button" className="font-semibold text-[color:var(--color-primary)] underline" onClick={() => navigate('/app/insights')}>
+                    Project insights
+                  </button>{' '}
+                  and the timeline.
+                </p>
+              )}
             </CardContent>
           </Card>
 

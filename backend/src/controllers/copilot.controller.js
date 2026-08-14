@@ -22,6 +22,7 @@ function threadToDto(row) {
       structured: m.structured || null,
       usedModules: m.usedModules || [],
       followUps: m.followUps || [],
+      imageBase64: m.imageBase64 || null,
       createdAt: m.createdAt || new Date().toISOString(),
     })),
     createdAt: obj.createdAt,
@@ -99,13 +100,20 @@ async function addMessage(req, res) {
 
   const originalContent = String(req.body.content || '').trim()
   const language = req.body.language || 'English'
+  const imageBase64 = req.body.imageBase64 || null
 
-  if (!originalContent) {
-    res.status(400).json({ message: 'content is required.' })
+  if (!originalContent && !imageBase64) {
+    res.status(400).json({ message: 'content or imageBase64 is required.' })
     return
   }
 
-  row.messages.push({ role: 'user', content: originalContent })
+  // Set headers for SSE
+  res.setHeader('Content-Type', 'text/event-stream')
+  res.setHeader('Cache-Control', 'no-cache')
+  res.setHeader('Connection', 'keep-alive')
+  res.flushHeaders()
+
+  row.messages.push({ role: 'user', content: originalContent, imageBase64 })
   
   const prompt = originalContent + (language !== 'English' ? ` (Please reply in ${language})` : '')
 
@@ -123,29 +131,39 @@ async function addMessage(req, res) {
       .slice(0, -1)
       .filter((m) => m.content && m.content.trim().length > 0)
       .slice(-6)
+
     ragResult = await buildExtractiveAnswer(
       prompt,
       systemContext,
       history,
-      req.project._id
+      req.project._id,
+      imageBase64,
+      (chunkText) => {
+        // Send chunk to client
+        res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`)
+      }
     )
 
     answerText = ragResult.answer
 
     if (!answerText || typeof answerText !== 'string') {
       answerText = 'I generated a response, but it was empty. Please try again.'
+      res.write(`data: ${JSON.stringify({ text: answerText })}\n\n`)
     }
 
     usedModules = detectModules(prompt, answerText)
-    followUps = buildFollowUps(answerText, req.user.role)
+    // Removed followups logic as requested by user
+    followUps = []
   } catch (err) {
     console.error('[Copilot RAG] Error:', err?.message || err)
 
     answerText = 'I encountered an issue generating the Copilot response. Please try again in a moment.'
+    res.write(`data: ${JSON.stringify({ text: answerText })}\n\n`)
     usedModules = ['Project']
-    followUps = ['Which tasks are delayed?', 'Show unresolved issues']
+    followUps = []
   }
 
+  const assistantMessageId = String(Date.now())
   row.messages.push({
     role: 'assistant',
     content: answerText,
@@ -165,17 +183,15 @@ async function addMessage(req, res) {
 
   const lastMsg = row.messages[row.messages.length - 1]
 
-  res.status(201).json({
-    thread: threadToDto(row),
-    message: {
-      id: lastMsg._id?.toString() || '',
-      role: lastMsg.role,
-      content: lastMsg.content,
-      usedModules: lastMsg.usedModules || [],
-      followUps: lastMsg.followUps || [],
-      citations: lastMsg.citations || [],
-    },
-  })
+  // Send the final metadata and complete the stream
+  res.write(`data: ${JSON.stringify({
+    done: true,
+    messageId: lastMsg._id?.toString() || assistantMessageId,
+    usedModules,
+    followUps,
+    citations: ragResult.citations || [],
+  })}\n\n`)
+  res.end()
 }
 
 async function patchThread(req, res) {

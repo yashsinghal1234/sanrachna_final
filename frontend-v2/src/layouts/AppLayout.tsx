@@ -20,8 +20,8 @@ import {
   Send,
   ShoppingCart,
   Timer,
-  UserCog,
   Users,
+  HardHat,
   X,
 } from 'lucide-react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
@@ -133,7 +133,7 @@ function navForRole(role: 'owner' | 'engineer' | 'worker'): NavItem[] {
     return [
       { to: '/app', label: 'Dashboard', end: true, icon: LayoutDashboard },
       { to: '/app/create-project', label: 'Create Project', icon: PlusCircle },
-      { to: '/app/settings/team', label: 'Team Management', icon: UserCog },
+      { to: '/app/workforce', label: 'Workforce & Team', icon: HardHat },
       { to: '/app/insights', label: 'Project Intelligence', icon: Gauge },
       { to: '/app/estimation', label: 'AI Planning Studio', icon: ClipboardList },
       { to: '/app/timeline', label: 'Timeline', icon: Timer },
@@ -152,7 +152,7 @@ function navForRole(role: 'owner' | 'engineer' | 'worker'): NavItem[] {
 
   return [
     { to: '/app', label: 'Dashboard', end: true, icon: LayoutDashboard },
-    { to: '/app/settings/team', label: 'Team Management', icon: UserCog },
+    { to: '/app/workforce', label: 'Workforce & Team', icon: HardHat },
     { to: '/app/insights', label: 'Project Intelligence', icon: Gauge },
     { to: '/app/estimation', label: 'AI Planning Studio', icon: ClipboardList },
     { to: '/app/timeline', label: 'Timeline / Scheduling', icon: Timer },

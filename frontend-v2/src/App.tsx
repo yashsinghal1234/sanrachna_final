@@ -29,8 +29,8 @@ import { ProfileSettingsPage } from '@/pages/settings/ProfileSettingsPage'
 import { SecuritySettingsPage } from '@/pages/settings/SecuritySettingsPage'
 import { NotificationSettingsPage } from '@/pages/settings/NotificationSettingsPage'
 import { ProjectSettingsPage } from '@/pages/settings/ProjectSettingsPage'
-import { TeamSettingsPage } from '@/pages/settings/TeamSettingsPage'
 import { CreateProjectPage } from '@/pages/CreateProjectPage'
+import { WorkforcePage } from '@/pages/WorkforcePage'
 import { RequireRouteAccess } from '@/components/RequireRouteAccess'
 
 function RequireAuth({ children }: { children: ReactElement }) {
@@ -89,6 +89,7 @@ export default function App() {
         <Route path="rfi" element={<RequireRouteAccess><RfiPage /></RequireRouteAccess>} />
         <Route path="issues" element={<RequireRouteAccess><IssuesPage /></RequireRouteAccess>} />
         <Route path="cost-resources" element={<RequireRouteAccess><CostResourcesPage /></RequireRouteAccess>} />
+        <Route path="workforce" element={<RequireRouteAccess><WorkforcePage /></RequireRouteAccess>} />
 
         <Route path="my-tasks" element={<RequireRouteAccess><MyTasksPage /></RequireRouteAccess>} />
         <Route path="logs/new" element={<RequireRouteAccess><SubmitDailyLogPage /></RequireRouteAccess>} />
@@ -98,7 +99,7 @@ export default function App() {
         <Route path="contacts" element={<RequireRouteAccess><ContactsPage /></RequireRouteAccess>} />
         <Route path="notifications" element={<RequireRouteAccess><Navigate to="/app" replace /></RequireRouteAccess>} />
 
-        <Route path="team" element={<Navigate to="/app/settings/team" replace />} />
+        <Route path="team" element={<Navigate to="/app/workforce" replace />} />
 
         <Route path="settings" element={<RequireRouteAccess><SettingsLayout /></RequireRouteAccess>}>
           <Route index element={<Navigate to="profile" replace />} />
@@ -106,7 +107,7 @@ export default function App() {
           <Route path="password" element={<SecuritySettingsPage />} />
           <Route path="notifications" element={<NotificationSettingsPage />} />
           <Route path="project" element={<ProjectSettingsPage />} />
-          <Route path="team" element={<TeamSettingsPage />} />
+          <Route path="team" element={<Navigate to="/app/workforce" replace />} />
         </Route>
       </Route>
 

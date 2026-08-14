@@ -52,6 +52,15 @@ The goal is to build a scalable construction intelligence platform capable of su
 
 ---
 
+# 🚀 Recent Updates
+
+- **Revamped Landing Page:** A modern, immersive landing page featuring 3D assets, dark mode, and responsive design.
+- **Advanced AI Copilot & RAG:** Integrated **Groq** for ultra-fast AI inference and a **Retrieval-Augmented Generation (RAG)** pipeline to provide context-aware construction insights directly within the platform.
+- **Procurement & Supply Chain Engine:** Enhanced the procurement page with AI-driven procurement recommendations, timeline scheduling, and automated Request for Quote (RFQ) generation.
+- **Workforce Management:** Added a dedicated Workforce Page for real-time labor tracking, allocation, and coordination.
+
+---
+
 # ✨ Core Features
 
 ## 🧠 AI Planning Studio

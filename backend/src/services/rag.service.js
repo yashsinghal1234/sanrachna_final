@@ -358,7 +358,7 @@ function cleanChunkForAnswer(text) {
     .trim()
 }
 
-async function buildExtractiveAnswer(question, projectContext, history = [], projectId = null) {
+async function buildExtractiveAnswer(question, projectContext, history = [], projectId = null, imageBase64 = null, onChunk = null) {
   const retrievalQuery = buildConversationQuery(question, history)
 
   // Pass the raw question to the retrieval logic to avoid polluting semantic embeddings
@@ -395,10 +395,14 @@ async function buildExtractiveAnswer(question, projectContext, history = [], pro
     })
     .join('\n\n---\n\n')
 
-  let finalAnswer
+  let finalAnswer = ''
 
   try {
-    finalAnswer = await askGroq(question, contextText)
+    const stream = await askGroq(question, contextText, imageBase64)
+    for await (const chunk of stream) {
+      finalAnswer += chunk
+      if (onChunk) onChunk(chunk)
+    }
     console.log('[GROQ] Answer generated successfully')
   } catch (err) {
     console.error('[GROQ] Failed:', err?.message || err)
@@ -412,7 +416,7 @@ async function buildExtractiveAnswer(question, projectContext, history = [], pro
       finalAnswer.toLowerCase().includes('not found') ||
       finalAnswer.toLowerCase().includes('not provided'))
   ) {
-    finalAnswer = `Based on the available project context, the main procurement risks are:
+    const fallbackText = `Based on the available project context, the main procurement risks are:
 
 • Late material delivery can affect schedule continuity.
 • Open RFIs may delay material ordering or execution decisions.
@@ -425,15 +429,19 @@ Recommended actions:
 • Review pending structural and soil documents.
 • Check material delivery dependencies before placing new orders.
 • Escalate critical site issues that can affect procurement timing.`
+    finalAnswer = fallbackText
+    if (onChunk) onChunk(fallbackText)
   }
 
   if (!finalAnswer) {
-    finalAnswer =
+    const fallbackText =
       'Based on the retrieved project data and construction knowledge:\n\n' +
       chunks
         .slice(0, 4)
         .map((chunk) => `• ${cleanChunkForAnswer(chunk.text)}`)
         .join('\n\n')
+    finalAnswer = fallbackText
+    if (onChunk) onChunk(fallbackText)
   }
 
   const citations = chunks.map((chunk, index) => {

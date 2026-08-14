@@ -10,6 +10,7 @@ const messageSchema = new mongoose.Schema(
     structured: { type: mongoose.Schema.Types.Mixed, default: null },
     usedModules: { type: [String], default: [] },
     followUps: { type: [String], default: [] },
+    imageBase64: { type: String, default: null },
   },
   { _id: true, timestamps: true },
 )
