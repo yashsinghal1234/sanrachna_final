@@ -4,11 +4,6 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { backendForgotPassword, backendResetPassword } from '@/api/backendAuth'
-import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
-import { Input } from '@/components/ui/Input'
-
-const gradient = 'bg-[linear-gradient(135deg,#2FBFAD_0%,#6EDBD0_45%,#3B82F6_100%)]'
 
 type RecoveryStep = 'verify' | 'reset'
 
@@ -41,12 +36,12 @@ export function ForgotPasswordPage() {
     passwordScore <= 1 ? 'Weak' : passwordScore <= 2 ? 'Fair' : passwordScore === 3 ? 'Good' : 'Strong'
   const strengthColor =
     passwordScore <= 1
-      ? 'bg-[color:var(--color-error)]'
+      ? 'bg-red-500'
       : passwordScore <= 2
-        ? 'bg-[color:var(--color-warning)]'
+        ? 'bg-yellow-500'
         : passwordScore === 3
-          ? 'bg-[color:var(--color-info)]'
-          : 'bg-[color:var(--color-success)]'
+          ? 'bg-blue-500'
+          : 'bg-green-500'
 
   const handleVerify = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -91,217 +86,194 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="grid min-h-screen grid-cols-1 bg-[color:var(--color-bg)] lg:grid-cols-2">
-      <div className="relative hidden overflow-hidden border-r border-[color:var(--color-border)] lg:block">
-        <img
-          src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1600&q=80"
-          alt="Construction site with cranes and concrete structure"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,15,31,0.20)_0%,rgba(8,15,31,0.72)_70%,rgba(8,15,31,0.84)_100%)]" />
-        <div className="relative flex h-full flex-col justify-between p-10 text-white">
-          <div className="flex items-center gap-3">
-            <div className={`size-10 rounded-[var(--radius-xl)] ${gradient}`} aria-hidden />
-            <div>
-              <div className="text-sm font-bold tracking-tight">Sanrachna</div>
-              <div className="text-xs text-white/85">Construction Intelligence</div>
-            </div>
-          </div>
-
-          <div className="mb-8 mt-auto max-w-md">
-            <h1 className="text-3xl font-bold tracking-tight">
-              {step === 'verify' ? 'Recover your account' : 'Create a new password'}
-            </h1>
-            <p className="mt-2 text-white/85">
-              {step === 'verify'
-                ? 'Verify your identity with your registered name and email before continuing.'
-                : 'Set a strong new password to restore access to your workspace securely.'}
-            </p>
-            <div className="mt-6 rounded-[var(--radius-2xl)] border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-              <div className="text-sm font-semibold">
-                {step === 'verify' ? 'Secure account recovery' : 'Password reset protection'}
-              </div>
-              <div className="mt-1 text-sm text-white/80">
-                {step === 'verify'
-                  ? 'We check your account details first, then unlock the reset step.'
-                  : 'Use 8+ characters with uppercase, number, and symbol for a stronger password.'}
-              </div>
-            </div>
-            <div className="mt-6 space-y-3 text-sm text-white/85">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="size-4 text-[#86EFAC]" />
-                Identity-first recovery flow
-              </div>
-              <div className="flex items-center gap-2">
-                <KeyRound className="size-4 text-[#93C5FD]" />
-                Password reset happens only after verification
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-center p-4 sm:p-6">
-        <Card className="w-full max-w-md p-5 sm:p-6">
+    <div className="flex min-h-screen bg-white dark:bg-[#0a0a0a]">
+      
+      {/* ── LEFT COLUMN: FORM ── */}
+      <div className="flex w-full flex-col justify-center px-8 py-12 lg:w-[45%] lg:px-16 xl:px-24">
+        <div className="mx-auto w-full max-w-[400px]">
+          
           <Link
             to="/login"
-            className="inline-flex items-center gap-2 text-sm font-medium text-[color:var(--color-text_secondary)] transition hover:text-[color:var(--color-text)]"
+            className="mb-8 inline-flex items-center gap-2 text-[13px] font-semibold text-green-600 dark:text-green-500 hover:underline"
           >
             <ArrowLeft className="size-4" />
             Back to login
           </Link>
 
-          <div className="mt-4 text-lg font-bold">{step === 'verify' ? 'Forgot Password' : 'Reset Password'}</div>
-          <p className="mt-1 text-sm text-[color:var(--color-text_secondary)]">
-            {step === 'verify'
-              ? 'Enter your registered name and email to verify your identity.'
-              : 'Choose a new password for your Sanrachna account.'}
-          </p>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold tracking-tight text-[#111] dark:text-white">
+              {step === 'verify' ? 'Recover your account' : 'Create a new password'}
+            </h1>
+            <p className="mt-3 text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
+              {step === 'verify'
+                ? 'Enter your registered name and email to verify your identity before continuing.'
+                : 'Set a strong new password to restore access to your workspace securely.'}
+            </p>
+          </div>
 
-          {error ? (
-            <div className="mt-4 rounded-[var(--radius-xl)] border border-[color:var(--color-error)]/30 bg-[color:var(--color-error)]/10 px-3 py-2 text-sm text-[color:var(--color-error)]">
+          {error && (
+            <div className="mb-6 rounded-lg bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-400">
               {error}
             </div>
-          ) : null}
+          )}
 
-          {success ? (
-            <div className="mt-4 rounded-[var(--radius-xl)] border border-[color:var(--color-success)]/30 bg-[color:var(--color-success)]/10 px-3 py-2 text-sm text-[color:var(--color-success)]">
+          {success && (
+            <div className="mb-6 rounded-lg bg-green-50 dark:bg-green-900/30 p-3 text-sm text-green-700 dark:text-green-400">
               {success}
             </div>
-          ) : null}
+          )}
 
           {step === 'verify' ? (
-            <form className="mt-6 space-y-4" onSubmit={handleVerify}>
-              <div>
-                <label className="text-sm font-medium" htmlFor="username">
-                  Username
-                </label>
-                <div className="relative mt-1.5">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-text_muted)]">
-                    <User className="size-4" />
-                  </span>
-                  <Input
-                    id="username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="pl-9"
-                    placeholder="Your registered name"
-                    required
-                  />
-                </div>
+            <form className="space-y-4" onSubmit={handleVerify}>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
+                  <User className="size-[18px]" />
+                </span>
+                <input
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full rounded-full border border-gray-300 dark:border-gray-700 bg-transparent pl-12 pr-6 py-3.5 text-sm text-black dark:text-white outline-none transition-colors focus:border-black dark:focus:border-white"
+                  placeholder="Your registered name"
+                  required
+                />
               </div>
 
-              <div>
-                <label className="text-sm font-medium" htmlFor="email">
-                  Email
-                </label>
-                <div className="relative mt-1.5">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-text_muted)]">
-                    <Mail className="size-4" />
-                  </span>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-9"
-                    placeholder="you@company.com"
-                    required
-                  />
-                </div>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
+                  <Mail className="size-[18px]" />
+                </span>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-full border border-gray-300 dark:border-gray-700 bg-transparent pl-12 pr-6 py-3.5 text-sm text-black dark:text-white outline-none transition-colors focus:border-black dark:focus:border-white"
+                  placeholder="you@company.com"
+                  required
+                />
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Verifying…' : 'Verify account'}
-              </Button>
+              <button
+                type="submit"
+                className="mt-6 w-full rounded-full bg-black dark:bg-white py-4 text-sm font-medium text-white dark:text-black transition-opacity hover:opacity-90 disabled:opacity-70"
+                disabled={loading}
+              >
+                {loading ? 'Verifying...' : 'Verify account'}
+              </button>
             </form>
           ) : (
-            <form className="mt-6 space-y-4" onSubmit={handleReset}>
-              <div>
-                <label className="text-sm font-medium" htmlFor="newPassword">
-                  New password
-                </label>
-                <div className="relative mt-1.5">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-text_muted)]">
-                    <Lock className="size-4" />
-                  </span>
-                  <Input
-                    id="newPassword"
-                    type={showPassword ? 'text' : 'password'}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="pl-9 pr-10"
-                    placeholder="••••••••"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[color:var(--color-text_muted)] hover:bg-[color:var(--color-surface_hover)]"
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
+            <form className="space-y-4" onSubmit={handleReset}>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
+                  <Lock className="size-[18px]" />
+                </span>
+                <input
+                  id="newPassword"
+                  type={showPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full rounded-full border border-gray-300 dark:border-gray-700 bg-transparent pl-12 pr-12 py-3.5 text-sm text-black dark:text-white outline-none transition-colors focus:border-black dark:focus:border-white"
+                  placeholder="New password"
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+                </button>
               </div>
 
-              <div>
-                <label className="text-sm font-medium" htmlFor="confirmPassword">
-                  Confirm password
-                </label>
-                <div className="relative mt-1.5">
-                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--color-text_muted)]">
-                    <Lock className="size-4" />
-                  </span>
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-9 pr-10"
-                    placeholder="••••••••"
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[color:var(--color-text_muted)] hover:bg-[color:var(--color-surface_hover)]"
-                    onClick={() => setShowConfirmPassword((v) => !v)}
-                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-gray-400">
+                  <Lock className="size-[18px]" />
+                </span>
+                <input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full rounded-full border border-gray-300 dark:border-gray-700 bg-transparent pl-12 pr-12 py-3.5 text-sm text-black dark:text-white outline-none transition-colors focus:border-black dark:focus:border-white"
+                  placeholder="Confirm password"
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
+                </button>
               </div>
 
-              <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-3">
-                <div className="flex items-center justify-between text-xs font-semibold">
-                  <span>Password strength</span>
-                  <span>{newPassword ? strengthLabel : 'Not set'}</span>
+              {/* Password Strength */}
+              {newPassword && (
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 p-4">
+                  <div className="flex items-center justify-between text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    <span>Strength</span>
+                    <span>{strengthLabel}</span>
+                  </div>
+                  <div className="mt-2 h-1.5 rounded-full bg-gray-200 dark:bg-gray-800">
+                    <div
+                      className={`h-1.5 rounded-full transition-all ${strengthColor}`}
+                      style={{ width: `${(passwordScore / 4) * 100}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="mt-2 h-2 rounded-full bg-slate-200">
-                  <div
-                    className={`h-2 rounded-full transition-all ${strengthColor}`}
-                    style={{ width: `${(passwordScore / 4) * 100}%` }}
-                  />
-                </div>
-                <div className="mt-2 text-xs text-[color:var(--color-text_secondary)]">
-                  Use 8+ characters with uppercase, number, and symbol.
-                </div>
-              </div>
+              )}
 
-              {confirmPassword && newPassword !== confirmPassword ? (
-                <div className="text-xs font-medium text-[color:var(--color-error)]">
-                  Password and confirm password should match.
+              {confirmPassword && newPassword !== confirmPassword && (
+                <div className="text-[13px] font-medium text-red-500 pl-4">
+                  Passwords do not match.
                 </div>
-              ) : null}
+              )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Resetting…' : 'Reset password'}
-              </Button>
+              <button
+                type="submit"
+                className="mt-6 w-full rounded-full bg-black dark:bg-white py-4 text-sm font-medium text-white dark:text-black transition-opacity hover:opacity-90 disabled:opacity-70"
+                disabled={loading}
+              >
+                {loading ? 'Resetting...' : 'Reset password'}
+              </button>
             </form>
           )}
-        </Card>
+
+        </div>
       </div>
+
+      {/* ── RIGHT COLUMN: ILLUSTRATION ── */}
+      <div className="hidden flex-1 p-6 lg:block">
+        <div className="relative h-full w-full overflow-hidden rounded-[3rem] bg-black">
+          <img 
+            src="/city_night.png" 
+            alt="City Night Architecture" 
+            className="absolute inset-0 h-full w-full object-cover opacity-80 transition-opacity duration-700 hover:opacity-100"
+          />
+          
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+          
+          {/* Overlay Text */}
+          <div className="absolute bottom-12 left-0 right-0 px-10 text-center">
+            <h2 className="mx-auto max-w-[360px] text-[22px] font-medium leading-relaxed text-white">
+              Securely restore access to your <span className="font-bold">Sanrachna</span> workspace
+            </h2>
+            
+            {/* Carousel Dots */}
+            <div className="mt-8 flex justify-center gap-2">
+              <div className="h-1.5 w-1.5 rounded-full bg-white/40"></div>
+              <div className="h-1.5 w-5 rounded-full bg-white"></div>
+              <div className="h-1.5 w-1.5 rounded-full bg-white/40"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      
     </div>
   )
 }

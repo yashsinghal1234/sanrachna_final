@@ -1,14 +1,10 @@
-import { Eye, EyeOff, ShieldCheck, UserPlus } from 'lucide-react'
+import { Eye, EyeOff, Building2, HardHat, FileCheck2, Calculator, UserPlus, ShieldCheck } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { useAuth, type Role } from '@/auth/AuthContext'
 import { backendSignup } from '@/api/backendAuth'
-import { ContributorsStack } from '@/components/marketing/ContributorsStack'
-import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
-import { Input } from '@/components/ui/Input'
 
 export function SignupPage() {
   const { login, setRole } = useAuth()
@@ -31,12 +27,12 @@ export function SignupPage() {
     passwordScore <= 1 ? 'Weak' : passwordScore <= 2 ? 'Fair' : passwordScore === 3 ? 'Good' : 'Strong'
   const strengthColor =
     passwordScore <= 1
-      ? 'bg-[color:var(--color-error)]'
+      ? 'bg-red-500'
       : passwordScore <= 2
-        ? 'bg-[color:var(--color-warning)]'
+        ? 'bg-yellow-500'
         : passwordScore === 3
-          ? 'bg-[color:var(--color-info)]'
-          : 'bg-[color:var(--color-success)]'
+          ? 'bg-blue-500'
+          : 'bg-green-500'
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -67,204 +63,205 @@ export function SignupPage() {
   }
 
   return (
-    <div className="grid min-h-screen grid-cols-1 bg-[color:var(--color-bg)] lg:grid-cols-2">
-      <div className="relative hidden min-h-[540px] overflow-hidden border-r border-[color:var(--color-border)] lg:block">
-        <img
-          src="https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=1600&q=80"
-          alt="Construction team discussing on-site plans"
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,15,31,0.18)_0%,rgba(8,15,31,0.75)_70%,rgba(8,15,31,0.88)_100%)]" />
-        <div className="relative flex h-full flex-col justify-between p-7 text-white">
-          <div className="text-sm">
-            <div className="font-bold tracking-tight">Sanrachna</div>
-            <div className="text-white/85">AI Brain for Construction</div>
-          </div>
-          <div className="mb-5 mt-auto max-w-md">
-            <h1 className="text-3xl font-bold tracking-tight">Create your workspace</h1>
-            <p className="mt-2 text-white/85">
-              Set up your account and start generating plans, forecasts, and site actions in one place.
+    <div className="flex min-h-screen bg-white dark:bg-[#0a0a0a]">
+      
+      {/* ── LEFT COLUMN: FORM ── */}
+      <div className="flex w-full flex-col justify-center px-8 py-12 lg:w-[45%] lg:px-16 xl:px-24 h-screen overflow-y-auto">
+        <div className="mx-auto w-full max-w-[450px]">
+          
+          <div className="mb-8 text-center">
+            <h1 className="text-5xl font-bold tracking-tight text-[#111] dark:text-white">Create an account</h1>
+            <p className="mt-3 text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
+              Join <span className="font-semibold text-black dark:text-white">Sanrachna</span> to start generating plans, forecasts, and site actions in one place.
             </p>
-            <div className="mt-4 rounded-[var(--radius-2xl)] border border-white/20 bg-white/10 p-3.5 backdrop-blur-sm">
-              <div className="text-sm font-semibold">From estimate to execution</div>
-              <div className="mt-1 text-sm text-white/80">
-                Cost planning, Gantt timelines, RFIs, daily logs, and emergency alerts.
-              </div>
-            </div>
-            <ContributorsStack
-              variant="light"
-              className="mt-6"
-              title="Built by practitioners"
-              subtitle="Field engineers, PMs, and AI researchers shaping the roadmap."
-            />
           </div>
-        </div>
-      </div>
 
-      <div className="flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-[color:var(--color-card)] p-5 shadow-[var(--shadow-card)] ring-1 ring-[color:var(--color-border)]">
-          <div className="text-lg font-bold">Create your account</div>
-          <p className="mt-1 text-sm text-[color:var(--color-text_secondary)]">
-            Fill in your details to create your account and start with the right role access.
-          </p>
-
-          {error ? (
-            <div className="mt-4 rounded-[var(--radius-xl)] border border-[color:var(--color-error)]/30 bg-[color:var(--color-error)]/10 px-3 py-2 text-sm text-[color:var(--color-error)]">
+          {error && (
+            <div className="mb-6 rounded-lg bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-400">
               {error}
             </div>
-          ) : null}
+          )}
 
-          <form className="mt-5 space-y-3.5" onSubmit={onSubmit}>
+          <form className="space-y-4" onSubmit={onSubmit}>
+            
             <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className="text-sm font-medium" htmlFor="name">
-                Full name
-              </label>
-              <Input id="name" name="name" className="mt-1.5" placeholder="Full name" required />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="text-sm font-medium" htmlFor="id">
-                Email or phone
-              </label>
-              <Input
-                id="id"
-                name="id"
-                className="mt-1.5"
-                placeholder="you@company.com"
-                required
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="text-sm font-medium" htmlFor="phone">
-                Phone number <span className="text-[color:var(--color-error)]">*</span>
-              </label>
-              <Input
-                id="phone"
-                name="phone"
-                className="mt-1.5"
-                placeholder="+91 … (used for directory & alerts)"
-                required
-                inputMode="tel"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium" htmlFor="password">
-                Password
-              </label>
-              <div className="relative mt-1.5">
-                <Input
+              <div className="sm:col-span-2">
+                <input
+                  id="name"
+                  name="name"
+                  className="w-full rounded-full border border-gray-300 dark:border-gray-700 bg-transparent px-6 py-3.5 text-sm text-black dark:text-white outline-none transition-colors focus:border-black dark:focus:border-white"
+                  placeholder="Full name"
+                  required
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <input
+                  id="id"
+                  name="id"
+                  className="w-full rounded-full border border-gray-300 dark:border-gray-700 bg-transparent px-6 py-3.5 text-sm text-black dark:text-white outline-none transition-colors focus:border-black dark:focus:border-white"
+                  placeholder="Email or phone"
+                  required
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <input
+                  id="phone"
+                  name="phone"
+                  className="w-full rounded-full border border-gray-300 dark:border-gray-700 bg-transparent px-6 py-3.5 text-sm text-black dark:text-white outline-none transition-colors focus:border-black dark:focus:border-white"
+                  placeholder="Phone number (+91 ...)"
+                  required
+                  inputMode="tel"
+                />
+              </div>
+
+              <div className="relative">
+                <input
                   id="password"
                   name="password"
                   type={show ? 'text' : 'password'}
-                  className="pr-10"
+                  className="w-full rounded-full border border-gray-300 dark:border-gray-700 bg-transparent pl-6 pr-12 py-3.5 text-sm text-black dark:text-white outline-none transition-colors focus:border-black dark:focus:border-white"
+                  placeholder="Password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
                 <button
                   type="button"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-[color:var(--color-text_muted)] hover:bg-slate-50"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
                   onClick={() => setShow((v) => !v)}
-                  aria-label={show ? 'Hide password' : 'Show password'}
                 >
-                  {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  {show ? <EyeOff className="size-[18px]" /> : <Eye className="size-[18px]" />}
                 </button>
               </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium" htmlFor="confirm">
-                Confirm password
-              </label>
-              <Input
-                id="confirm"
-                name="confirm"
-                className="mt-1.5"
-                type="password"
-                required
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-              />
-            </div>
-            </div>
 
-            <div className="rounded-[var(--radius-xl)] border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-3">
-              <div className="flex items-center justify-between text-xs font-semibold">
-                <span>Password strength</span>
-                <span>{password ? strengthLabel : 'Not set'}</span>
-              </div>
-              <div className="mt-2 h-2 rounded-full bg-slate-200">
-                <div
-                  className={`h-2 rounded-full transition-all ${strengthColor}`}
-                  style={{ width: `${(passwordScore / 4) * 100}%` }}
+              <div>
+                <input
+                  id="confirm"
+                  name="confirm"
+                  type="password"
+                  className="w-full rounded-full border border-gray-300 dark:border-gray-700 bg-transparent px-6 py-3.5 text-sm text-black dark:text-white outline-none transition-colors focus:border-black dark:focus:border-white"
+                  placeholder="Confirm password"
+                  required
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
                 />
               </div>
-              <div className="mt-2 text-xs text-[color:var(--color-text_secondary)]">
-                Use 8+ characters with uppercase, number, and symbol.
-              </div>
             </div>
 
-            <div>
-              <div className="text-sm font-medium">Role</div>
-              <div className="mt-2 grid gap-2 sm:grid-cols-3">
+            {/* Password Strength */}
+            {password && (
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 p-4">
+                <div className="flex items-center justify-between text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  <span>Strength</span>
+                  <span>{strengthLabel}</span>
+                </div>
+                <div className="mt-2 h-1.5 rounded-full bg-gray-200 dark:bg-gray-800">
+                  <div
+                    className={`h-1.5 rounded-full transition-all ${strengthColor}`}
+                    style={{ width: `${(passwordScore / 4) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {confirm && password !== confirm && (
+              <div className="text-[13px] font-medium text-red-500 pl-4">
+                Passwords do not match.
+              </div>
+            )}
+
+            {/* Role Selection */}
+            <div className="pt-2">
+              <div className="mb-3 text-[13px] font-semibold text-gray-600 dark:text-gray-400 pl-1">Select your role</div>
+              <div className="grid gap-3 sm:grid-cols-3">
                 {([
-                  { key: 'owner', label: 'Owner' },
-                  { key: 'engineer', label: 'Engineer' },
-                  { key: 'worker', label: 'Worker' },
+                  { key: 'owner', label: 'Owner', desc: 'Insights' },
+                  { key: 'engineer', label: 'Engineer', desc: 'Execution' },
+                  { key: 'worker', label: 'Worker', desc: 'Site Logs' },
                 ] as const).map((r) => (
                   <button
                     key={r.key}
                     type="button"
                     className={[
-                      'rounded-[var(--radius-xl)] border px-3 py-3 text-left text-sm transition',
+                      'rounded-2xl border p-3 text-left transition-all',
                       r.key === role
-                        ? 'border-[color:var(--color-primary)] bg-[color:var(--color-primary_light)]/20'
-                        : 'border-[color:var(--color-border)] bg-white hover:bg-slate-50',
+                        ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                        : 'border-gray-200 bg-white hover:border-gray-300 text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-600',
                     ].join(' ')}
                     onClick={() => setRoleLocal(r.key)}
                   >
-                    <div className="font-semibold">{r.label}</div>
-                    <div className="mt-1 text-xs text-[color:var(--color-text_secondary)]">
-                      {r.key === 'owner'
-                        ? 'View insights & budgets'
-                        : r.key === 'engineer'
-                          ? 'Manage project execution'
-                          : 'Submit logs & issues'}
+                    <div className="text-sm font-semibold">{r.label}</div>
+                    <div className={`mt-1 text-[11px] ${r.key === role ? 'text-gray-300 dark:text-gray-700' : 'text-gray-500 dark:text-gray-500'}`}>
+                      {r.desc}
                     </div>
                   </button>
                 ))}
               </div>
             </div>
 
-            <Button className="w-full" type="submit" disabled={loading}>
+            <button
+              type="submit"
+              className="mt-6 w-full flex items-center justify-center gap-2 rounded-full bg-black dark:bg-white py-4 text-sm font-medium text-white dark:text-black transition-opacity hover:opacity-90 disabled:opacity-70"
+              disabled={loading}
+            >
               {loading ? (
-                'Creating…'
+                'Creating...'
               ) : (
                 <>
                   <UserPlus className="size-4" />
                   Create account
                 </>
               )}
-            </Button>
-
-            {confirm && password !== confirm ? (
-              <div className="text-xs font-medium text-[color:var(--color-error)]">
-                Password and confirm password should match.
-              </div>
-            ) : null}
-
-            <div className="flex items-center justify-between text-sm">
-              <Link to="/login" className="font-medium text-[color:var(--color-primary_dark)] hover:underline">
-                Already have an account?
-              </Link>
-              <span className="inline-flex items-center gap-2 text-[color:var(--color-text_secondary)]">
-                <ShieldCheck className="size-4 text-[color:var(--color-success)]" />
-                Safe
-              </span>
-            </div>
+            </button>
           </form>
-        </Card>
+
+          <div className="mt-8 flex items-center justify-between text-[13px]">
+            <div className="text-gray-500 dark:text-gray-400">
+              Already have an account?{' '}
+              <Link to="/login" className="font-semibold text-green-600 dark:text-green-500 hover:underline">
+                Login
+              </Link>
+            </div>
+            <span className="inline-flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+              <ShieldCheck className="size-4 text-green-600 dark:text-green-500" />
+              Secure
+            </span>
+          </div>
+
+        </div>
       </div>
+
+      {/* ── RIGHT COLUMN: ILLUSTRATION ── */}
+      <div className="hidden flex-1 p-6 lg:block">
+        <div className="relative h-full w-full overflow-hidden rounded-[3rem] bg-black">
+          <img 
+            src="/city_night.png" 
+            alt="City Night Architecture" 
+            className="absolute inset-0 h-full w-full object-cover opacity-80 transition-opacity duration-700 hover:opacity-100"
+          />
+          
+          {/* Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
+          
+          {/* Overlay Text */}
+          <div className="absolute bottom-12 left-0 right-0 px-10 text-center">
+            <h2 className="mx-auto max-w-[360px] text-[22px] font-medium leading-relaxed text-white">
+              Join the future of construction management with <span className="font-bold">Sanrachna</span>
+            </h2>
+            
+            {/* Carousel Dots */}
+            <div className="mt-8 flex justify-center gap-2">
+              <div className="h-1.5 w-5 rounded-full bg-white"></div>
+              <div className="h-1.5 w-1.5 rounded-full bg-white/40"></div>
+              <div className="h-1.5 w-1.5 rounded-full bg-white/40"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      
     </div>
   )
 }
-
