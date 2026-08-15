@@ -40,3 +40,11 @@ Thumbs.db
 
 # PDFs
 *.pdf
+
+# AI Configuration Folders
+.gemini
+.gemini/
+.cursor
+.cursor/
+.claude
+.claude/

@@ -1,10 +1,29 @@
-import { Eye, EyeOff, Building2, HardHat, FileCheck2, Calculator, UserPlus, ShieldCheck } from 'lucide-react'
+import { Eye, EyeOff, UserPlus, ShieldCheck } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { useAuth, type Role } from '@/auth/AuthContext'
 import { backendSignup } from '@/api/backendAuth'
+import { AuthCarousel, type CarouselItem } from '@/components/AuthCarousel'
+
+const CAROUSEL_ITEMS: CarouselItem[] = [
+  {
+    type: 'video',
+    src: "/Pinterest (2)-enhanced.mp4",
+    text: <>Join the future of construction management with <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">Sanrachna</span></>
+  },
+  {
+    type: 'video',
+    src: "/Pinterest (3).mp4",
+    text: <>Collaborate effortlessly across site and office.</>
+  },
+  {
+    type: 'video',
+    src: "/Pinterest-enhanced.mp4",
+    text: <>Gain unparalleled insights with real-time analytics.</>
+  }
+]
 
 export function SignupPage() {
   const { login, setRole } = useAuth()
@@ -66,7 +85,7 @@ export function SignupPage() {
     <div className="flex min-h-screen bg-white dark:bg-[#0a0a0a]">
       
       {/* ── LEFT COLUMN: FORM ── */}
-      <div className="flex w-full flex-col justify-center px-8 py-12 lg:w-[45%] lg:px-16 xl:px-24 h-screen overflow-y-auto">
+      <div className="flex w-full flex-col justify-center px-8 py-12 lg:w-[45%] lg:px-8 xl:px-12 h-screen overflow-y-auto">
         <div className="mx-auto w-full max-w-[450px]">
           
           <div className="mb-8 text-center">
@@ -233,34 +252,7 @@ export function SignupPage() {
         </div>
       </div>
 
-      {/* ── RIGHT COLUMN: ILLUSTRATION ── */}
-      <div className="hidden flex-1 p-6 lg:block">
-        <div className="relative h-full w-full overflow-hidden rounded-[3rem] bg-black">
-          <img 
-            src="/city_night.png" 
-            alt="City Night Architecture" 
-            className="absolute inset-0 h-full w-full object-cover opacity-80 transition-opacity duration-700 hover:opacity-100"
-          />
-          
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
-          
-          {/* Overlay Text */}
-          <div className="absolute bottom-12 left-0 right-0 px-10 text-center">
-            <h2 className="mx-auto max-w-[360px] text-[22px] font-medium leading-relaxed text-white">
-              Join the future of construction management with <span className="font-bold">Sanrachna</span>
-            </h2>
-            
-            {/* Carousel Dots */}
-            <div className="mt-8 flex justify-center gap-2">
-              <div className="h-1.5 w-5 rounded-full bg-white"></div>
-              <div className="h-1.5 w-1.5 rounded-full bg-white/40"></div>
-              <div className="h-1.5 w-1.5 rounded-full bg-white/40"></div>
-            </div>
-          </div>
-
-        </div>
-      </div>
+      <AuthCarousel items={CAROUSEL_ITEMS} />
       
     </div>
   )

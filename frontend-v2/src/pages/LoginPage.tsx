@@ -1,10 +1,11 @@
-import { Eye, EyeOff, Building2, HardHat, FileCheck2, Calculator } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import type { FormEvent } from 'react'
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { useAuth } from '@/auth/AuthContext'
 import { backendSignin } from '@/api/backendAuth'
+import { AuthCarousel, type CarouselItem } from '@/components/AuthCarousel'
 
 // Simple Inline SVGs for Social Login
 const GoogleIcon = () => (
@@ -27,6 +28,24 @@ const FacebookIcon = () => (
     <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H7.6v-3h2.4V9.6c0-2.38 1.41-3.7 3.58-3.7.94 0 1.78.07 2.02.1v2.34l-1.39.01c-1.09 0-1.3.52-1.3 1.28V12h2.58l-.34 3h-2.24v6.8C18.56 20.87 22 16.84 22 12z" />
   </svg>
 )
+
+const CAROUSEL_ITEMS: CarouselItem[] = [
+  {
+    type: 'video',
+    src: "/Pinterest-enhanced.mp4",
+    text: <>Elevate your construction management with <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">Sanrachna</span></>
+  },
+  {
+    type: 'video',
+    src: "/Untitled design-enhanced.mp4",
+    text: <>Seamless site tracking powered by <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">intelligent tools</span></>
+  },
+  {
+    type: 'video',
+    src: "/Pinterest (1)-enhanced.mp4",
+    text: <>Transform your project visibility from day one.</>
+  }
+]
 
 export function LoginPage() {
   const { login } = useAuth()
@@ -52,11 +71,12 @@ export function LoginPage() {
     const fd = new FormData(e.currentTarget)
     const emailOrPhone = String(fd.get('id') || '').trim()
     const password = String(fd.get('password') || '').trim()
+    const rememberMe = fd.get('rememberMe') === 'on'
     if (!emailOrPhone || !password) return
 
     setLoading(true)
     try {
-      const { token, user } = await backendSignin({ email: emailOrPhone, password })
+      const { token, user } = await backendSignin({ email: emailOrPhone, password, rememberMe })
       login({ token, user })
       navigate('/app', { replace: true })
     } catch (err) {
@@ -70,7 +90,7 @@ export function LoginPage() {
     <div className="flex min-h-screen bg-white dark:bg-[#0a0a0a]">
       
       {/* ── LEFT COLUMN: FORM ── */}
-      <div className="flex w-full flex-col justify-center px-8 lg:w-[45%] lg:px-16 xl:px-24">
+      <div className="flex w-full flex-col justify-center px-8 lg:w-[45%] lg:px-8 xl:px-12">
         <div className="mx-auto w-full max-w-[400px]">
           
           <div className="mb-10 text-center">
@@ -121,7 +141,16 @@ export function LoginPage() {
               </button>
             </div>
 
-            <div className="flex justify-end pt-1 pb-1">
+            <div className="flex items-center justify-between pt-1 pb-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="rememberMe"
+                  className="size-4 rounded border-gray-300 dark:border-gray-700 bg-transparent text-black dark:text-white focus:ring-black dark:focus:ring-white cursor-pointer"
+                />
+                <span className="text-[13px] text-gray-600 dark:text-gray-400">Remember me</span>
+              </label>
+              
               <Link to="/forgot-password" className="text-[13px] font-medium text-black dark:text-white hover:underline">
                 Forgot Password?
               </Link>
@@ -136,31 +165,27 @@ export function LoginPage() {
             </button>
           </form>
 
-          {/* Social Logins */}
-          <div className="mt-10">
-            <div className="relative flex items-center justify-center">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
-              </div>
-              <div className="relative bg-white dark:bg-[#0a0a0a] px-4 text-[13px] text-gray-500 dark:text-gray-400">
-                or continue with
-              </div>
+          <div className="mt-8 flex items-center justify-center text-[13px]">
+            <div className="h-[1px] flex-1 bg-gray-200 dark:bg-gray-800"></div>
+            <div className="px-4 text-gray-500 dark:text-gray-400">
+              Or continue with
             </div>
-
-            <div className="mt-8 flex justify-center gap-6">
-              <button type="button" className="flex size-[50px] items-center justify-center rounded-full bg-transparent border border-gray-200 dark:border-gray-800 transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]">
-                <GoogleIcon />
-              </button>
-              <button type="button" className="flex size-[50px] items-center justify-center rounded-full bg-transparent border border-gray-200 dark:border-gray-800 text-black dark:text-white transition-all duration-300 hover:shadow-[0_0_20px_rgba(0,0,0,0.3)] dark:hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]">
-                <AppleIcon />
-              </button>
-              <button type="button" className="flex size-[50px] items-center justify-center rounded-full bg-transparent border border-gray-200 dark:border-gray-800 text-[#1877F2] transition-all duration-300 hover:shadow-[0_0_20px_#1877F280] dark:hover:shadow-[0_0_20px_#1877F280]">
-                <FacebookIcon />
-              </button>
-            </div>
+            <div className="h-[1px] flex-1 bg-gray-200 dark:bg-gray-800"></div>
           </div>
 
-          <div className="mt-12 text-center text-[13px] text-gray-500 dark:text-gray-400">
+          <div className="mt-6 flex justify-center gap-6">
+            <button className="group flex h-14 w-14 items-center justify-center rounded-full border border-gray-200 dark:border-gray-800 bg-transparent transition-all duration-300 hover:border-[#4285F4] hover:shadow-[0_0_15px_rgba(66,133,244,0.4)]">
+              <GoogleIcon />
+            </button>
+            <button className="group flex h-14 w-14 items-center justify-center rounded-full border border-gray-200 dark:border-gray-800 bg-transparent text-black dark:text-white transition-all duration-300 hover:border-gray-400 hover:shadow-[0_0_15px_rgba(156,163,175,0.4)] dark:hover:border-gray-500">
+              <AppleIcon />
+            </button>
+            <button className="group flex h-14 w-14 items-center justify-center rounded-full border border-gray-200 dark:border-gray-800 bg-transparent transition-all duration-300 hover:border-[#1877F2] hover:shadow-[0_0_15px_rgba(24,119,242,0.4)]">
+              <FacebookIcon />
+            </button>
+          </div>
+
+          <div className="mt-8 text-center text-[13px] text-gray-500 dark:text-gray-400">
             Not a member?{' '}
             <Link to="/signup" className="font-semibold text-green-600 dark:text-green-500 hover:underline">
               Register now
@@ -170,34 +195,7 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* ── RIGHT COLUMN: ILLUSTRATION ── */}
-      <div className="hidden flex-1 p-6 lg:block">
-        <div className="relative h-full w-full overflow-hidden rounded-[3rem] bg-black">
-          <img 
-            src="/city_night.png" 
-            alt="City Night Architecture" 
-            className="absolute inset-0 h-full w-full object-cover opacity-80 transition-opacity duration-700 hover:opacity-100"
-          />
-          
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent"></div>
-          
-          {/* Overlay Text */}
-          <div className="absolute bottom-12 left-0 right-0 px-10 text-center">
-            <h2 className="mx-auto max-w-[360px] text-[22px] font-medium leading-relaxed text-white">
-              Make your construction management easier and organized with <span className="font-bold">Sanrachna</span>
-            </h2>
-            
-            {/* Carousel Dots */}
-            <div className="mt-8 flex justify-center gap-2">
-              <div className="h-1.5 w-1.5 rounded-full bg-white/40"></div>
-              <div className="h-1.5 w-1.5 rounded-full bg-white/40"></div>
-              <div className="h-1.5 w-5 rounded-full bg-white"></div>
-            </div>
-          </div>
-
-        </div>
-      </div>
+      <AuthCarousel items={CAROUSEL_ITEMS} />
       
     </div>
   )

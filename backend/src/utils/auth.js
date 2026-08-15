@@ -1,15 +1,17 @@
 const jwt = require('jsonwebtoken')
 
-function signToken(user) {
+function signToken(user, rememberMe = false) {
   const secret = process.env.JWT_SECRET
   if (!secret) {
     throw new Error('JWT_SECRET is not set in environment variables.')
   }
 
+  const expiresIn = rememberMe ? '7d' : (process.env.JWT_EXPIRES_IN || '1d')
+
   return jwt.sign(
     { userId: user._id.toString(), role: user.role },
     secret,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' },
+    { expiresIn },
   )
 }
 

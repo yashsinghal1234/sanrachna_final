@@ -1,180 +1,132 @@
-# 🏗️ Sanrachna — AI-Powered Construction Intelligence Platform
+<div align="center">
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=009688&height=200&section=header&text=🏗️%20Sanrachna&fontSize=70&fontColor=ffffff" width="100%" />
 
-<p align="center">
-  <strong>Plan • Monitor • Collaborate • Predict</strong>
-</p>
+  <h3>AI-Powered Construction Intelligence Platform</h3>
+  <p><em>Plan • Monitor • Collaborate • Predict — All in one ecosystem.</em></p>
 
-<p align="center">
-Sanrachna is an AI-enabled construction management ecosystem designed to streamline planning, workforce coordination, cost estimation, issue tracking, safety monitoring, and real-time project execution across construction sites.
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react" />
-  <img src="https://img.shields.io/badge/Node.js-18+-339933?style=flat&logo=node.js" />
-  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat&logo=typescript" />
-  <img src="https://img.shields.io/badge/FastAPI-Python-009688?style=flat&logo=fastapi" />
-  <img src="https://img.shields.io/badge/MongoDB-Database-47A248?style=flat&logo=mongodb" />
-  <img src="https://img.shields.io/badge/AI-Integrated-orange" />
-</p>
+  <p>
+    <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
+    <img src="https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node" />
+    <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TS" />
+    <img src="https://img.shields.io/badge/FastAPI-Python-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
+    <img src="https://img.shields.io/badge/MongoDB-Database-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB" />
+    <img src="https://img.shields.io/badge/AI_Powered-Groq_RAG-FF6F00?style=for-the-badge" alt="AI" />
+  </p>
+</div>
 
 ---
 
-# 📖 About Sanrachna
+## 🌟 The Future of Construction is Here
 
 > **“Sanrachna”** *(संरचना)* is derived from Sanskrit and represents **structure, architecture, and intelligent construction systems**.
 
-Sanrachna is a modern full-stack construction management platform built to bridge communication and operational gaps between project owners, engineers, supervisors, and on-site workers.
+Construction projects are notoriously complex, often plagued by fragmented communication, manual reporting, delayed decision-making, and disconnected tools. **Sanrachna changes everything.** 
 
-The platform combines:
-- AI-assisted project planning
-- Smart workforce coordination
-- Real-time issue tracking
-- Cost prediction
-- Document workflows
-- Safety management
-- Analytics and reporting
+Built to bridge the operational gap between project owners, engineers, supervisors, and on-site workers, Sanrachna transforms traditional workflows through **intelligent automation, centralized collaboration, predictive analytics, and AI-driven project assistance.**
 
-into one unified ecosystem.
+Whether you're managing a single building or a massive infrastructure project, Sanrachna is your ultimate construction intelligence partner.
 
 ---
 
-# 🎯 Vision
+## ✨ Why Sanrachna? The "Wow" Factor
 
-Construction projects often rely on fragmented communication, manual reporting, delayed decision-making, and disconnected tools.
-
-Sanrachna aims to transform this workflow through:
-- intelligent automation,
-- centralized collaboration,
-- predictive analytics,
-- and AI-driven project assistance.
-
-The goal is to build a scalable construction intelligence platform capable of supporting infrastructure projects of all scales.
+| 🧠 **AI-Assisted Planning** | 📊 **Real-Time Execution** | 💰 **Predictive Analytics** |
+| :--- | :--- | :--- |
+| Generate complete execution plans with our AI Studio. Automatic task breakdowns, milestones, and context-aware insights powered by **Groq** and **RAG**. | Monitor live health indicators, workforce utilization, and progress timelines directly from an immersive, 3D-enhanced dashboard. | Leverage built-in Machine Learning models to predict project costs, forecast budgets, and optimize resource allocation *before* execution begins. |
 
 ---
 
-# 🚀 Recent Updates
+## 🚀 Key Features
 
-- **Revamped Landing Page:** A modern, immersive landing page featuring 3D assets, dark mode, and responsive design.
-- **Advanced AI Copilot & RAG:** Integrated **Groq** for ultra-fast AI inference and a **Retrieval-Augmented Generation (RAG)** pipeline to provide context-aware construction insights directly within the platform.
-- **Procurement & Supply Chain Engine:** Enhanced the procurement page with AI-driven procurement recommendations, timeline scheduling, and automated Request for Quote (RFQ) generation.
-- **Workforce Management:** Added a dedicated Workforce Page for real-time labor tracking, allocation, and coordination.
+### 🏗️ For the Site & Office
+- **Smart Task Management:** Role-based assignment with lifecycle tracking.
+- **Daily Progress Logs:** Seamless submission from workers, quick approval by engineers.
+- **Workforce Coordination:** Live labor tracking and dynamic allocation.
+- **Document Hub:** Centralized, version-aware repository for all blueprints and contracts.
 
----
+### 🛡️ Safety & Reliability
+- **Incident Workflows:** Severity-based classification and escalation.
+- **RFI & Issue Tracking:** Threaded discussions and priority-based resolution.
 
-# ✨ Core Features
-
-## 🧠 AI Planning Studio
-- Generate complete project execution plans using AI
-- Automatic task breakdown and milestone generation
-- AI-assisted resource allocation and procurement planning
-- Context-aware construction copilot with project memory
-
----
-
-## 📊 Real-Time Dashboard
-- Live project health indicators
-- Timeline and progress monitoring
-- Cost burn-rate analytics
-- Workforce and resource utilization insights
+### 🤖 AI Capabilities
+- **AI Construction Copilot:** Chat with your project data! Get context-aware answers instantly.
+- **Automated AI Reporting:** One-click PDF generation with narrative summaries and risk analysis.
+- **Procurement Engine:** AI-driven material recommendations and automated RFQ creation.
 
 ---
 
-## 📋 Smart Task Management
-- Role-based task assignment
-- Priority and deadline tracking
-- Task lifecycle monitoring
-- Real-time updates for field teams
+## 🏛️ System Architecture
 
----
+Sanrachna utilizes a robust, modern microservices-inspired architecture to ensure scalability and speed:
 
-## 🧾 Daily Progress Logs
-- Workers can submit on-site progress reports
-- Engineers can review and approve submissions
-- Historical project log management
-- Structured progress tracking across phases
+```mermaid
+graph TD
+    %% Styling
+    classDef frontend fill:#61DAFB,stroke:#333,stroke-width:2px,color:#000
+    classDef backend fill:#339933,stroke:#333,stroke-width:2px,color:#fff
+    classDef db fill:#47A248,stroke:#333,stroke-width:2px,color:#fff
+    classDef py fill:#009688,stroke:#333,stroke-width:2px,color:#fff
+    classDef ai fill:#FF6F00,stroke:#333,stroke-width:2px,color:#fff
 
----
+    %% Nodes
+    A[Frontend - React + TypeScript]:::frontend
+    B[Node.js Backend API]:::backend
+    C[(MongoDB)]:::db
+    D{AI Copilot & RAG Services}:::ai
+    E[FastAPI Report Engine]:::py
+    F[PDF Generator]:::py
+    G[ML Cost Estimation Engine]:::py
 
-## 🚨 Safety & Emergency Management
-- Incident reporting workflows
-- Severity-based emergency classification
-- Safety audit trail
-- Emergency escalation system
-
----
-
-## 📄 Document Management System
-- Centralized document repository
-- Upload and categorize construction documents
-- Version-aware file access
-- Secure project-level storage
-
----
-
-## 💬 RFI (Request For Information)
-- Structured RFI workflow management
-- Communication between field and office teams
-- Status tracking and threaded discussions
-
----
-
-## ⚠️ Issue Tracking System
-- Raise and assign project issues
-- Track resolution progress
-- Associate issues with tasks and project phases
-- Priority-based escalation
-
----
-
-## 💰 Cost & Resource Management
-- Budget vs actual cost tracking
-- Procurement planning
-- Resource allocation visualization
-- Material requirement estimation
-
----
-
-## 📈 ML-Based Cost Estimation
-- Predict estimated project costs using machine learning
-- Budget forecasting before execution
-- Data-driven decision assistance
-
----
-
-## 📑 AI Report Generation
-- Automated construction progress reports
-- PDF export support
-- AI-generated narrative summaries
-- Risk and timeline analysis
+    %% Connections
+    A -->|REST API / WebSockets| B
+    B -->|Read/Write| C
+    B -->|Context & Prompts| D
+    B -->|Report Data| E
+    E -->|Formats| F
+    B -->|Inference Data| G
+```
 
 ---
 
 ## 🔐 Role-Based Access Control
-Three dedicated access levels:
-- **Owner**
-- **Engineer**
-- **Worker**
 
-Each role receives a tailored interface and permissions system.
+Sanrachna delivers tailored experiences based on user roles:
+- 👑 **Owner:** High-level analytics, budget forecasting, and AI copilot.
+- 👷‍♂️ **Engineer:** Task management, RFI resolution, log approvals, and document management.
+- 🛠️ **Worker:** Simplified mobile-friendly interface for daily progress logs and incident reporting.
 
 ---
 
-# 🏛️ System Architecture
+## ⚡ Getting Started
 
-```mermaid
-graph TD
+Ready to experience Sanrachna locally? Our ecosystem is divided into three main components:
 
-A[Frontend - React + TypeScript]
-B[Node.js Backend API]
-C[MongoDB Database]
-D[AI Services]
-E[FastAPI Report Engine]
-F[PDF Generator]
-G[ML Cost Estimation Engine]
+### 1️⃣ Start the Backend (Node.js)
+```bash
+cd backend
+npm install
+npm run dev
+```
+*(Requires MongoDB connection string in `.env`)*
 
-A --> B
-B --> C
-B --> D
-B --> E
-E --> F
-B --> G
+### 2️⃣ Start the Frontend (React + Vite)
+```bash
+cd frontend-v2
+npm install
+npm run dev
+```
+
+### 3️⃣ Start the AI & Report Engine (Python / FastAPI)
+```bash
+cd report-engine
+pip install -r requirements.txt
+./start_report_engine.bat
+```
+
+---
+
+<div align="center">
+  <p>Built with ❤️ to revolutionize the construction industry.</p>
+  <p><strong>Copyright © 2026 Sanrachna Platform. All rights reserved.</strong><br/>
+  <em>Proprietary and confidential. Unauthorized copying or distribution is strictly prohibited.</em></p>
+</div>

@@ -18,9 +18,10 @@ function sanitizeUser(user) {
 
 async function signup(req, res, next) {
   try {
-    const { name, email, password, role } = req.body
+    const { name, email, password, role, phone } = req.body
     const cleanName = String(name || '').trim()
     const cleanEmail = normalizeEmail(email)
+    const cleanPhone = String(phone || '').trim()
 
     if (!cleanName || !cleanEmail || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required.' })
@@ -37,6 +38,7 @@ async function signup(req, res, next) {
       email: cleanEmail,
       password: hashedPassword,
       role,
+      phone: cleanPhone,
     })
 
     const token = signToken(user)
@@ -52,14 +54,20 @@ async function signup(req, res, next) {
 
 async function signin(req, res, next) {
   try {
-    const { email, password } = req.body
+    const { email, password, rememberMe } = req.body
     const cleanEmail = normalizeEmail(email)
 
     if (!cleanEmail || !password) {
-      return res.status(400).json({ message: 'Email and password are required.' })
+      return res.status(400).json({ message: 'Email or username and password are required.' })
     }
 
-    const user = await User.findOne({ email: cleanEmail })
+    const user = await User.findOne({
+      $or: [
+        { email: cleanEmail },
+        { name: { $regex: new RegExp('^' + req.body.email.trim() + '$', 'i') } }
+      ]
+    })
+    
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password.' })
     }
@@ -69,7 +77,7 @@ async function signin(req, res, next) {
       return res.status(401).json({ message: 'Invalid email or password.' })
     }
 
-    const token = signToken(user)
+    const token = signToken(user, rememberMe)
     return res.status(200).json({
       message: 'Signin successful.',
       token,

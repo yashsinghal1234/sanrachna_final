@@ -84,7 +84,7 @@ export async function backendSignup(payload: {
   return { token: data.token, user }
 }
 
-export async function backendSignin(payload: { email: string; password: string }) {
+export async function backendSignin(payload: { email: string; password: string; rememberMe?: boolean }) {
   const data = await postJson<ApiAuthResponse>('/api/auth/signin', payload)
   const user: User = {
     id: data.user.id,
