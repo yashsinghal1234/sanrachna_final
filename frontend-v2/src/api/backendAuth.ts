@@ -80,7 +80,15 @@ export async function backendSignup(payload: {
   role: Role
   phone: string
 }) {
-  return postJson<{ message: string; userId: string; email: string }>('/api/auth/signup', payload)
+  const data = await postJson<ApiAuthResponse>('/api/auth/signup', payload)
+  const user: User = {
+    id: data.user.id,
+    name: data.user.name,
+    emailOrPhone: data.user.email,
+    phone: typeof data.user.phone === 'string' ? data.user.phone : undefined,
+    role: data.user.role ?? null,
+  }
+  return { token: data.token, user }
 }
 
 export async function backendVerifySignup(payload: { userId: string; otp: string }) {
@@ -115,7 +123,7 @@ export function backendForgotPassword(payload: { username: string; email: string
   return postJson<ForgotPasswordResponse>('/api/auth/forgot-password', payload)
 }
 
-export function backendResetPassword(payload: { userId: string | null; otp: string; newPassword: string }) {
+export function backendResetPassword(payload: { userId: string | null; newPassword: string }) {
   return postJson<MessageResponse>('/api/auth/reset-password', payload)
 }
 

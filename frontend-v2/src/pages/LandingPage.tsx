@@ -717,7 +717,7 @@ export function LandingPage() {
              return (
                <div 
                  key={role.id} 
-                 ref={(el) => (rolesRef.current[i] = el)}
+                 ref={(el) => { if (el) rolesRef.current[i] = el; }}
                  className={`flex flex-col cursor-pointer transition-all duration-700 ${isActive ? 'opacity-100 py-4' : 'opacity-30 hover:opacity-60 py-2'}`}
                  onClick={() => {
                     setActiveRoleIndex(i);
