@@ -5,7 +5,7 @@ import { FaSalesforce } from 'react-icons/fa';
 
 export function LandingPage() {
   return (
-    <div className="min-h-screen bg-page-ink font-inter text-snow blueprint-grid relative selection:bg-blue-cornflower/30">
+    <div className="min-h-screen bg-page-ink font-inter text-snow blueprint-grid relative selection:bg-blue-cornflower/30 overflow-x-hidden">
       
       {/* ── TOP NAV ── */}
       <nav className="flex items-center justify-between px-6 md:px-12 w-full mx-auto relative z-10 pt-10 pb-5">
