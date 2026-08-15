@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Sparkles, FolderOpen, ChevronRight, Star, Search } from 'lucide-react';
+import { Sparkles, FolderOpen, ChevronRight, Star } from 'lucide-react';
 import { SiZoom, SiGooglemeet, SiAppstore, SiZapier, SiZendesk } from 'react-icons/si';
 import { FaSalesforce } from 'react-icons/fa';
 
