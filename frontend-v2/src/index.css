@@ -215,3 +215,14 @@
   background-size: 64px 64px;
   background-position: center top;
 }
+
+.footer-link {
+  @apply relative w-fit hover:text-snow transition-colors font-medium text-ash;
+}
+.footer-link::after {
+  content: '';
+  @apply absolute bottom-0 left-0 h-[1px] w-full origin-bottom-right scale-x-0 bg-current transition-transform duration-300;
+}
+.footer-link:hover::after {
+  @apply origin-bottom-left scale-x-100;
+}

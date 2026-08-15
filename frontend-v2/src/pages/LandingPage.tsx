@@ -1,9 +1,80 @@
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, FolderOpen, ChevronRight, Star } from 'lucide-react';
 import { SiZoom, SiGooglemeet, SiAppstore, SiZapier, SiZendesk } from 'react-icons/si';
 import { FaSalesforce } from 'react-icons/fa';
 
+const roles = [
+  {
+    id: "ai-planning",
+    title: "AI Construction Planning",
+    icon: <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,
+    desc: "Generate complete construction plans instantly. Our AI automatically optimizes cost estimation, resource allocation, and timeline mapping before ground is even broken."
+  },
+  {
+    id: "attendance",
+    title: "Workforce Attendance",
+    icon: <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    desc: "Track your crew effortlessly. Manage daily worker attendance, log subcontractor hours, and simplify your field payroll directly from the site."
+  },
+  {
+    id: "daily-logs",
+    title: "Daily Work Records",
+    icon: <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>,
+    desc: "Never miss a site update. Easily log daily work progress, track material arrivals, and record site conditions to maintain a bulletproof single source of truth."
+  },
+  {
+    id: "cost-resources",
+    title: "Cost & Resource Tracking",
+    icon: <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg>,
+    desc: "Protect your profit margins. Monitor budget burn rates and resource utilization in real-time to catch overruns before they impact the bottom line."
+  },
+  {
+    id: "search",
+    title: "Semantic Search",
+    icon: <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
+    desc: "Find answers in seconds. Query your blueprints, contracts, and safety logs naturally to get precise, cited answers without manual digging."
+  },
+  {
+    id: "safety",
+    title: "Safety & Compliance",
+    icon: <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>,
+    desc: "Prevent incidents before they occur. Surface recurring hazards and maintain a verifiable, OSHA-compliant paper trail for every site zone."
+  }
+];
+
 export function LandingPage() {
+  const [activeRoleIndex, setActiveRoleIndex] = useState(0);
+  const rolesRef = useRef<(HTMLDivElement | null)[]>([]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Trigger when the element crosses the 40% mark of the screen height
+      const triggerPoint = window.innerHeight * 0.4;
+      let closestIndex = 0;
+      let minDistance = Infinity;
+
+      rolesRef.current.forEach((ref, index) => {
+        if (!ref) return;
+        const rect = ref.getBoundingClientRect();
+        // Measure distance from the top of the element to our trigger point
+        const distance = Math.abs(rect.top - triggerPoint);
+        
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestIndex = index;
+        }
+      });
+
+      setActiveRoleIndex(prev => prev !== closestIndex ? closestIndex : prev);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Check on initial load
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <div className="min-h-screen bg-page-ink font-inter text-snow blueprint-grid relative selection:bg-blue-cornflower/30 overflow-x-hidden">
       
@@ -443,8 +514,6 @@ export function LandingPage() {
         </div>
       </section>
 
-
-
       {/* ── MORE WAYS TO QUERY ── */}
       <section className="py-24 px-10 md:px-24 lg:px-32 max-w-[1440px] mx-auto relative z-10 border-t border-steel-border">
          <div className="font-mono text-[12px] text-ash tracking-[1px] uppercase mb-12">
@@ -452,75 +521,123 @@ export function LandingPage() {
          </div>
          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Search */}
-            <div>
-              <div className="bg-[#111] rounded-[8px] border border-steel-border h-[180px] p-6 mb-6 overflow-hidden relative shadow-2xl flex flex-col items-center">
-                 <div className="w-full max-w-[240px] bg-card-carbon border border-steel-border rounded-full py-2 px-4 flex items-center gap-2 mb-4">
-                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-snow" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                   <span className="text-[12px] text-snow">M25 concrete rate Maharashtra</span>
+            <div className="group cursor-default">
+              <div className="bg-[#0a0a0a] rounded-[12px] border border-steel-border h-[220px] p-6 mb-6 overflow-hidden relative shadow-2xl flex flex-col items-center transition-all duration-500 group-hover:border-white/20">
+                 {/* Background glow */}
+                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[150px] h-[150px] bg-blue-500/10 blur-[40px] rounded-full pointer-events-none transition-opacity duration-500 opacity-50 group-hover:opacity-100"></div>
+                 
+                 {/* Search Input */}
+                 <div className="w-full max-w-[240px] bg-[#1a1a1a] border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.1)] rounded-[8px] py-2.5 px-3 flex items-center gap-2 mb-3 relative z-10 transition-all duration-300 group-hover:shadow-[0_0_20px_rgba(59,130,246,0.2)]">
+                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-blue-400" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                   <span className="text-[12px] text-snow font-medium">M25 concrete rate</span>
+                   <div className="w-[1px] h-[12px] bg-blue-400 animate-pulse ml-[-2px]"></div>
                  </div>
-                 <div className="w-full max-w-[240px] bg-card-carbon border border-steel-border rounded-[8px] p-3 text-left">
-                   <div className="flex items-center gap-1 text-[10px] text-blue-400 font-medium mb-1"><Sparkles className="size-3 fill-blue-400" /> Source: CPWD DSR 2023</div>
-                   <div className="text-[10px] text-ash opacity-50">According to the benchmark, the rate is...</div>
+
+                 {/* Results dropdown */}
+                 <div className="w-full max-w-[240px] bg-[#161616] border border-steel-border rounded-[8px] p-1 flex flex-col gap-1 relative z-10 transform transition-transform duration-500 translate-y-2 opacity-80 group-hover:translate-y-0 group-hover:opacity-100 shadow-xl">
+                   <div className="bg-white/5 rounded-[6px] p-2.5 hover:bg-white/10 transition-colors">
+                     <div className="flex items-center gap-2 text-[10px] text-blue-400 font-medium mb-1"><Sparkles className="size-3 fill-blue-400" /> Source: CPWD DSR 2023</div>
+                     <div className="text-[10px] text-snow leading-tight line-clamp-2">The current benchmark rate for M25 grade concrete in Maharashtra region is ₹5,400 per cu.m.</div>
+                   </div>
+                   <div className="p-2.5 opacity-50">
+                     <div className="flex items-center gap-2 text-[10px] text-ash font-medium mb-1">📄 Project_BOQ_v2.xlsx</div>
+                     <div className="text-[10px] text-ash/60 line-clamp-1">Subcontractor quoted ₹5,800...</div>
+                   </div>
                  </div>
                  {/* Fade gradient */}
-                 <div className="absolute inset-x-0 bottom-0 h-[80px] bg-gradient-to-t from-[#111] to-transparent"></div>
+                 <div className="absolute inset-x-0 bottom-0 h-[60px] bg-gradient-to-t from-[#0a0a0a] to-transparent z-20"></div>
               </div>
               <h5 className="text-[16px] font-semibold text-snow flex items-center gap-2 mb-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                Search
+                Semantic Search
               </h5>
               <p className="text-[14px] text-ash">Lightning fast keyword and semantic search with RAG enables your team to find insights in seconds.</p>
             </div>
 
-            {/* Explore */}
-            <div>
-              <div className="bg-[#111] rounded-[8px] border border-steel-border h-[180px] p-6 mb-6 overflow-hidden relative shadow-2xl flex items-center justify-center">
-                 <div className="flex gap-2">
-                   <div className="bg-card-carbon border border-steel-border rounded-[6px] px-3 py-1.5 text-[12px] text-ash">Sort</div>
-                   <div className="bg-card-carbon border border-steel-border rounded-[6px] px-3 py-1.5 text-[12px] text-ash">More</div>
-                   <div className="bg-card-carbon border border-steel-border rounded-[6px] p-1.5 text-snow relative shadow-[0_0_15px_rgba(59,130,246,0.5)] bg-blue-900/20">
-                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 8v8M16 8v8M4 12h16"/></svg>
-                     <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black text-snow text-[10px] px-2 py-1 rounded-[4px] whitespace-nowrap border border-steel-border z-10">Explore</div>
-                     <div className="absolute top-4 left-4">
-                       <svg width="12" height="12" viewBox="0 0 24 24" fill="white" stroke="black" strokeWidth="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
-                     </div>
+            {/* Hub */}
+            <div className="group cursor-default">
+              <div className="bg-[#0a0a0a] rounded-[12px] border border-steel-border h-[220px] p-6 mb-6 overflow-hidden relative shadow-2xl flex flex-col items-center justify-center transition-all duration-500 group-hover:border-white/20">
+                 {/* Background glow */}
+                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150px] h-[150px] bg-purple-500/10 blur-[40px] rounded-full pointer-events-none transition-opacity duration-500 opacity-50 group-hover:opacity-100"></div>
+
+                 {/* Folder Interface */}
+                 <div className="w-full max-w-[240px] bg-[#161616] border border-steel-border shadow-xl rounded-[8px] overflow-hidden relative z-10 transform transition-transform duration-500 group-hover:scale-105">
+                   <div className="bg-[#1a1a1a] border-b border-steel-border px-3 py-2 flex items-center justify-between">
+                     <div className="flex gap-1.5 items-center text-[10px] text-ash font-mono"><FolderOpen className="size-3 text-purple-400" /> /project-alpha</div>
+                     <div className="flex gap-1"><div className="size-2 rounded-full bg-red-500/50"></div><div className="size-2 rounded-full bg-yellow-500/50"></div><div className="size-2 rounded-full bg-green-500/50"></div></div>
                    </div>
-                   <div className="bg-card-carbon border border-steel-border rounded-[6px] px-3 py-1.5 text-[12px] text-snow flex items-center justify-center">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="21" y1="12" x2="3" y2="12"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="18" x2="3" y2="18"/></svg>
+                   <div className="p-2 flex flex-col gap-1">
+                     <div className="flex items-center justify-between p-2 hover:bg-white/5 rounded-[4px] cursor-pointer transition-colors">
+                       <div className="flex items-center gap-2 text-[11px] text-snow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-blue-400" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Foundation_Blueprints.pdf</div>
+                       <div className="text-[8px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded uppercase tracking-wider">v3.2</div>
+                     </div>
+                     <div className="flex items-center justify-between p-2 hover:bg-white/5 rounded-[4px] cursor-pointer transition-colors bg-white/5 border border-white/5">
+                       <div className="flex items-center gap-2 text-[11px] text-snow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-green-400" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Subcontractor_SLA.docx</div>
+                       <div className="text-[8px] bg-green-500/20 text-green-300 px-1.5 py-0.5 rounded uppercase tracking-wider">Approved</div>
+                     </div>
+                     <div className="flex items-center justify-between p-2 hover:bg-white/5 rounded-[4px] cursor-pointer transition-colors">
+                       <div className="flex items-center gap-2 text-[11px] text-snow"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-yellow-400" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> Soil_Test_Report.xlsx</div>
+                       <div className="text-[8px] text-ash">2 mins ago</div>
+                     </div>
                    </div>
                  </div>
               </div>
               <h5 className="text-[16px] font-semibold text-snow flex items-center gap-2 mb-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 8v8M16 8v8M4 12h16"/></svg>
-                Document Management Hub
+                <FolderOpen className="size-4" />
+                Document Hub
               </h5>
               <p className="text-[14px] text-ash">Central place for blueprints, contracts, and soil reports. Tagged to project phases with version tracking.</p>
             </div>
 
-            {/* Slack */}
-            <div>
-              <div className="bg-[#111] rounded-[8px] border border-steel-border h-[180px] p-6 mb-6 overflow-hidden relative shadow-2xl">
-                 <div className="flex gap-3 text-left">
-                   <div className="size-6 bg-purple-600 rounded-[4px] mt-1 shrink-0 flex items-center justify-center font-bold text-snow text-[10px]">#</div>
-                   <div>
-                     <div className="text-[12px] text-snow font-medium">Harry <span className="text-ash text-[10px] font-normal">9:16 AM</span></div>
-                     <div className="text-[12px] text-snow"><span className="text-blue-400 bg-blue-900/30 px-1 rounded">@Sanrachna</span> is the foundation task delayed?</div>
+            {/* Reporting */}
+            <div className="group cursor-default">
+              <div className="bg-[#0a0a0a] rounded-[12px] border border-steel-border h-[220px] p-6 mb-6 overflow-hidden relative shadow-2xl flex flex-col items-center justify-center transition-all duration-500 group-hover:border-white/20">
+                 {/* Background glow */}
+                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150px] h-[150px] bg-teal-500/10 blur-[40px] rounded-full pointer-events-none transition-opacity duration-500 opacity-50 group-hover:opacity-100"></div>
+
+                 {/* Report Mockup */}
+                 <div className="w-[160px] bg-[#161616] border border-steel-border shadow-xl rounded-[8px] p-3 relative z-10 transform transition-transform duration-500 group-hover:-translate-y-2 group-hover:scale-105">
+                   {/* Header */}
+                   <div className="flex items-center justify-between mb-3 border-b border-steel-border pb-2">
+                     <div className="text-[10px] text-snow font-medium">Weekly Summary</div>
+                     <div className="flex items-center gap-1 bg-teal-500/20 text-teal-300 px-1.5 py-0.5 rounded-[4px] text-[7px] uppercase tracking-wider">
+                       <Sparkles className="size-2" /> Auto
+                     </div>
                    </div>
-                 </div>
-                 <div className="flex gap-3 text-left mt-4">
-                   <div className="size-6 bg-page-ink border border-steel-border rounded-[4px] mt-1 shrink-0 flex items-center justify-center"><Sparkles className="size-3 text-snow"/></div>
-                   <div>
-                     <div className="text-[12px] text-snow font-medium">Sanrachna <span className="bg-steel-border/50 text-[8px] px-1 rounded ml-1">APP</span> <span className="text-ash text-[10px] font-normal">9:16 AM</span></div>
-                     <div className="text-[12px] text-snow">Yes, recalculating Gantt chart...</div>
-                     <div className="text-[10px] text-ash opacity-50 mt-1 pl-2 border-l border-steel-border">You will finish Dec 14, not Oct 30...</div>
+                   
+                   {/* Content lines */}
+                   <div className="flex flex-col gap-2">
+                     <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                       <div className="h-full bg-teal-400 w-[65%]"></div>
+                     </div>
+                     <div className="text-[8px] text-ash flex justify-between">
+                       <span>Phase 2 Progress</span>
+                       <span className="text-teal-400">65%</span>
+                     </div>
+                     
+                     <div className="mt-2 space-y-1.5">
+                       <div className="h-1.5 w-[90%] bg-white/5 rounded"></div>
+                       <div className="h-1.5 w-[75%] bg-white/5 rounded"></div>
+                       <div className="h-1.5 w-[85%] bg-white/5 rounded"></div>
+                     </div>
+                   </div>
+                   
+                   {/* Highlight box */}
+                   <div className="mt-3 bg-white/5 border border-white/10 rounded-[4px] p-2 flex items-start gap-1.5">
+                     <div className="size-3 bg-teal-500/20 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                       <div className="size-1 bg-teal-400 rounded-full"></div>
+                     </div>
+                     <div className="text-[7px] text-snow leading-tight opacity-80">
+                       Concrete pouring completed on schedule. No critical issues reported.
+                     </div>
                    </div>
                  </div>
               </div>
               <h5 className="text-[16px] font-semibold text-snow flex items-center gap-2 mb-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                Chat on WhatsApp & Mobile
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                Automated Reporting
               </h5>
-              <p className="text-[14px] text-ash">Simply @Sanrachna on WhatsApp for instant answers pulled from your data—site intelligence for workers on the go.</p>
+              <p className="text-[14px] text-ash">Generate comprehensive daily logs and weekly progress summaries instantly from scattered site data.</p>
             </div>
          </div>
       </section>
@@ -534,10 +651,10 @@ export function LandingPage() {
           <h3 className="text-heading-sm font-semibold tracking-[-0.5px] text-snow mb-6 max-w-[600px]">
             Actionable context across every team
           </h3>
-          <p className="text-body text-ash mb-8 max-w-[640px]">
+          <p className="text-body text-ash mb-9 max-w-[640px]">
             From estimate to handover, the site is in the room. Sanrachna plugs directly into your existing infrastructure, auto-escalating RFIs and updating your Gantt charts based on daily site logs.
           </p>
-          <div className="flex gap-4">
+          <div className="flex gap-4 mb-8">
             <Link to="/signup" className="bg-snow text-page-ink px-4 py-2.5 rounded-[8px] text-[14px] font-medium hover:opacity-90 transition-opacity">Contact sales</Link>
             <Link to="/signup" className="bg-transparent border border-graphite text-snow px-4 py-2.5 rounded-[8px] text-[14px] font-medium hover:bg-card-carbon transition-colors">Try Sanrachna free</Link>
           </div>
@@ -594,42 +711,42 @@ export function LandingPage() {
             Sanrachna for
           </h2>
         </div>
-        <div className="md:w-2/3 flex flex-col gap-6">
-           <div className="flex flex-col gap-4">
-             <div className="flex items-center gap-4">
-               <div className="size-8"><svg viewBox="0 0 24 24" fill="none" stroke="#6798ff" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
-               <h3 className="text-[32px] md:text-[48px] font-semibold tracking-tight text-snow leading-none">Project Managers</h3>
-             </div>
-             <p className="text-body text-ash max-w-[500px] ml-12">
-               Stop guessing your estimates. Sanrachna surfaces real-time benchmarks and site signals so junior engineers can estimate with the confidence of a 20-year veteran.
-             </p>
-             <a href="#" className="text-[14px] font-medium text-snow hover:text-blue-cornflower transition-colors ml-12 mb-4 flex items-center gap-1">Learn more <ChevronRight className="size-4" /></a>
-           </div>
-
-           <div className="flex items-center gap-4 opacity-40 hover:opacity-80 transition-opacity cursor-pointer">
-              <div className="size-8 flex items-center justify-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="blue" stroke="white" strokeWidth="1"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg></div>
-              <h3 className="text-[32px] md:text-[48px] font-serif text-transparent" style={{WebkitTextStroke: '1px white'}}>Architects</h3>
-            </div>
-            
-            <div className="flex items-center gap-4 cursor-pointer">
-              <div className="size-8 flex items-center justify-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6798ff" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg></div>
-              <h3 className="text-[32px] md:text-[48px] font-serif text-snow font-bold">Junior Engineers</h3>
-            </div>
-
-            <div className="flex items-center gap-4 opacity-40 hover:opacity-80 transition-opacity cursor-pointer">
-              <div className="size-8 flex items-center justify-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="7" cy="12" r="3"/><circle cx="17" cy="12" r="3"/></svg></div>
-              <h3 className="text-[32px] md:text-[48px] font-serif text-transparent" style={{WebkitTextStroke: '1px white'}}>Site Supervisors</h3>
-            </div>
-
-            <div className="flex items-center gap-4 opacity-40 hover:opacity-80 transition-opacity cursor-pointer">
-              <div className="size-8 flex items-center justify-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="blue" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
-              <h3 className="text-[32px] md:text-[48px] font-serif text-transparent" style={{WebkitTextStroke: '1px white'}}>Contractors</h3>
-            </div>
-
-            <div className="flex items-center gap-4 opacity-40 hover:opacity-80 transition-opacity cursor-pointer">
-              <div className="size-8 flex items-center justify-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><polygon points="11 19 2 12 11 5 11 19"/><path d="M22 12h-4"/></svg></div>
-              <h3 className="text-[32px] md:text-[48px] font-serif text-transparent" style={{WebkitTextStroke: '1px white'}}>Safety Officers</h3>
-            </div>
+        <div className="md:w-2/3 flex flex-col gap-8 pb-8">
+           {roles.map((role, i) => {
+             const isActive = activeRoleIndex === i;
+             return (
+               <div 
+                 key={role.id} 
+                 ref={(el) => (rolesRef.current[i] = el)}
+                 className={`flex flex-col cursor-pointer transition-all duration-700 ${isActive ? 'opacity-100 py-4' : 'opacity-30 hover:opacity-60 py-2'}`}
+                 onClick={() => {
+                    setActiveRoleIndex(i);
+                    rolesRef.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                 }}
+               >
+                 <div className="flex items-center gap-6">
+                   <div className={`w-[48px] flex justify-center transition-all duration-700 ${isActive ? 'text-blue-cornflower scale-110 opacity-100' : 'text-ash opacity-40 scale-100'}`}>
+                     {role.icon}
+                   </div>
+                   <h3 
+                     className={`text-[32px] md:text-[48px] font-retro tracking-wide transition-all duration-700 ${isActive ? 'text-snow leading-none' : 'text-transparent'}`}
+                     style={!isActive ? { WebkitTextStroke: '1px white' } : {}}
+                   >
+                     {role.title}
+                   </h3>
+                 </div>
+                 
+                 <div className={`overflow-hidden transition-all duration-700 ${isActive ? 'max-h-[200px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
+                   <p className="text-body text-ash max-w-[500px] ml-12">
+                     {role.desc}
+                   </p>
+                   <a href="#" className="text-[14px] font-medium text-snow hover:text-blue-cornflower transition-colors ml-12 mt-6 flex items-center gap-1 w-fit">
+                     Learn more <ChevronRight className="size-4" />
+                   </a>
+                 </div>
+               </div>
+             );
+           })}
         </div>
       </section>
 
@@ -637,31 +754,32 @@ export function LandingPage() {
       {/* ── AI NATIVE PLATFORM / SECURITY ── */}
       <section className="py-24 px-10 md:px-24 lg:px-32 border-t border-steel-border relative z-10 bg-page-ink">
         <div className="max-w-[1440px] mx-auto">
-          <h2 className="text-[40px] md:text-[72px] font-semibold leading-[1.05] tracking-[-3px] text-snow max-w-[900px] mb-8">
-            Your <span className="inline-block text-[40px] md:text-[64px] align-middle transform -translate-y-1">🧠</span> AI native construction intelligence platform—secure, grounded, and ready to scale <span className="inline-block text-[#3b82f6] text-[40px] md:text-[64px] align-middle transform -translate-y-1"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> org-wide
+          <h2 className="text-[40px] md:text-[72px] font-semibold leading-[1.05] tracking-[-3px] text-snow max-w-[1000px] mb-8">
+            Your <img src="/images/brain.png" alt="Brain" className="inline-block h-[56px] md:h-[80px] object-contain align-middle transform -translate-y-1 mx-1" /> AI native construction intelligence platform—secure, compliant, and ready to scale <img src="/images/globe.png" alt="Globe" className="inline-block h-[56px] md:h-[80px] object-contain align-middle transform -translate-y-1 mx-1" /> <span className="font-retro tracking-wide font-normal">org-wide</span>
           </h2>
-          <p className="text-[18px] text-ash max-w-[600px] mb-20 leading-relaxed">
-            Sanrachna is built for construction firms where budget control and timeline accuracy aren't optional. Precise CPWD DSR benchmarking, RERA compliance, and offline-first reliability are table stakes—but what sets Sanrachna apart is how it gives your junior engineers the estimation intelligence of a 20-year veteran.
+          <p className="text-[18px] text-ash max-w-[900px] mb-20 leading-relaxed">
+            Sanrachna is built for organizations where security, privacy, and control aren't optional. SOC 2 Type II, ISO 27001, HIPAA, and GDPR compliance are table stakes—but what sets Sanrachna apart is how it lets your team move fast without trading away governance.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-32">
             {/* Built for trust at scale */}
+            {/* Offline Fallback */}
             <div>
-              <div className="bg-[#111] rounded-[8px] border border-steel-border h-[220px] p-6 mb-6 overflow-hidden relative flex flex-col items-center">
-                 <div className="w-full bg-card-carbon border border-steel-border rounded-[8px] p-4 flex justify-between items-center mb-4">
+              <div className="bg-[#111] rounded-[8px] border border-steel-border h-[220px] p-6 mb-6 overflow-hidden relative flex flex-col items-center justify-center">
+                 <div className="bg-card-carbon border border-steel-border rounded-[8px] p-4 w-full flex items-center justify-between z-10">
                    <div>
-                     <div className="text-[12px] text-snow font-medium">Data retention period</div>
-                     <div className="text-[10px] text-ash">Automatically delete files</div>
+                     <div className="text-[12px] text-snow font-medium flex items-center gap-2"><div className="size-2 rounded-full bg-orange-500 shadow-[0_0_8px_orange]"></div> Offline Mode</div>
+                     <div className="text-[10px] text-ash">14 logs queued for sync</div>
                    </div>
-                   <div className="bg-page-ink border border-steel-border px-3 py-1.5 rounded-[6px] text-[12px] text-snow flex items-center gap-2">2 years <ChevronRight className="size-3 rotate-90" /></div>
+                   <div className="size-6 border border-steel-border rounded-full flex items-center justify-center text-ash bg-page-ink">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="2" y1="2" x2="22" y2="22"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 8.82a15 15 0 0 1 4.17-2.65"/><path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76"/></svg>
+                   </div>
                  </div>
-                 <div className="w-full bg-[#151515] border border-steel-border rounded-[6px] py-2 px-4 flex items-center justify-center gap-2 opacity-50 mb-2">
-                   <div className="size-4 bg-blue-500 rounded-sm"></div> <span className="text-[12px] text-snow">Continue with Microsoft</span>
+                 <div className="w-full bg-[#151515] border border-steel-border rounded-[6px] py-3 px-4 flex items-center justify-between opacity-50 mt-3 z-10">
+                    <span className="text-[12px] text-snow">DSR Benchmarks</span>
+                    <span className="text-[10px] text-green-400 bg-green-400/10 px-2 rounded border border-green-400/20">Cached</span>
                  </div>
-                 <div className="w-full bg-[#151515] border border-steel-border rounded-[6px] py-2 px-4 flex items-center justify-center gap-2 opacity-30">
-                   <div className="size-4 bg-red-500 rounded-full"></div> <span className="text-[12px] text-snow">Continue with Google</span>
-                 </div>
-                 <div className="absolute inset-x-0 bottom-0 h-[80px] bg-gradient-to-t from-[#111] to-transparent"></div>
+                 <div className="absolute inset-x-0 bottom-0 h-[80px] bg-gradient-to-t from-[#111] to-transparent z-0"></div>
               </div>
               <h5 className="text-[16px] font-semibold text-snow flex items-center gap-2 mb-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
@@ -670,19 +788,18 @@ export function LandingPage() {
               <p className="text-[14px] text-ash">Construction sites lose internet. Sanrachna stores CPWD DSR benchmarks locally and queues daily logs for sync.</p>
             </div>
 
-            {/* Drive consistency */}
+            {/* Emergency Alert */}
             <div>
-              <div className="bg-[#111] rounded-[8px] border border-steel-border h-[220px] p-6 mb-6 overflow-hidden relative flex gap-4">
-                 <div className="flex-1 border border-steel-border rounded-[8px] p-4 bg-page-ink">
-                    <div className="text-[12px] text-snow font-medium mb-4 flex justify-between">Direct competitors <span>2</span></div>
-                    <div className="bg-card-carbon border border-steel-border rounded-[4px] p-2 mb-2 text-[10px]"><span className="bg-purple-600/30 text-purple-400 px-2 rounded">Violet 28</span></div>
-                    <div className="bg-card-carbon border border-steel-border rounded-[4px] p-2 mb-2 text-[10px]"><span className="bg-green-600/30 text-green-400 px-2 rounded">Beta 28</span></div>
+              <div className="bg-[#111] rounded-[8px] border border-steel-border h-[220px] p-6 mb-6 overflow-hidden relative flex flex-col items-center justify-center">
+                 <div className="bg-page-ink border border-red-900/50 rounded-[12px] p-6 w-full max-w-[200px] flex flex-col items-center justify-center shadow-2xl z-10 relative overflow-hidden">
+                   <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-red-600 via-orange-500 to-red-600"></div>
+                   <div className="size-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center border border-red-500/20 mb-3 shadow-[0_0_20px_rgba(239,68,68,0.15)]">
+                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                   </div>
+                   <div className="text-[14px] text-snow font-bold mb-1">Trigger SOS</div>
+                   <div className="text-[9px] text-ash text-center leading-tight">Alerting Site Engineer<br/>& Safety Officer</div>
                  </div>
-                 <div className="flex-1 border border-steel-border rounded-[8px] p-4 bg-page-ink opacity-40 transform translate-x-4">
-                    <div className="text-[12px] text-snow font-medium mb-4">Direct com...</div>
-                    <div className="bg-card-carbon border border-steel-border rounded-[4px] p-2 mb-2 text-[10px]"><span className="bg-green-600/30 text-green-400 px-2 rounded">Green 28</span></div>
-                 </div>
-                 <div className="absolute inset-x-0 bottom-0 h-[60px] bg-gradient-to-t from-[#111] to-transparent"></div>
+                 <div className="absolute inset-x-0 bottom-0 h-[60px] bg-gradient-to-t from-[#111] to-transparent z-0"></div>
               </div>
               <h5 className="text-[16px] font-semibold text-snow flex items-center gap-2 mb-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 22 22 22"></polygon></svg>
@@ -691,25 +808,33 @@ export function LandingPage() {
               <p className="text-[14px] text-ash">One-tap SOS triggers for safety hazards. Instantly notifies the Site Engineer and Safety Officer with geolocation.</p>
             </div>
 
-            {/* Privacy without friction */}
+            {/* 3-Layer Role System */}
             <div>
               <div className="bg-[#111] rounded-[8px] border border-steel-border h-[220px] p-6 mb-6 overflow-hidden relative flex flex-col items-center justify-center">
-                 <div className="w-full max-w-[240px] bg-card-carbon border border-steel-border rounded-[8px] p-4">
-                   <div className="flex justify-between items-center mb-6">
-                     <div className="flex items-center gap-2"><div className="size-8 bg-blue-500 rounded-full flex items-center justify-center text-[10px] text-white">Canva</div> <div><div className="text-[12px] text-snow">Canva</div><div className="text-[10px] text-ash">131 workspace me...</div></div></div>
-                     <div className="text-[12px] text-ash flex items-center gap-1">View only <ChevronRight className="size-3 rotate-90" /></div>
+                 <div className="w-full max-w-[240px] bg-card-carbon border border-steel-border rounded-[8px] p-4 z-10 shadow-2xl">
+                   <div className="flex justify-between items-center mb-4">
+                     <div className="flex items-center gap-3">
+                       <div className="size-8 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded-full flex items-center justify-center text-[10px] font-bold">O</div>
+                       <span className="text-[12px] text-snow font-medium">Owner</span>
+                     </div>
+                     <div className="text-[10px] text-snow bg-blue-500/20 px-2 py-1 rounded border border-blue-500/20">Portfolio</div>
                    </div>
-                   <div className="text-[10px] text-snow mb-3">More people with access</div>
-                   <div className="flex justify-between items-center mb-2">
-                     <div className="flex items-center gap-2"><div className="size-6 bg-gray-600 rounded-full"></div> <span className="text-[12px] text-snow">Claire Fletcher</span></div>
-                     <div className="text-[12px] text-snow flex items-center gap-1">Full access <ChevronRight className="size-3 rotate-90" /></div>
+                   <div className="flex justify-between items-center mb-4">
+                     <div className="flex items-center gap-3">
+                       <div className="size-8 bg-purple-500/10 border border-purple-500/30 text-purple-400 rounded-full flex items-center justify-center text-[10px] font-bold">SE</div>
+                       <span className="text-[12px] text-snow font-medium">Senior Eng</span>
+                     </div>
+                     <div className="text-[10px] text-snow bg-purple-500/20 px-2 py-1 rounded border border-purple-500/20">Timeline</div>
                    </div>
                    <div className="flex justify-between items-center">
-                     <div className="flex items-center gap-2"><div className="size-6 bg-gray-600 rounded-full"></div> <span className="text-[12px] text-snow">Kevin Ellison</span></div>
-                     <div className="text-[12px] text-snow flex items-center gap-1">View only <ChevronRight className="size-3 rotate-90" /></div>
+                     <div className="flex items-center gap-3">
+                       <div className="size-8 bg-orange-500/10 border border-orange-500/30 text-orange-400 rounded-full flex items-center justify-center text-[10px] font-bold">JW</div>
+                       <span className="text-[12px] text-snow font-medium">Jnr Worker</span>
+                     </div>
+                     <div className="text-[10px] text-snow bg-orange-500/20 px-2 py-1 rounded border border-orange-500/20">Tasks</div>
                    </div>
                  </div>
-                 <div className="absolute inset-x-0 bottom-0 h-[60px] bg-gradient-to-t from-[#111] to-transparent"></div>
+                 <div className="absolute inset-x-0 bottom-0 h-[60px] bg-gradient-to-t from-[#111] to-transparent z-0"></div>
               </div>
               <h5 className="text-[16px] font-semibold text-snow flex items-center gap-2 mb-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -718,47 +843,65 @@ export function LandingPage() {
               <p className="text-[14px] text-ash">Owners see the portfolio, Senior Engineers manage the timeline, and Junior Workers only see assigned tasks.</p>
             </div>
 
-            {/* PII Redaction */}
-            <div>
-              <div className="bg-[#111] rounded-[8px] border border-steel-border h-[220px] p-6 mb-6 overflow-hidden relative flex flex-col justify-end">
-                 <div className="absolute top-6 left-6 text-[14px] text-ash opacity-50 leading-relaxed">
-                   Jane Smith, and I'm a big fan of your<br/>
-                   My email is <span className="bg-card-carbon border border-steel-border px-1 rounded text-snow opacity-100 shadow-[0_0_10px_black]">[redacted]</span>
-                 </div>
-                 <div className="flex justify-end pr-4">
-                   <div className="w-[180px] h-[100px] rounded-[8px] overflow-hidden relative mt-8 z-10 shadow-xl border border-steel-border/50">
-                     <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=200&fit=crop" className="w-full h-full object-cover" />
-                     {/* blur overlay */}
-                     <div className="absolute inset-y-0 left-0 w-2/3 backdrop-blur-xl bg-page-ink/30 border-r border-steel-border/30"></div>
-                   </div>
-                 </div>
-              </div>
-              <h5 className="text-[16px] font-semibold text-snow flex items-center gap-2 mb-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-                Automatic PII redaction
-              </h5>
-              <p className="text-[14px] text-ash">Names, faces, and voices are automatically redacted across text, audio, and video—compliance built in, not bolted on.</p>
-            </div>
-
-            {/* AI you can trust */}
+            {/* Worker Attendance Tracking */}
             <div>
               <div className="bg-[#111] rounded-[8px] border border-steel-border h-[220px] p-6 mb-6 overflow-hidden relative flex flex-col items-center justify-center">
-                 <div className="bg-card-carbon border border-steel-border rounded-full px-4 py-2 text-[12px] text-snow mb-4 inline-block z-10">Summarize this project for me</div>
-                 <div className="w-full max-w-[200px] space-y-3 relative z-10 mt-6">
+                 <div className="w-full max-w-[220px] bg-card-carbon border border-steel-border rounded-[8px] p-4 z-10 shadow-2xl relative">
+                   <div className="text-[12px] text-snow font-bold mb-4 flex items-center justify-between">Site A - Attendance <span className="text-[9px] text-green-400 bg-green-400/10 border border-green-400/20 px-2 py-0.5 rounded">Active</span></div>
+                   
+                   <div className="flex justify-between items-center mb-3">
+                     <div className="flex items-center gap-3">
+                       <div className="size-6 bg-blue-500/10 border border-blue-500/30 rounded-full flex items-center justify-center text-[10px] text-blue-400 font-bold">JS</div>
+                       <div className="text-[11px] text-snow">John S.</div>
+                     </div>
+                     <div className="text-[10px] text-green-400 flex items-center gap-1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 08:00 AM</div>
+                   </div>
+
+                   <div className="flex justify-between items-center mb-3">
+                     <div className="flex items-center gap-3">
+                       <div className="size-6 bg-purple-500/10 border border-purple-500/30 rounded-full flex items-center justify-center text-[10px] text-purple-400 font-bold">MR</div>
+                       <div className="text-[11px] text-snow">Mike R.</div>
+                     </div>
+                     <div className="text-[10px] text-green-400 flex items-center gap-1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg> 08:05 AM</div>
+                   </div>
+
+                   <div className="flex justify-between items-center opacity-60">
+                     <div className="flex items-center gap-3">
+                       <div className="size-6 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center text-[10px] text-red-400 font-bold">AW</div>
+                       <div className="text-[11px] text-snow">Alex W.</div>
+                     </div>
+                     <div className="text-[9px] text-red-400 border border-red-500/20 bg-red-500/10 px-2 py-0.5 rounded">Absent</div>
+                   </div>
+                 </div>
+                 <div className="absolute inset-x-0 bottom-0 h-[60px] bg-gradient-to-t from-[#111] to-transparent z-0"></div>
+              </div>
+              <h5 className="text-[16px] font-semibold text-snow flex items-center gap-2 mb-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Automated Attendance
+              </h5>
+              <p className="text-[14px] text-ash">Easily manage the daily attendance of your workforce. Track check-ins and absences without messy paper logs.</p>
+            </div>
+
+            {/* Grounded in CPWD & DSR */}
+            <div>
+              <div className="bg-[#111] rounded-[8px] border border-steel-border h-[220px] p-6 mb-6 overflow-hidden relative flex flex-col items-center justify-center">
+                 <div className="bg-blue-600/20 border border-blue-500/30 rounded-full px-4 py-2 text-[12px] text-blue-200 mb-6 inline-block z-10 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
+                   Estimate 500sqm of M25 concrete
+                 </div>
+                 <div className="w-full max-w-[220px] space-y-3 relative z-10">
                    <div className="h-4 bg-steel-border/50 rounded-full w-full relative">
-                      <div className="absolute -right-2 -top-2 size-4 bg-page-ink border border-steel-border rounded-full flex items-center justify-center text-[8px] text-snow cursor-pointer group">
-                        1
-                        {/* Tooltip */}
-                        <div className="absolute top-6 right-0 w-[160px] bg-card-carbon border border-steel-border rounded-[6px] p-2 text-left z-20 shadow-2xl opacity-100">
-                          <div className="text-[10px] text-snow font-medium mb-1">Interview with John, Acme Inc.</div>
-                          <div className="text-[8px] text-ash">The app crashes frequently, making it unusable at times.</div>
+                      <div className="absolute right-4 -top-2 size-4 bg-blue-600 border border-blue-400 rounded-full flex items-center justify-center text-[8px] text-snow cursor-pointer shadow-[0_0_10px_blue] z-20">
+                        [1]
+                        <div className="absolute top-6 left-1/2 -translate-x-1/2 w-[160px] bg-card-carbon border border-steel-border rounded-[6px] p-3 text-left z-30 shadow-2xl">
+                          <div className="flex items-center gap-1 text-[10px] text-snow font-bold mb-1"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> CPWD DSR 2023, 4.1.5</div>
+                          <div className="text-[9px] text-ash leading-snug">Providing and laying in position cement concrete of specified grade...</div>
                         </div>
                       </div>
                    </div>
                    <div className="h-4 bg-steel-border/50 rounded-full w-5/6"></div>
                    <div className="h-4 bg-steel-border/50 rounded-full w-4/6"></div>
                  </div>
-                 <div className="absolute inset-x-0 bottom-0 h-[80px] bg-gradient-to-t from-[#111] to-transparent"></div>
+                 <div className="absolute inset-x-0 bottom-0 h-[80px] bg-gradient-to-t from-[#111] to-transparent z-0"></div>
               </div>
               <h5 className="text-[16px] font-semibold text-snow flex items-center gap-2 mb-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -771,25 +914,25 @@ export function LandingPage() {
             <div>
               <div className="bg-[#111] rounded-[8px] border border-steel-border h-[220px] mb-6 overflow-hidden relative flex items-center justify-center">
                  {/* Blueprint grid bg */}
-                 <div className="absolute inset-0 blueprint-grid opacity-30"></div>
+                 <div className="absolute inset-0 blueprint-grid opacity-30 z-0"></div>
                  <div className="relative z-10 flex items-center gap-4">
-                   <div className="size-16 bg-card-carbon border border-steel-border rounded-[12px] flex items-center justify-center shadow-2xl">
-                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                   <div className="size-14 bg-card-carbon border border-steel-border rounded-[12px] flex items-center justify-center shadow-2xl relative overflow-hidden text-snow">
+                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                    </div>
                    <div className="h-[2px] w-8 bg-steel-border relative">
-                     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-4 bg-blue-600 shadow-[0_0_10px_blue] rounded-[2px]"></div>
+                     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-4 bg-blue-600 shadow-[0_0_15px_blue] rounded-[2px] animate-pulse"></div>
                    </div>
-                   <div className="size-16 bg-card-carbon border border-steel-border rounded-[12px] flex items-center justify-center font-bold text-snow text-xl shadow-2xl">
-                     aws
+                   <div className="size-14 bg-card-carbon border border-steel-border rounded-[12px] flex flex-col items-center justify-center font-bold text-snow shadow-2xl">
+                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
                    </div>
                  </div>
-                 <div className="absolute inset-x-0 bottom-0 h-[40px] bg-gradient-to-t from-[#111] to-transparent"></div>
+                 <div className="absolute inset-x-0 bottom-0 h-[40px] bg-gradient-to-t from-[#111] to-transparent z-0"></div>
               </div>
               <h5 className="text-[16px] font-semibold text-snow flex items-center gap-2 mb-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                 Private AI
               </h5>
-              <p className="text-[14px] text-ash">Sanrachna runs Gen AI on AWS Bedrock in a secure, private environment. Your data never trains models and never leaves your control.</p>
+              <p className="text-[14px] text-ash">Sanrachna runs generative AI on dedicated private infrastructure. Your data never trains public models and never leaves your control.</p>
             </div>
           </div>
         </div>
@@ -843,20 +986,12 @@ export function LandingPage() {
 
          <div className="relative z-10 text-center">
            <h2 className="text-[48px] md:text-[80px] font-semibold tracking-tight text-snow leading-none mb-12 flex flex-col items-center">
-             <div className="flex items-center gap-4">
+             <div className="flex items-center gap-6 md:gap-8">
                <span className="font-serif italic font-bold">Build</span>
                {/* 8-bit smiley */}
-               <div className="size-16 md:size-24 bg-blue-600 rounded-[4px] relative" style={{
-                  clipPath: 'polygon(10% 0, 90% 0, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0 90%, 0 10%)'
-               }}>
-                 <svg viewBox="0 0 24 24" fill="none" className="w-full h-full p-2">
-                   <rect x="7" y="8" width="2" height="2" fill="white"/>
-                   <rect x="15" y="8" width="2" height="2" fill="white"/>
-                   <rect x="6" y="14" width="2" height="2" fill="white"/>
-                   <rect x="16" y="14" width="2" height="2" fill="white"/>
-                   <rect x="8" y="16" width="8" height="2" fill="white"/>
-                 </svg>
-               </div>
+                <div className="h-[1em] w-[1.5em] mx-2 relative flex items-center justify-center shrink-0">
+                   <img src="/svgexport-68.svg" alt="Build Icon" className="w-[1.5em] h-[1.5em] max-w-none drop-shadow-2xl absolute" />
+                 </div>
                <span>with better</span>
              </div>
              <span><span className="font-retro italic text-[#6798ff]">margins</span> and visibility</span>
@@ -870,127 +1005,105 @@ export function LandingPage() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="py-24 px-10 md:px-24 lg:px-32 max-w-[1440px] mx-auto border-t border-steel-border relative z-10 text-[13px]">
-        <div className="flex flex-col md:flex-row gap-16 md:gap-8 justify-between">
-          <div className="w-[100px]">
-             {/* Logo */}
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-snow">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-              </svg>
-          </div>
-          
-          <div className="flex-1 grid grid-cols-2 md:grid-cols-6 gap-8 text-ash">
-             {/* PLATFORM */}
-             <div className="flex flex-col gap-3">
-               <div className="text-[10px] font-mono tracking-widest text-ash/50 mb-2 uppercase">Platform</div>
-               <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">AI Estimator</Link>
-               <Link to="#" className="hover:text-snow transition-colors font-medium flex items-center gap-2 text-snow">Gantt Planning 2.0 <span className="bg-card-carbon border border-steel-border px-1.5 py-0.5 rounded text-[8px] text-ash tracking-widest">BETA</span></Link>
-               <Link to="#" className="hover:text-snow transition-colors font-medium flex items-center gap-2 text-snow">Site Dashboards <span className="bg-card-carbon border border-steel-border px-1.5 py-0.5 rounded text-[8px] text-ash tracking-widest">BETA</span></Link>
-               <Link to="#" className="hover:text-snow transition-colors font-medium flex items-center gap-2 text-snow">Digital Twins <span className="bg-blue-600/20 text-blue-400 border border-blue-600/30 px-1.5 py-0.5 rounded text-[8px] tracking-widest">NEW</span></Link>
-               <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Daily Logs</Link>
-               <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Safety Reports</Link>
-               <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Document Control</Link>
-               <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Equipment Tracking</Link>
-               <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Bidding & Tenders</Link>
-               <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Customers</Link>
-               <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Pricing</Link>
-             </div>
-             
-             {/* ROLES & USE CASES */}
-             <div className="flex flex-col gap-8">
-               <div className="flex flex-col gap-3">
-                 <div className="text-[10px] font-mono tracking-widest text-ash/50 mb-2 uppercase">Roles</div>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Project Manager</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Architect</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Site Engineer</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">General Contractor</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Safety Officer</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Subcontractor</Link>
+      <footer className="w-full bg-[#070707] border-t border-steel-border/50 relative z-10 text-[13px]">
+        <div className="py-24 px-10 md:px-24 lg:px-32 max-w-[1440px] mx-auto">
+          <div className="flex flex-col md:flex-row gap-16 md:gap-8 justify-between">
+            <div className="w-[100px] shrink-0">
+               {/* Logo */}
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-snow">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+            </div>
+            
+            <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-8 text-ash">
+               {/* PLATFORM */}
+               <div className="flex flex-col gap-4">
+                 <div className="text-[11px] font-mono tracking-[0.1em] text-ash/60 mb-2 uppercase">Platform</div>
+                 <Link to="#" className="footer-link">AI Projects</Link>
+                 <Link to="#" className="footer-link flex items-center gap-2">AI Channels 2.0 <span className="bg-white/5 border border-white/10 px-1.5 py-0.5 rounded-[4px] text-[9px] text-ash tracking-widest font-mono">BETA</span></Link>
+                 <Link to="#" className="footer-link flex items-center gap-2">AI Dashboards <span className="bg-white/5 border border-white/10 px-1.5 py-0.5 rounded-[4px] text-[9px] text-ash tracking-widest font-mono">BETA</span></Link>
+                 <Link to="#" className="footer-link flex items-center gap-2">Digital Twins <span className="bg-white/10 text-snow border border-white/20 px-1.5 py-0.5 rounded-[4px] text-[9px] tracking-widest font-mono">NEW</span></Link>
+                 <Link to="#" className="footer-link">AI Chat</Link>
+                 <Link to="#" className="footer-link">AI Docs</Link>
+                 <Link to="#" className="footer-link">AI Agents</Link>
+                 <Link to="#" className="footer-link">Deploy</Link>
+                 <Link to="#" className="footer-link">Enterprise</Link>
+                 <Link to="#" className="footer-link">Customers</Link>
+                 <Link to="#" className="footer-link">Pricing</Link>
                </div>
                
-               <div className="flex flex-col gap-3">
-                 <div className="text-[10px] font-mono tracking-widest text-ash/50 mb-2 uppercase">Use Cases</div>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Progress Tracking</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Quality Control</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Resource Allocation</Link>
+               {/* ROLES */}
+               <div className="flex flex-col gap-4">
+                 <div className="text-[11px] font-mono tracking-[0.1em] text-ash/60 mb-2 uppercase">Roles</div>
+                 <Link to="#" className="footer-link">Project Manager</Link>
+                 <Link to="#" className="footer-link">Site Engineer</Link>
+                 <Link to="#" className="footer-link">Architect</Link>
+                 <Link to="#" className="footer-link">General Contractor</Link>
+                 <Link to="#" className="footer-link">Safety Officer</Link>
+                 <Link to="#" className="footer-link">Subcontractor</Link>
+                 <Link to="#" className="footer-link">BIM Coordinator</Link>
+                 <Link to="#" className="footer-link">Quantity Surveyor</Link>
+                 <Link to="#" className="footer-link">Client / Owner</Link>
                </div>
-             </div>
-
-             {/* COMPARISONS */}
-             <div className="flex flex-col gap-3">
-                 <div className="text-[10px] font-mono tracking-widest text-ash/50 mb-2 uppercase">Comparisons</div>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Procore</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Autodesk Build</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Fieldwire</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Buildertrend</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">CoConstruct</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">PlanGrid</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Touchplan</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">CMiC</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">RedTeam</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">ProTenders</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">e-Builder</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Bentley SYNCHRO</Link>
-             </div>
-
-             {/* RESOURCES */}
-             <div className="flex flex-col gap-3">
-                 <div className="text-[10px] font-mono tracking-widest text-ash/50 mb-2 uppercase">Resources</div>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Blog</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Case Studies</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Changelog</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Community</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Events</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Help centre</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Academy</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Live Demos</Link>
-             </div>
-
-             {/* CUSTOMERS */}
-             <div className="flex flex-col gap-3">
-                 <div className="text-[10px] font-mono tracking-widest text-ash/50 mb-2 uppercase">Customers</div>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">L&T Construction</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">DLF</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Tata Projects</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Shapoorji Pallonji</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Afcons</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">NCC Limited</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">JMC Projects</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">HCC</Link>
-             </div>
-
-             {/* CONTACT & COMPANY */}
-             <div className="flex flex-col gap-8">
-               <div className="flex flex-col gap-3">
-                 <div className="text-[10px] font-mono tracking-widest text-ash/50 mb-2 uppercase">Contact</div>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Request a demo</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Contact sales</Link>
+                 
+               {/* USE CASES */}
+               <div className="flex flex-col gap-4">
+                 <div className="text-[11px] font-mono tracking-[0.1em] text-ash/60 mb-2 uppercase">Use Cases</div>
+                 <Link to="/signup" className="footer-link">Progress Tracking</Link>
+                 <Link to="/signup" className="footer-link">Quality Control</Link>
+                 <Link to="/signup" className="footer-link">Resource Allocation</Link>
+                 <Link to="/signup" className="footer-link">Safety & Compliance</Link>
+                 <Link to="/signup" className="footer-link">Cost Estimation</Link>
+                 <Link to="/signup" className="footer-link">Field Reporting</Link>
+                 <Link to="/signup" className="footer-link">Bid Management</Link>
+                 <Link to="/signup" className="footer-link">Labor Attendance</Link>
+                 <Link to="/signup" className="footer-link">Document Control</Link>
                </div>
-               
-               <div className="flex flex-col gap-3">
-                 <div className="text-[10px] font-mono tracking-widest text-ash/50 mb-2 uppercase">Company</div>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Careers</Link>
-                 <Link to="#" className="hover:text-snow transition-colors font-medium text-snow">Trust center</Link>
-               </div>
-             </div>
-          </div>
-        </div>
 
-        <div className="mt-32 pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] font-mono tracking-widest text-ash/60 uppercase">
-          <div>© 2026 SANRACHNA INC.</div>
-          
-          <div className="flex gap-8">
-            <Link to="#" className="hover:text-snow transition-colors">Cookie preferences</Link>
-            <Link to="#" className="hover:text-snow transition-colors">Legal & privacy</Link>
+               {/* RESOURCES */}
+               <div className="flex flex-col gap-4">
+                   <div className="text-[11px] font-mono tracking-[0.1em] text-ash/60 mb-2 uppercase">Resources</div>
+                   <Link to="#" className="footer-link">Blog</Link>
+                   <Link to="#" className="footer-link">Outlier</Link>
+                   <Link to="#" className="footer-link">Changelog</Link>
+                   <Link to="#" className="footer-link">Community</Link>
+                   <Link to="#" className="footer-link">Events</Link>
+                   <Link to="#" className="footer-link">Help centre</Link>
+                   <Link to="#" className="footer-link">Academy</Link>
+                   <Link to="#" className="footer-link">Live Demos</Link>
+               </div>
+
+               {/* CONTACT & COMPANY */}
+               <div className="flex flex-col gap-10">
+                 <div className="flex flex-col gap-4">
+                   <div className="text-[11px] font-mono tracking-[0.1em] text-ash/60 mb-2 uppercase">Contact</div>
+                   <Link to="#" className="footer-link">Request a demo</Link>
+                   <Link to="#" className="footer-link">Contact sales</Link>
+                 </div>
+                 
+                 <div className="flex flex-col gap-4">
+                   <div className="text-[11px] font-mono tracking-[0.1em] text-ash/60 mb-2 uppercase">Company</div>
+                   <Link to="#" className="footer-link">Careers</Link>
+                   <Link to="#" className="footer-link">Trust center</Link>
+                 </div>
+               </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <span>Follow Us</span>
-            <div className="flex gap-2">
-              <a href="#" className="border border-steel-border/50 rounded flex items-center justify-center p-1.5 hover:bg-card-carbon transition-colors text-snow"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg></a>
-              <a href="#" className="border border-steel-border/50 rounded flex items-center justify-center p-1.5 hover:bg-card-carbon transition-colors text-snow"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg></a>
-              <a href="#" className="border border-steel-border/50 rounded flex items-center justify-center p-1.5 hover:bg-card-carbon transition-colors text-snow"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg></a>
-              <a href="#" className="border border-steel-border/50 rounded flex items-center justify-center p-1.5 hover:bg-card-carbon transition-colors text-snow"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+          <div className="mt-32 pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] font-mono tracking-[0.15em] text-ash/60 uppercase">
+            <div>© 2026 SANRACHNA INC.</div>
+            
+            <div className="flex gap-8">
+              <Link to="#" className="hover:text-snow transition-colors">Cookie preferences</Link>
+              <Link to="#" className="hover:text-snow transition-colors">Legal & privacy</Link>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <span className="text-[10px] text-ash/60 uppercase tracking-[0.15em] font-mono">Made by</span>
+              <a href="https://github.com/yashsinghal1234" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-full pl-1 pr-4 py-1 hover:bg-white/10 transition-colors">
+                <img src="https://github.com/yashsinghal1234.png" alt="yashsinghal1234" className="w-7 h-7 rounded-full" />
+                <span className="font-mono text-[11px] text-snow normal-case tracking-normal">Yash Singhal</span>
+              </a>
             </div>
           </div>
         </div>

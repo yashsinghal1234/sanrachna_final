@@ -32,8 +32,8 @@ const FacebookIcon = () => (
 const CAROUSEL_ITEMS: CarouselItem[] = [
   {
     type: 'video',
-    src: "/Pinterest-enhanced.mp4",
-    text: <>Elevate your construction management with <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">Sanrachna</span></>
+    src: "/Pinterest (1)-enhanced.mp4",
+    text: <>Transform your project visibility from day one.</>
   },
   {
     type: 'video',
@@ -42,8 +42,8 @@ const CAROUSEL_ITEMS: CarouselItem[] = [
   },
   {
     type: 'video',
-    src: "/Pinterest (1)-enhanced.mp4",
-    text: <>Transform your project visibility from day one.</>
+    src: "/Pinterest-enhanced.mp4",
+    text: <>Elevate your construction management with <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">Sanrachna</span></>
   }
 ]
 

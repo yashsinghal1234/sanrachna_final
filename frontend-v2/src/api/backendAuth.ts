@@ -25,6 +25,13 @@ type MessageResponse = {
   message: string
 }
 
+export class AuthApiError extends Error {
+  constructor(message: string, public data?: any) {
+    super(message)
+    this.name = 'AuthApiError'
+  }
+}
+
 async function postJson<T>(path: string, body: unknown): Promise<T> {
   const url = `${authApiBaseUrl()}${path}`
   // #region agent log
@@ -56,7 +63,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   if (!res.ok) {
     const message =
       typeof data === 'object' && data && 'message' in data ? String((data as { message?: unknown }).message) : 'Request failed.'
-    throw new Error(message)
+    throw new AuthApiError(message, data)
   }
   // #region agent log
   try {
@@ -73,7 +80,11 @@ export async function backendSignup(payload: {
   role: Role
   phone: string
 }) {
-  const data = await postJson<ApiAuthResponse>('/api/auth/signup', payload)
+  return postJson<{ message: string; userId: string; email: string }>('/api/auth/signup', payload)
+}
+
+export async function backendVerifySignup(payload: { userId: string; otp: string }) {
+  const data = await postJson<ApiAuthResponse>('/api/auth/verify-signup', payload)
   const user: User = {
     id: data.user.id,
     name: data.user.name,
@@ -82,6 +93,10 @@ export async function backendSignup(payload: {
     role: data.user.role ?? null,
   }
   return { token: data.token, user }
+}
+
+export async function backendResendOtp(payload: { userId: string }) {
+  return postJson<MessageResponse>('/api/auth/resend-otp', payload)
 }
 
 export async function backendSignin(payload: { email: string; password: string; rememberMe?: boolean }) {
@@ -100,7 +115,7 @@ export function backendForgotPassword(payload: { username: string; email: string
   return postJson<ForgotPasswordResponse>('/api/auth/forgot-password', payload)
 }
 
-export function backendResetPassword(payload: { userId: string | null; newPassword: string }) {
+export function backendResetPassword(payload: { userId: string | null; otp: string; newPassword: string }) {
   return postJson<MessageResponse>('/api/auth/reset-password', payload)
 }
 
