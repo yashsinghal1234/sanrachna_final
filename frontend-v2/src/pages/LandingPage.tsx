@@ -1015,7 +1015,7 @@ export function LandingPage() {
                 </svg>
             </div>
             
-            <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-8 text-ash">
+            <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-8 text-ash">
 
                {/* ROLES */}
                <div className="flex flex-col gap-4">
@@ -1045,6 +1045,18 @@ export function LandingPage() {
                  <Link to="/signup" className="footer-link">Document Control</Link>
                </div>
 
+               {/* RESOURCES */}
+               <div className="flex flex-col gap-4">
+                   <div className="text-[11px] font-mono tracking-[0.1em] text-ash/60 mb-2 uppercase">Resources</div>
+                   <Link to="#" className="footer-link">Blog</Link>
+                   <Link to="#" className="footer-link">Outlier</Link>
+                   <Link to="#" className="footer-link">Changelog</Link>
+                   <Link to="#" className="footer-link">Community</Link>
+                   <Link to="#" className="footer-link">Events</Link>
+                   <Link to="#" className="footer-link">Help centre</Link>
+                   <Link to="#" className="footer-link">Academy</Link>
+                   <Link to="#" className="footer-link">Live Demos</Link>
+               </div>
 
                {/* CONTACT & COMPANY */}
                <div className="flex flex-col gap-10">
