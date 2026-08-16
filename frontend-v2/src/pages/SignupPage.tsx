@@ -15,7 +15,7 @@ const CAROUSEL_ITEMS: CarouselItem[] = [
   },
   {
     type: 'video',
-    src: "/Pinterest (3)comp.mp4",
+    src: "/Pinterest (2)-enhanced (1)comp.mp4",
     text: <>Collaborate effortlessly across site and office.</>
   },
   {
