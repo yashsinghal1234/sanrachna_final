@@ -1020,15 +1020,15 @@ export function LandingPage() {
                {/* ROLES */}
                <div className="flex flex-col gap-4">
                  <div className="text-[11px] font-mono tracking-[0.1em] text-ash/60 mb-2 uppercase">Roles</div>
-                 <Link to="#" className="footer-link">Project Manager</Link>
-                 <Link to="#" className="footer-link">Site Engineer</Link>
-                 <Link to="#" className="footer-link">Architect</Link>
-                 <Link to="#" className="footer-link">General Contractor</Link>
-                 <Link to="#" className="footer-link">Safety Officer</Link>
-                 <Link to="#" className="footer-link">Subcontractor</Link>
-                 <Link to="#" className="footer-link">BIM Coordinator</Link>
-                 <Link to="#" className="footer-link">Quantity Surveyor</Link>
-                 <Link to="#" className="footer-link">Client / Owner</Link>
+                 <Link to="/login" className="footer-link">Project Manager</Link>
+                 <Link to="/login" className="footer-link">Site Engineer</Link>
+                 <Link to="/login" className="footer-link">Architect</Link>
+                 <Link to="/login" className="footer-link">General Contractor</Link>
+                 <Link to="/login" className="footer-link">Safety Officer</Link>
+                 <Link to="/login" className="footer-link">Subcontractor</Link>
+                 <Link to="/login" className="footer-link">BIM Coordinator</Link>
+                 <Link to="/login" className="footer-link">Quantity Surveyor</Link>
+                 <Link to="/login" className="footer-link">Client / Owner</Link>
                </div>
                  
                {/* USE CASES */}
@@ -1048,28 +1048,28 @@ export function LandingPage() {
                {/* RESOURCES */}
                <div className="flex flex-col gap-4">
                    <div className="text-[11px] font-mono tracking-[0.1em] text-ash/60 mb-2 uppercase">Resources</div>
-                   <Link to="#" className="footer-link">Blog</Link>
-                   <Link to="#" className="footer-link">Outlier</Link>
-                   <Link to="#" className="footer-link">Changelog</Link>
-                   <Link to="#" className="footer-link">Community</Link>
-                   <Link to="#" className="footer-link">Events</Link>
-                   <Link to="#" className="footer-link">Help centre</Link>
-                   <Link to="#" className="footer-link">Academy</Link>
-                   <Link to="#" className="footer-link">Live Demos</Link>
+                   <Link to="/login" className="footer-link">Blog</Link>
+                   <Link to="/login" className="footer-link">Outlier</Link>
+                   <Link to="/login" className="footer-link">Changelog</Link>
+                   <Link to="/login" className="footer-link">Community</Link>
+                   <Link to="/login" className="footer-link">Events</Link>
+                   <Link to="/login" className="footer-link">Help centre</Link>
+                   <Link to="/login" className="footer-link">Academy</Link>
+                   <Link to="/login" className="footer-link">Live Demos</Link>
                </div>
 
                {/* CONTACT & COMPANY */}
                <div className="flex flex-col gap-10">
                  <div className="flex flex-col gap-4">
                    <div className="text-[11px] font-mono tracking-[0.1em] text-ash/60 mb-2 uppercase">Contact</div>
-                   <Link to="#" className="footer-link">Request a demo</Link>
-                   <Link to="#" className="footer-link">Let's Connect</Link>
+                   <Link to="/login" className="footer-link">Request a demo</Link>
+                   <Link to="/login" className="footer-link">Let's Connect</Link>
                  </div>
                  
                  <div className="flex flex-col gap-4">
                    <div className="text-[11px] font-mono tracking-[0.1em] text-ash/60 mb-2 uppercase">Company</div>
-                   <Link to="#" className="footer-link">Careers</Link>
-                   <Link to="#" className="footer-link">Trust center</Link>
+                   <Link to="/login" className="footer-link">Careers</Link>
+                   <Link to="/login" className="footer-link">Trust center</Link>
                  </div>
                </div>
             </div>
@@ -1079,8 +1079,8 @@ export function LandingPage() {
             <div>© 2026 SANRACHNA INC.</div>
             
             <div className="flex gap-8">
-              <Link to="#" className="hover:text-snow transition-colors">Cookie preferences</Link>
-              <Link to="#" className="hover:text-snow transition-colors">Legal & privacy</Link>
+              <Link to="/login" className="hover:text-snow transition-colors">Cookie preferences</Link>
+              <Link to="/login" className="hover:text-snow transition-colors">Legal & privacy</Link>
             </div>
 
             <div className="flex items-center gap-4">
