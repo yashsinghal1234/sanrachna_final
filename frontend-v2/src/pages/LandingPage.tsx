@@ -1015,23 +1015,8 @@ export function LandingPage() {
                 </svg>
             </div>
             
-            <div className="flex-1 grid grid-cols-2 md:grid-cols-5 gap-8 text-ash">
-               {/* PLATFORM */}
-               <div className="flex flex-col gap-4">
-                 <div className="text-[11px] font-mono tracking-[0.1em] text-ash/60 mb-2 uppercase">Platform</div>
-                 <Link to="#" className="footer-link">AI Projects</Link>
-                 <Link to="#" className="footer-link flex items-center gap-2">AI Channels 2.0 <span className="bg-white/5 border border-white/10 px-1.5 py-0.5 rounded-[4px] text-[9px] text-ash tracking-widest font-mono">BETA</span></Link>
-                 <Link to="#" className="footer-link flex items-center gap-2">AI Dashboards <span className="bg-white/5 border border-white/10 px-1.5 py-0.5 rounded-[4px] text-[9px] text-ash tracking-widest font-mono">BETA</span></Link>
-                 <Link to="#" className="footer-link flex items-center gap-2">Digital Twins <span className="bg-white/10 text-snow border border-white/20 px-1.5 py-0.5 rounded-[4px] text-[9px] tracking-widest font-mono">NEW</span></Link>
-                 <Link to="#" className="footer-link">AI Chat</Link>
-                 <Link to="#" className="footer-link">AI Docs</Link>
-                 <Link to="#" className="footer-link">AI Agents</Link>
-                 <Link to="#" className="footer-link">Deploy</Link>
-                 <Link to="#" className="footer-link">Enterprise</Link>
-                 <Link to="#" className="footer-link">Customers</Link>
-                 <Link to="#" className="footer-link">Pricing</Link>
-               </div>
-               
+            <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-8 text-ash">
+
                {/* ROLES */}
                <div className="flex flex-col gap-4">
                  <div className="text-[11px] font-mono tracking-[0.1em] text-ash/60 mb-2 uppercase">Roles</div>
