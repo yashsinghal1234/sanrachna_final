@@ -15,12 +15,12 @@ const CAROUSEL_ITEMS: CarouselItem[] = [
   },
   {
     type: 'video',
-    src: "/Pinterest (3).mp4",
+    src: "/Pinterest (3)comp.mp4",
     text: <>Collaborate effortlessly across site and office.</>
   },
   {
     type: 'video',
-    src: "/Pinterest-enhanced.mp4",
+    src: "/Pinterest-enhancedcomp.mp4",
     text: <>Gain unparalleled insights with real-time analytics.</>
   }
 ]

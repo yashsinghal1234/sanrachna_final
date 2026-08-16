@@ -37,12 +37,12 @@ const CAROUSEL_ITEMS: CarouselItem[] = [
   },
   {
     type: 'video',
-    src: "/Untitled design-enhanced.mp4",
+    src: "/Untitled design-enhancedcomp.mp4",
     text: <>Seamless site tracking powered by <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">intelligent tools</span></>
   },
   {
     type: 'video',
-    src: "/Pinterest-enhanced.mp4",
+    src: "/Pinterest-enhancedcomp.mp4",
     text: <>Elevate your construction management with <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">Sanrachna</span></>
   }
 ]

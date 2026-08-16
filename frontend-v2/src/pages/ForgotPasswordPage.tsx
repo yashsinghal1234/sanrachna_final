@@ -9,7 +9,7 @@ import { AuthCarousel, type CarouselItem } from '@/components/AuthCarousel'
 const CAROUSEL_ITEMS: CarouselItem[] = [
   {
     type: 'video',
-    src: "/Untitled design-enhanced.mp4",
+    src: "/Untitled design-enhancedcomp.mp4",
     text: <>Securely restore access to your <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">Sanrachna</span> workspace</>
   },
   {
