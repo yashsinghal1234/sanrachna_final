@@ -14,9 +14,9 @@ const CAROUSEL_ITEMS: CarouselItem[] = [
   },
   {
     type: 'video',
-    src: "/Pinterest (1)-enhanced.mp4",
-    text: <>Your construction data, protected and accessible.</>
-  }
+    src: "/Pinterest (1)-enhancedcompress.mp4",
+    text: <>Transform your project visibility from day one.</>
+  },
 ]
 
 type RecoveryStep = 'verify' | 'reset'

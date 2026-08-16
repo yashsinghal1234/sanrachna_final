@@ -10,8 +10,8 @@ import { AuthCarousel, type CarouselItem } from '@/components/AuthCarousel'
 const CAROUSEL_ITEMS: CarouselItem[] = [
   {
     type: 'video',
-    src: "/Pinterest (2)-enhanced.mp4",
-    text: <>Join the future of construction management with <span className="font-semibold text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">Sanrachna</span></>
+    src: "/Pinterest (1)-enhancedcompress.mp4",
+    text: <>Transform your project visibility from day one.</>
   },
   {
     type: 'video',

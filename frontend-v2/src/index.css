@@ -154,7 +154,7 @@
   }
 
   * {
-    @apply border-[color:var(--color-border)];
+    border-color: var(--color-border);
   }
   button, a {
     @apply transition-all duration-200;

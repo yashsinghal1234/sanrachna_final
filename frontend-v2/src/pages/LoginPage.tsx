@@ -32,7 +32,7 @@ const FacebookIcon = () => (
 const CAROUSEL_ITEMS: CarouselItem[] = [
   {
     type: 'video',
-    src: "/Pinterest (1)-enhanced.mp4",
+    src: "/Pinterest (1)-enhancedcompress.mp4",
     text: <>Transform your project visibility from day one.</>
   },
   {
