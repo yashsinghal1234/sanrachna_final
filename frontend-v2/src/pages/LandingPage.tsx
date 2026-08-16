@@ -1079,8 +1079,8 @@ export function LandingPage() {
             <div>© 2026 SANRACHNA INC.</div>
             
             <div className="flex gap-8">
-              <Link to="/login" className="hover:text-snow transition-colors">Cookie preferences</Link>
-              <Link to="/login" className="hover:text-snow transition-colors">Legal & privacy</Link>
+              <Link to="/privacy" className="hover:text-snow transition-colors">Cookie preferences</Link>
+              <Link to="/legal" className="hover:text-snow transition-colors">Legal & privacy</Link>
             </div>
 
             <div className="flex items-center gap-4">

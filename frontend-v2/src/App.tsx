@@ -28,6 +28,7 @@ import { SettingsLayout } from '@/layouts/SettingsLayout'
 import { ProfileSettingsPage } from '@/pages/settings/ProfileSettingsPage'
 import { SecuritySettingsPage } from '@/pages/settings/SecuritySettingsPage'
 import { NotificationSettingsPage } from '@/pages/settings/NotificationSettingsPage'
+import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { ProjectSettingsPage } from '@/pages/settings/ProjectSettingsPage'
 import { CreateProjectPage } from '@/pages/CreateProjectPage'
 import { WorkforcePage } from '@/pages/WorkforcePage'
@@ -52,6 +53,8 @@ export default function App() {
         <Route index element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/legal" element={<PlaceholderPage title="Legal Information" description="Legal terms and conditions for Sanrachna." />} />
+        <Route path="/privacy" element={<PlaceholderPage title="Privacy Policy" description="Privacy policy and data handling information for Sanrachna." />} />
         <Route
           path="/select-role"
           element={
