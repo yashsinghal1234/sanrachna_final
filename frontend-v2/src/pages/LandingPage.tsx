@@ -98,7 +98,7 @@ export function LandingPage() {
         </div>
         <div className="flex items-center gap-4">
           <Link to="/login" className="text-[14px] font-medium text-snow hover:text-ash transition-colors hidden sm:block">Log in</Link>
-          <Link to="/signup" className="bg-snow text-page-ink px-5 py-2.5 rounded-[8px] text-[14px] font-medium hover:opacity-90 transition-opacity">Contact sales</Link>
+          <Link to="/signup" className="bg-snow text-page-ink px-5 py-2.5 rounded-[8px] text-[14px] font-medium hover:opacity-90 transition-opacity">Let's Connect</Link>
         </div>
       </nav>
 
@@ -124,7 +124,7 @@ export function LandingPage() {
           
           <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link to="/signup" className="w-full sm:w-auto bg-snow text-page-ink px-6 py-3.5 rounded-[8px] text-[15px] font-medium hover:opacity-90 transition-opacity">
-              Contact sales
+              Let's Connect
             </Link>
             <Link to="/signup" className="w-full sm:w-auto bg-transparent border border-graphite text-snow px-6 py-3.5 rounded-[8px] text-[15px] font-medium hover:bg-card-carbon transition-colors">
               Try Sanrachna free
@@ -219,7 +219,7 @@ export function LandingPage() {
         </p>
 
         <div className="flex gap-6 justify-center mt-12 relative z-20">
-          <Link to="/signup" className="bg-snow text-page-ink px-8 py-4 rounded-[8px] text-[16px] font-semibold hover:opacity-90 transition-opacity">Contact sales</Link>
+          <Link to="/signup" className="bg-snow text-page-ink px-8 py-4 rounded-[8px] text-[16px] font-semibold hover:opacity-90 transition-opacity">Let's Connect</Link>
           <Link to="/signup" className="bg-transparent border border-graphite text-snow px-8 py-4 rounded-[8px] text-[16px] font-semibold hover:bg-card-carbon transition-colors">Try Sanrachna free</Link>
         </div>
 
@@ -301,7 +301,7 @@ export function LandingPage() {
             What once took weeks happens in minutes. Sanrachna's AI automatically surfaces trends, themes, and signals across your entire project lifecycle—from supplier quotes and budget estimates to RFIs and site logs—so your team spends time on decisions, not synthesis.
           </p>
           <div className="flex gap-4">
-            <Link to="/signup" className="bg-snow text-page-ink px-4 py-2.5 rounded-[8px] text-[14px] font-medium hover:opacity-90 transition-opacity">Contact sales</Link>
+            <Link to="/signup" className="bg-snow text-page-ink px-4 py-2.5 rounded-[8px] text-[14px] font-medium hover:opacity-90 transition-opacity">Let's Connect</Link>
             <Link to="/signup" className="bg-transparent border border-graphite text-snow px-4 py-2.5 rounded-[8px] text-[14px] font-medium hover:bg-card-carbon transition-colors">Try Sanrachna free</Link>
           </div>
         </div>
@@ -447,7 +447,7 @@ export function LandingPage() {
             Chat with your project data like you'd message a 20-year veteran. Ask 'What is our estimated cost for flooring?' or 'Which tasks are delayed this week?'. Patterns that no single engineer could see on their own, answered instantly with RAG-grounded precision.
           </p>
           <div className="flex gap-4 mb-3">
-            <Link to="/signup" className="bg-snow text-page-ink px-4 pt-[10px] pb-[11px] rounded-[8px] text-[14px] font-medium hover:opacity-90 transition-opacity">Contact sales</Link>
+            <Link to="/signup" className="bg-snow text-page-ink px-4 pt-[10px] pb-[11px] rounded-[8px] text-[14px] font-medium hover:opacity-90 transition-opacity">Let's Connect</Link>
             <Link to="/signup" className="bg-transparent border border-graphite text-snow px-4 pt-[10px] pb-[11px] rounded-[8px] text-[14px] font-medium hover:bg-card-carbon transition-colors">Try Sanrachna free</Link>
           </div>
         </div>
@@ -655,7 +655,7 @@ export function LandingPage() {
             From estimate to handover, the site is in the room. Sanrachna plugs directly into your existing infrastructure, auto-escalating RFIs and updating your Gantt charts based on daily site logs.
           </p>
           <div className="flex gap-4 mb-8">
-            <Link to="/signup" className="bg-snow text-page-ink px-4 py-2.5 rounded-[8px] text-[14px] font-medium hover:opacity-90 transition-opacity">Contact sales</Link>
+            <Link to="/signup" className="bg-snow text-page-ink px-4 py-2.5 rounded-[8px] text-[14px] font-medium hover:opacity-90 transition-opacity">Let's Connect</Link>
             <Link to="/signup" className="bg-transparent border border-graphite text-snow px-4 py-2.5 rounded-[8px] text-[14px] font-medium hover:bg-card-carbon transition-colors">Try Sanrachna free</Link>
           </div>
         </div>
@@ -998,7 +998,7 @@ export function LandingPage() {
            </h2>
            
            <div className="flex gap-4 justify-center">
-             <Link to="/signup" className="bg-snow text-page-ink px-6 py-3 rounded-[8px] text-[14px] font-medium hover:opacity-90 transition-opacity">Contact sales</Link>
+             <Link to="/signup" className="bg-snow text-page-ink px-6 py-3 rounded-[8px] text-[14px] font-medium hover:opacity-90 transition-opacity">Let's Connect</Link>
              <Link to="/signup" className="bg-transparent border border-graphite text-snow px-6 py-3 rounded-[8px] text-[14px] font-medium hover:bg-card-carbon transition-colors">Try Sanrachna free</Link>
            </div>
          </div>
@@ -1078,7 +1078,7 @@ export function LandingPage() {
                  <div className="flex flex-col gap-4">
                    <div className="text-[11px] font-mono tracking-[0.1em] text-ash/60 mb-2 uppercase">Contact</div>
                    <Link to="#" className="footer-link">Request a demo</Link>
-                   <Link to="#" className="footer-link">Contact sales</Link>
+                   <Link to="#" className="footer-link">Let's Connect</Link>
                  </div>
                  
                  <div className="flex flex-col gap-4">
