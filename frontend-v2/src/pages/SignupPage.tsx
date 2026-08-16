@@ -10,13 +10,13 @@ import { AuthCarousel, type CarouselItem } from '@/components/AuthCarousel'
 const CAROUSEL_ITEMS: CarouselItem[] = [
   {
     type: 'video',
-    src: "/Pinterest (1)-enhancedcompress.mp4",
-    text: <>Transform your project visibility from day one.</>
+    src: "/Pinterest (2)-enhanced (1)comp.mp4",
+    text: <>Collaborate effortlessly across site and office.</>
   },
   {
     type: 'video',
-    src: "/Pinterest (2)-enhanced (1)comp.mp4",
-    text: <>Collaborate effortlessly across site and office.</>
+    src: "/Pinterest (1)-enhancedcompress.mp4",
+    text: <>Transform your project visibility from day one.</>
   },
   {
     type: 'video',
