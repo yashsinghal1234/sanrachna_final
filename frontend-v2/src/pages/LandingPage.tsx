@@ -118,7 +118,7 @@ export function LandingPage() {
             </span>
           </h1>
           
-          <p className="mt-10 text-[18px] md:text-[24px] font-normal text-ash max-w-[900px] mx-auto tracking-[-0.2px] leading-[1.4]">
+          <p className="mt-10 text-[18px] md:text-[24px] font-normal text-ash max-w-[1200px] xl:max-w-max mx-auto tracking-[-0.2px] leading-[1.4] text-balance">
             One platform for every site signal. Sanrachna's AI turns CPWD benchmarks, field logs, and daily reports into answers your estimators and site engineers can act on.
           </p>
           
@@ -133,8 +133,8 @@ export function LandingPage() {
         </div>
 
         {/* ── INDUSTRIES ── */}
-        <div className="mt-20 md:mt-32 w-full border-t border-white/5 pt-8 flex flex-col items-center overflow-hidden relative">
-          <span className="text-[11px] font-mono text-ash tracking-[0.2em] uppercase mb-16 mt-8 md:mt-12 relative z-20">Built for modern teams in</span>
+        <div className="mt-0 w-full border-t border-white/5 pt-8 flex flex-col items-center overflow-hidden relative">
+          <span className="text-[11px] font-mono text-ash tracking-[0.2em] uppercase mb-4 mt-8 md:mt-12 relative z-20">Built for modern teams in</span>
           
           {/* Gradient masks for smooth edges */}
           <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-r from-page-ink to-transparent z-10 pointer-events-none mt-16"></div>
@@ -158,7 +158,7 @@ export function LandingPage() {
       </section>
 
       {/* ── STATS SECTION ── */}
-      <section className="py-24 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto relative z-10 text-left">
+      <section className="py-12 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto relative z-10 text-left">
         <h2 className="text-heading md:text-[48px] font-semibold leading-tight tracking-[-0.84px] text-snow max-w-[900px] mb-20 text-left">
           <span className="whitespace-nowrap">Sanrachna transforms <FolderOpen className="inline size-8 md:size-10 text-ash mx-1 -mt-2" /> <span className="font-retro tracking-wide text-[1.1em] inline-block transform -translate-y-1.5">fragmented</span></span> <br className="hidden md:block" />
           construction data into decision-ready <Sparkles className="inline size-8 md:size-10 text-blue-cornflower mx-1 fill-blue-cornflower -mt-2" /> intelligence automatically, <br className="hidden md:block" />
@@ -204,7 +204,7 @@ export function LandingPage() {
       </section>
 
       {/* ── MID-PAGE CTA ── */}
-      <section className="my-32 py-40 px-6 md:px-12 lg:px-16 text-center max-w-[1200px] mx-auto relative z-10 border-t border-steel-border">
+      <section className="my-16 py-16 px-6 md:px-12 lg:px-16 text-center max-w-[1200px] mx-auto relative z-10 border-t border-steel-border">
         <h2 className="text-[48px] md:text-[72px] lg:text-[88px] font-semibold leading-[1.1] tracking-[-3px] text-snow mx-auto flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mb-12">
           <span>Equip</span>
           <img src="/images/enter-key.png" alt="Enter" className="h-[40px] md:h-[60px] mx-1 transform -rotate-2" />
@@ -227,7 +227,7 @@ export function LandingPage() {
       </section>
 
       {/* ── CENTRALIZE SECTION ── */}
-      <section className="py-24 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto relative z-10 border-t border-steel-border" id="product">
+      <section className="py-12 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto relative z-10 border-t border-steel-border" id="product">
         <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-8">
           <div className="flex-1">
             <h2 className="text-[64px] md:text-[80px] font-semibold tracking-[-2px] text-snow flex items-start gap-1 mb-6 leading-none">
@@ -289,7 +289,7 @@ export function LandingPage() {
       </section>
 
       {/* ── ANALYZE SECTION ── */}
-      <section className="py-24 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto relative z-10 border-t border-steel-border">
+      <section className="py-12 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto relative z-10 border-t border-steel-border">
         <div className="mb-16">
           <h2 className="text-display font-semibold tracking-[-2.3px] text-snow flex items-start gap-1 mb-6">
             Analyze <span className="text-blue-cornflower text-[24px] font-retro tracking-normal leading-none mt-4">02</span>
@@ -435,7 +435,7 @@ export function LandingPage() {
       </section>
 
       {/* ── QUERY SECTION ── */}
-      <section className="py-24 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto relative z-10 border-t border-steel-border">
+      <section className="py-12 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto relative z-10 border-t border-steel-border">
         <div className="mb-16">
           <h2 className="text-display font-semibold tracking-[-2.3px] text-snow flex items-start gap-1 mb-6">
             Query <span className="text-blue-cornflower text-[24px] font-retro tracking-normal leading-none mt-4">03</span>
@@ -453,7 +453,7 @@ export function LandingPage() {
         </div>
 
         {/* Large AI Chat Card */}
-        <div className="bg-card-carbon rounded-[8px] border border-steel-border p-8 flex flex-col mb-16">
+        <div className="bg-card-carbon rounded-[8px] border border-steel-border p-8 flex flex-col mb-4">
           <div className="bg-[#111] border border-steel-border rounded-[8px] flex-1 overflow-hidden relative shadow-2xl flex">
             {/* Sidebar */}
             <div className="w-[240px] border-r border-steel-border hidden md:flex flex-col p-4">
@@ -515,8 +515,8 @@ export function LandingPage() {
       </section>
 
       {/* ── MORE WAYS TO QUERY ── */}
-      <section className="py-24 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto relative z-10 border-t border-steel-border">
-         <div className="font-mono text-[12px] text-ash tracking-[1px] uppercase mb-12">
+      <section className="py-12 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto relative z-10 border-t border-steel-border">
+         <div className="font-mono text-[12px] text-ash tracking-[1px] uppercase mb-6">
            More ways to query your data
          </div>
          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -643,7 +643,7 @@ export function LandingPage() {
       </section>
 
       {/* ── ACT SECTION ── */}
-      <section className="py-24 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto relative z-10 border-t border-steel-border">
+      <section className="py-12 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto relative z-10 border-t border-steel-border">
         <div className="mb-16">
           <h2 className="text-display font-semibold tracking-[-2.3px] text-snow flex items-start gap-1 mb-6">
             Act <span className="text-blue-cornflower text-[24px] font-retro tracking-normal leading-none mt-4">04</span>
@@ -705,9 +705,9 @@ export function LandingPage() {
 
 
       {/* ── TARGET AUDIENCES ── */}
-      <section className="py-24 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto border-t border-steel-border relative z-10 flex flex-col md:flex-row gap-16 md:gap-32">
+      <section className="py-12 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto border-t border-steel-border relative z-10 flex flex-col md:flex-row gap-16 md:gap-32">
         <div className="md:w-1/3">
-          <h2 className="text-[40px] md:text-display font-semibold tracking-[-2px] text-snow sticky top-24">
+          <h2 className="text-[40px] md:text-[60px] lg:text-display font-semibold tracking-[-2px] text-snow sticky top-24 whitespace-nowrap whitespace-nowrap">
             Sanrachna for
           </h2>
         </div>
@@ -752,7 +752,7 @@ export function LandingPage() {
 
 
       {/* ── AI NATIVE PLATFORM / SECURITY ── */}
-      <section className="py-24 px-6 md:px-12 lg:px-16 border-t border-steel-border relative z-10 bg-page-ink">
+      <section className="py-12 px-6 md:px-12 lg:px-16 border-t border-steel-border relative z-10 bg-page-ink">
         <div className="max-w-[1440px] mx-auto">
           <h2 className="text-[40px] md:text-[72px] font-semibold leading-[1.05] tracking-[-3px] text-snow max-w-[1000px] mb-8">
             Your <img src="/images/brain.png" alt="Brain" className="inline-block h-[56px] md:h-[80px] object-contain align-middle transform -translate-y-1 mx-1" /> AI native construction intelligence platform—secure, compliant, and ready to scale <img src="/images/globe.png" alt="Globe" className="inline-block h-[56px] md:h-[80px] object-contain align-middle transform -translate-y-1 mx-1" /> <span className="font-retro tracking-wide font-normal">org-wide</span>
@@ -1006,7 +1006,7 @@ export function LandingPage() {
 
       {/* ── FOOTER ── */}
       <footer className="w-full bg-[#070707] border-t border-steel-border/50 relative z-10 text-[13px]">
-        <div className="py-24 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto">
+        <div className="pt-12 pb-4 px-6 md:px-12 lg:px-16 max-w-[1440px] mx-auto">
           <div className="flex flex-col md:flex-row gap-16 md:gap-8 justify-between">
             <div className="w-[100px] shrink-0">
                {/* Logo */}
@@ -1075,7 +1075,7 @@ export function LandingPage() {
             </div>
           </div>
 
-          <div className="mt-32 pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] font-mono tracking-[0.15em] text-ash/60 uppercase">
+          <div className="mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-[10px] font-mono tracking-[0.15em] text-ash/60 uppercase">
             <div>© 2026 SANRACHNA INC.</div>
             
             <div className="flex gap-8">
