@@ -43,13 +43,17 @@ Whether you're managing a single building or a massive infrastructure project, S
 - **Daily Progress Logs:** Seamless submission from workers, quick approval by engineers.
 - **Workforce Coordination:** Live labor tracking and dynamic allocation.
 - **Document Hub:** Centralized, version-aware repository for all blueprints and contracts.
+- **Planning Studio:** Interactive timeline scheduling and project task breakdown.
+- **Project Insights Dashboard:** Real-time analytics, cost tracking, and overall project health metrics.
 
 ### 🛡️ Safety & Reliability
+- **Emergency Evacuation System:** One-tap SOS alerts, live muster point tracking, and automated emergency broadcasting.
 - **Incident Workflows:** Severity-based classification and escalation.
 - **RFI & Issue Tracking:** Threaded discussions and priority-based resolution.
 
-### 🤖 AI Capabilities
+### 🤖 AI & Machine Learning Capabilities
 - **AI Construction Copilot:** Chat with your project data! Get context-aware answers instantly.
+- **ML Cost Estimation:** Predict budgets and resource requirements using trained Machine Learning models.
 - **Automated AI Reporting:** One-click PDF generation with narrative summaries and risk analysis.
 - **Procurement Engine:** AI-driven material recommendations and automated RFQ creation.
 
